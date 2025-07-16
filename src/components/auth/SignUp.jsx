@@ -4,6 +4,7 @@ import { User, Mail, Lock } from 'lucide-react';
 import BG from '../../assets/BG.png'; 
 import { Link } from 'react-router-dom';
 import api from '../../api/api';
+import { auth } from '../../utils/auth';
 
 const SignUp = () => {
   const [formData, setFormData] = useState({
@@ -13,6 +14,7 @@ const SignUp = () => {
     email: '',
     password: '',
   });
+  const [success, setSuccess] = useState('');
 
   const [errors, setErrors] = useState({});
 
@@ -21,28 +23,101 @@ const SignUp = () => {
     setFormData({ ...formData, [name]: value });
   };
 
- const handleSubmit = async (e) => {
+ const [isSubmitting, setIsSubmitting] = useState(false);
+ const [isLoading, setIsLoading] = useState(false);
+const MAX_RETRIES = 2;
+
+const attemptSignup = async (retryCount = 0) => {
+  try {
+    const response = await api.post('/auth/signup', {
+      email: formData.email.trim(),
+      password: formData.password.trim()
+    });
+    
+    // If the response includes a token, store it
+    if (response.access_token) {
+      auth.setAuthToken(response.access_token);
+    }
+    
+    return { success: true, response };
+  } catch (error) {
+    if (
+      retryCount < MAX_RETRIES &&
+      error.response?.status === 500 &&
+      error.response?.data?.detail?.includes('Unable to connect to authentication service')
+    ) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      return attemptSignup(retryCount + 1);
+    }
+    return { success: false, error };
+  }
+};
+
+const handleSubmit = async (e) => {
   e.preventDefault();
+  if (isSubmitting) return;
 
   const validationErrors = {};
-  if (!formData.firstName.trim()) validationErrors.firstName = 'First name is required';
-  if (!formData.lastName.trim()) validationErrors.lastName = 'Last name is required';
-  if (!formData.username.trim()) validationErrors.username = 'Username is required';
-  if (!formData.email.trim()) validationErrors.email = 'Email is required';
-  if (!formData.password.trim()) validationErrors.password = 'Password is required';
+  if (!formData.email.trim()) {
+    validationErrors.email = 'Email is required';
+  } else if (!/^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$/.test(formData.email)) {
+    validationErrors.email = 'Please enter a valid email address';
+  }
+  if (!formData.password.trim()) {
+    validationErrors.password = 'Password is required';
+  } else if (formData.password.length < 6) {
+    validationErrors.password = 'Password must be at least 6 characters long';
+  }
 
   setErrors(validationErrors);
 
   if (Object.keys(validationErrors).length === 0) {
+    setIsSubmitting(true);
+    setErrors({});
+
     try {
-      const response = await api.post('/auth/signup', formData);
-      console.log('Signup Success:', response.data);
-      // Show success message or navigate to login
+      const { success, response: signupResponse, error } = await attemptSignup();
+
+      if (!success) {
+        let errorMessage = 'An error occurred while connecting to the server';
+
+        if (error.response) {
+          if (error.response.status === 422) {
+            // Validation errors from FastAPI
+            errorMessage = error.response.data.detail;
+          } else if (error.response.status === 400) {
+            // Bad request errors (e.g., invalid credentials)
+            errorMessage = error.response.data.detail;
+          } else if (error.response.status === 500) {
+            // Server errors
+            errorMessage = error.response.data.detail || 'An unexpected error occurred. Please try again later.';
+          } else {
+            errorMessage = error.response.data.detail || 'An error occurred during signup';
+          }
+        }
+        
+        setErrors({
+          api: errorMessage,
+        });
+        return;
+      }
+
+      // Successfully signed up
+      setSuccess('Successfully signed up!');
+      
+      // If we got a token in the response, we're already logged in
+      if (signupResponse.access_token) {
+        auth.redirectToDashboard();
+      } else {
+        // If no token, redirect to login to get one
+        auth.redirectToLogin();
+      }
     } catch (error) {
-      console.error('Signup Error:', error.response?.data || error.message);
       setErrors({
-        api: error.response?.data?.message || 'Something went wrong during signup!',
+        api: 'An unexpected error occurred. Please try again.',
       });
+    } finally {
+      setIsSubmitting(false);
     }
   }
 };
@@ -93,6 +168,18 @@ const SignUp = () => {
           <p className="text-center text-gray-300 mb-4">Or</p>
 
           <form onSubmit={handleSubmit}>
+            {success && (
+              <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4">
+                <span className="block sm:inline">{success}</span>
+              </div>
+            )}
+            
+            {errors.api && (
+              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
+                <span className="block sm:inline">{errors.api}</span>
+              </div>
+            )}
+
             {/* First & Last Name side by side */}
             <div className="grid grid-cols-2 gap-4">
               <FormField
@@ -166,9 +253,22 @@ const SignUp = () => {
             {/* Submit Button */}
             <button
               type="submit"
-              className="w-full py-2 mt-4 rounded-lg bg-gradient-to-r from-purple-600 to-blue-600 text-white font-semibold hover:opacity-90"
+              disabled={isSubmitting}
+              className={`w-full py-2 mt-4 rounded-lg bg-gradient-to-r from-purple-600 to-blue-600 text-white font-semibold ${
+                isSubmitting ? 'opacity-75 cursor-not-allowed' : 'hover:opacity-90'
+              }`}
             >
-              Sign Up
+              {isSubmitting ? (
+                <div className="flex items-center justify-center">
+                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Signing up...
+                </div>
+              ) : (
+                'Sign Up'
+              )}
             </button>
           </form>
 
