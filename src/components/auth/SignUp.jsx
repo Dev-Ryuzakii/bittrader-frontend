@@ -3,7 +3,7 @@ import FormField from '../UI/FormField';
 import { User, Mail, Lock } from 'lucide-react';
 import BG from '../../assets/BG.png'; 
 import { Link } from 'react-router-dom';
-import api from '../../api/api';
+import { authAPI } from '../../api/api';
 import { auth } from '../../utils/auth';
 
 const SignUp = () => {
@@ -29,7 +29,7 @@ const MAX_RETRIES = 2;
 
 const attemptSignup = async (retryCount = 0) => {
   try {
-    const response = await api.post('/auth/signup', {
+    const response = await authAPI.signup({
       email: formData.email.trim(),
       password: formData.password.trim()
     });

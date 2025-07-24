@@ -2,17 +2,21 @@ import React, { useState } from 'react';
 import { Mail, Lock } from 'lucide-react';
 import BG from '../../assets/BG.png';
 import FormField from '../UI/FormField';
-import { Link } from 'react-router-dom';
-import api from '../../api/api';
-import { auth } from '../../utils/auth';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { authAPI } from '../../api/api';
+import { useAuth } from '../../contexts/AuthContext.jsx';
 
 const SignIn = () => {
+  const { login } = useAuth();
   const [formData, setFormData] = useState({
     email: '',
     password: '',
   });
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
+  const from = location.state?.from?.pathname || '/dashboard';
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -35,24 +39,27 @@ const SignIn = () => {
     if (Object.keys(validationErrors).length === 0) {
       setIsSubmitting(true);
       try {
-        const response = await api.post('/auth/login', formData);
-        console.log('Login response:', response);
+        // Call the API to authenticate
+        const response = await authAPI.login({
+          email: formData.email,
+          password: formData.password
+        });
         
-        if (response.data && response.data.access_token) {
-          // Store token and redirect
-          auth.setAuthToken(response.data.access_token);
-          auth.redirectToDashboard();
-        } else {
-          console.error('Missing access token in response:', response); // Debug log
-          setErrors({
-            api: 'Authentication failed',
-          });
-        }
+        // Extract token and user data from response
+        const { access_token, user } = response;
+        
+        // Update auth context with user data and token
+        await login(user, access_token);
+        
+        // Navigate to intended page
+        navigate(from, { replace: true });
       } catch (error) {
         console.error('Login Error:', error);
         let errorMessage = 'Invalid credentials or server error!';
         if (error.response?.data?.detail) {
           errorMessage = error.response.data.detail;
+        } else if (error.message) {
+          errorMessage = error.message;
         }
         setErrors({
           api: errorMessage,
@@ -73,7 +80,7 @@ const SignIn = () => {
       <div className="relative z-10 w-full max-w-md bg-white/10 backdrop-blur-lg rounded-xl shadow-2xl p-8">
         {/* Logo */}
         <div className="flex justify-center mb-6">
-          <h1 className="text-2xl text-white font-bold tracking-wide">Bitetrader</h1>
+          <h1 className="text-2xl text-white font-bold tracking-wide">Tradexas</h1>
         </div>
 
         {/* Sign In Form */}
