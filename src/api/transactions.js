@@ -65,9 +65,7 @@ export const getTransactions = async (params = {}) => {
         page_size: response.data.page_size || pageSize,
         total_pages: Math.ceil((response.data.total || 0) / pageSize)
       }
-    };
-    
-  } catch (apiError) {
+    };  } catch (apiError) {
     // Log API failures in development
     if (process.env.NODE_ENV === 'development') {
       console.error('Transactions API failed:', {

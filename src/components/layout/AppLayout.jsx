@@ -5,7 +5,7 @@ const AppLayout = ({ children }) => {
     <div className="min-h-screen bg-black text-white">
       <nav className="bg-[#1A1A1A] border-b border-[#2A2A2A] px-6 py-4">
         <div className="flex items-center justify-between">
-          <div className="text-xl font-bold">BitTrader</div>
+          <div className="text-xl font-bold">Tradexas</div>
           <div className="flex items-center space-x-4">
             {/* Add navigation items here */}
           </div>

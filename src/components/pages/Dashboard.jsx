@@ -2,39 +2,91 @@ import React, { useState, useEffect } from 'react';
 import AccountCard from '../UI/AccountCard';
 import AccountSlider from '../UI/AccountSlider';
 import MarketOverview from '../UI/MarketOverview';
-import TradingSection from '../UI/TradingSection';
+import TradingViewWidget from '../UI/TradingViewWidget';
+import FallbackChart from '../UI/FallbackChart';
+import ErrorBoundary from '../UI/ErrorBoundary';
+import TradeModal from '../modals/TradeModal';
 import TransactionsTable from '../UI/TransactionsTable';
 import { TrendingUp, Users, Activity, Target, Plus, BarChart3, Zap } from 'lucide-react';
 import { getTransactions } from '../../api/transactions';
+import { getAccounts, placeTrade } from '../../api/broker';
 
 const Dashboard = () => {
   const [transactions, setTransactions] = useState([]);
   const [transactionsLoading, setTransactionsLoading] = useState(true);
+  const [brokerAccounts, setBrokerAccounts] = useState([]);
+  const [isTradeModalOpen, setIsTradeModalOpen] = useState(false);
+  const [selectedAccount, setSelectedAccount] = useState(null);
+  const [tradeStatus, setTradeStatus] = useState({ loading: false, success: false, error: null });
 
-  // Fetch transactions on component mount
+  // Fetch transactions and accounts on component mount
   useEffect(() => {
-    const fetchTransactions = async () => {
+    const fetchData = async () => {
+      // Don't let API errors block the dashboard from loading
+      setTransactionsLoading(true);
+      
+      // Fetch transactions with error isolation
       try {
-        setTransactionsLoading(true);
-        const response = await getTransactions({ limit: 5 }); // Get only 5 for dashboard preview
-        if (response.success) {
-          setTransactions(response.data);
+        const transactionsResponse = await getTransactions({ limit: 5 });
+        if (transactionsResponse.success) {
+          setTransactions(transactionsResponse.data);
         }
-      } catch (error) {
-        console.error('Error fetching transactions:', error);
-      } finally {
-        setTransactionsLoading(false);
+      } catch (transactionError) {
+        console.log('⚠️ Transactions API unavailable, dashboard will work without transaction data');
       }
+      
+      // Fetch broker accounts with error isolation  
+      try {
+        const accountsResponse = await getAccounts();
+        if (accountsResponse.success && accountsResponse.data && accountsResponse.data.length > 0) {
+          console.log('✅ Broker accounts loaded:', accountsResponse.data);
+          setBrokerAccounts(accountsResponse.data);
+          setSelectedAccount(accountsResponse.data[0]);
+        } else {
+          console.log('⚠️ No broker accounts found, using demo accounts');
+          if (demoAccounts.length > 0) {
+            setSelectedAccount(demoAccounts[0]);
+          }
+        }
+      } catch (brokerError) {
+        console.log('⚠️ Broker API unavailable, using demo accounts');
+        if (demoAccounts.length > 0) {
+          setSelectedAccount(demoAccounts[0]);
+        }
+      }
+      
+      setTransactionsLoading(false);
     };
 
-    fetchTransactions();
+    fetchData();
   }, []);
+  
+  // Handle placing a trade
+  const handlePlaceTrade = async (accountId, tradeData) => {
+    setTradeStatus({ loading: true, success: false, error: null });
+    
+    try {
+      const response = await placeTrade(accountId, tradeData);
+      
+      if (response.success) {
+        setTradeStatus({ loading: false, success: true, error: null });
+        // You could update the UI or show a success message here
+        console.log('Trade placed successfully:', response.data);
+        return response.data;
+      } else {
+        throw new Error(response.error || 'Failed to place trade');
+      }
+    } catch (error) {
+      setTradeStatus({ loading: false, success: false, error: error.message });
+      throw error;
+    }
+  };
 
   // Demo data - this will later come from backend when accounts are linked
   const demoAccounts = [
     {
       id: 1,
-      accountName: "MT5 Demo Account",
+      accountName: "PepperStone",
       balance: 17228.17,
       pnl: 5459.05,
       equity: 9475.12,
@@ -42,7 +94,7 @@ const Dashboard = () => {
     },
     {
       id: 2,
-      accountName: "Live Trading Account",
+      accountName: "FXPRO",
       balance: 27413.21,
       pnl: 11512.47,
       equity: 3715.31,
@@ -50,7 +102,7 @@ const Dashboard = () => {
     },
     {
       id: 3,
-      accountName: "Strategy Test Account",
+      accountName: "FINALTO",
       balance: 24148.06,
       pnl: 17721.76,
       equity: 4312.91,
@@ -159,9 +211,79 @@ const Dashboard = () => {
         <MarketOverview />
       </div>
 
-      {/* Trading Section */}
+      {/* TradingView Chart Section */}
       <div className="mb-8">
-        <TradingSection />
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center space-x-4">
+            <h2 className="text-xl font-semibold text-white">Live Trading Chart</h2>
+            {selectedAccount && (
+              <div className="bg-blue-600/20 text-blue-400 px-3 py-1 rounded-full text-sm">
+                Trading on: {selectedAccount.broker_name || selectedAccount.accountName}
+              </div>
+            )}
+          </div>
+          <div className="flex items-center space-x-2">
+            <select 
+              className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg text-sm text-white px-3 py-1"
+              onChange={(e) => {
+                const accountId = e.target.value;
+                // First check demo accounts
+                let account = demoAccounts.find(a => a.id.toString() === accountId);
+                // If not found in demo accounts, check broker accounts
+                if (!account && brokerAccounts.length > 0) {
+                  account = brokerAccounts.find(a => a.id === accountId);
+                }
+                if (account) {
+                  setSelectedAccount(account);
+                }
+              }}
+              value={selectedAccount?.id?.toString() || ''}
+            >
+              <option value="" disabled>Select account</option>
+              {demoAccounts.map((account) => (
+                <option key={`demo-${account.id}`} value={account.id}>
+                  {account.accountName}
+                </option>
+              ))}
+              {brokerAccounts && brokerAccounts.length > 0 && brokerAccounts.map((account) => (
+                <option key={account.id} value={account.id}>
+                  {account.broker_name || 'Broker'} - {account.login || 'Account'}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+        
+        <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg overflow-hidden">
+            <TradingViewWidget />
+        </div>
+        
+        {/* Trading status message */}
+        {tradeStatus.success && (
+          <div className="mt-2 bg-green-900/30 border border-green-700 text-green-200 px-4 py-2 rounded">
+            Trade placed successfully
+          </div>
+        )}
+        
+        {tradeStatus.error && (
+          <div className="mt-2 bg-red-900/30 border border-red-700 text-red-200 px-4 py-2 rounded">
+            Error placing trade: {tradeStatus.error}
+          </div>
+        )}
+        
+        {/* Trade Modal */}
+        <TradeModal 
+          isOpen={isTradeModalOpen}
+          onClose={() => {
+            setIsTradeModalOpen(false);
+            // Reset trade status when closing modal
+            setTradeStatus({ loading: false, success: false, error: null });
+          }}
+          accounts={[...demoAccounts, ...brokerAccounts]}
+          selectedAccount={selectedAccount}
+          onAccountSelect={setSelectedAccount}
+          onPlaceTrade={handlePlaceTrade}
+        />
       </div>
       
       {/* Transactions Section */}

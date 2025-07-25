@@ -75,7 +75,7 @@ const MarketCard = ({
     return `${sign}${value.toLocaleString()}`;
   };
 
-  // Enhanced SVG chart component
+  // Simple SVG chart component
   const MiniChart = ({ data, isPositive }) => {
     if (!data || data.length === 0) return null;
 
@@ -91,91 +91,46 @@ const MarketCard = ({
       return `${x},${y}`;
     }).join(' ');
 
-    // Create a closed area for the gradient fill
-    const areaPoints = `0,${height} ${points} ${width},${height}`;
-    
-    // Define gradient colors based on trend
-    const gradientColor = isPositive ? 
-      ["rgba(16, 185, 129, 0.3)", "rgba(16, 185, 129, 0)"] : 
-      ["rgba(239, 68, 68, 0.3)", "rgba(239, 68, 68, 0)"];
-    
-    const strokeColor = isPositive ? "#10b981" : "#ef4444";
-    
     return (
-      <svg width={width} height={height} className="opacity-90">
-        <defs>
-          <linearGradient id={`chartGradient-${isPositive ? 'up' : 'down'}`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={gradientColor[0]} />
-            <stop offset="100%" stopColor={gradientColor[1]} />
-          </linearGradient>
-        </defs>
-        
-        {/* Gradient area */}
-        <polygon
-          points={areaPoints}
-          fill={`url(#chartGradient-${isPositive ? 'up' : 'down'})`}
-        />
-        
-        {/* Line */}
+      <svg width={width} height={height} className="opacity-80">
         <polyline
           points={points}
           fill="none"
-          stroke={strokeColor}
-          strokeWidth="2"
+          stroke={isPositive ? "#10b981" : "#ef4444"}
+          strokeWidth="1.5"
           strokeLinecap="round"
           strokeLinejoin="round"
-        />
-        
-        {/* Highlight the last point */}
-        <circle 
-          cx={(data.length - 1) / (data.length - 1) * width} 
-          cy={height - ((data[data.length - 1] - min) / range) * height} 
-          r="2" 
-          fill="#fff" 
-          stroke={strokeColor} 
-          strokeWidth="1" 
         />
       </svg>
     );
   };
 
   return (
-    <div className={`relative bg-gradient-to-br ${currentVariant.gradient} rounded-lg p-4 border ${currentVariant.border} 
-      hover:shadow-lg ${currentVariant.glow} transition-all duration-300 hover:scale-[1.02] 
-      min-w-[220px] max-w-[260px] backdrop-blur-sm cursor-pointer`}>
-      
-      {/* Shimmering effect for background */}
-      <div className="absolute inset-0 overflow-hidden rounded-lg pointer-events-none">
-        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-50"></div>
-        <div className="absolute inset-y-0 right-0 w-px bg-gradient-to-b from-transparent via-white/20 to-transparent opacity-50"></div>
-      </div>
-      
+    <div className={`relative bg-gradient-to-br ${currentVariant.gradient} rounded-lg p-4 border ${currentVariant.border} hover:shadow-lg ${currentVariant.glow} transition-all duration-300 hover:scale-[1.02] min-w-[200px] max-w-[240px] backdrop-blur-sm`}>
       {/* Header */}
-      <div className="flex items-center justify-between mb-3 relative z-10">
+      <div className="flex items-center justify-between mb-3">
         <div className="flex items-center space-x-2">
-          <div className={`w-9 h-9 rounded-full bg-gradient-to-r ${currentVariant.accent} 
-            flex items-center justify-center text-white text-xs font-bold shadow-lg`}>
+          <div className={`w-8 h-8 rounded-full bg-gradient-to-r ${currentVariant.accent} flex items-center justify-center text-white text-xs font-bold`}>
             {symbol.substring(0, 2).toUpperCase()}
           </div>
           <div>
-            <div className="text-white font-bold text-sm">{symbol}</div>
+            <div className="text-white font-medium text-sm">{symbol}</div>
             <div className="text-gray-300 text-xs">{name}</div>
           </div>
         </div>
       </div>
 
-      {/* Price with animation */}
-      <div className="mb-3 relative z-10">
-        <div className="text-white text-lg font-bold mb-1 transition-all duration-300">
+      {/* Price */}
+      <div className="mb-3">
+        <div className="text-white text-lg font-bold mb-1">
           {formatPrice(animatedPrice)}
         </div>
         <div className="flex items-center space-x-2">
-          <div className={`flex items-center space-x-1 ${isPositive ? 'text-green-400' : 'text-red-400'} 
-            rounded-full px-2 py-0.5 bg-white/5 backdrop-blur-sm`}>
+          <div className={`flex items-center space-x-1 ${isPositive ? 'text-green-400' : 'text-red-400'}`}>
             {isPositive ? (
-              <TrendingUp size={12} strokeWidth={2.5} />
+              <TrendingUp size={12} />
             ) : (
-              <TrendingDown size={12} strokeWidth={2.5} />
+              <TrendingDown size={12} />
             )}
             <span className="text-xs font-medium">
               {formatChange(change)} ({changePercent > 0 ? '+' : ''}{changePercent.toFixed(1)}%)
@@ -185,17 +140,12 @@ const MarketCard = ({
       </div>
 
       {/* Mini Chart */}
-      <div className="flex justify-end relative z-10">
+      <div className="flex justify-end">
         <MiniChart data={chartData} isPositive={isPositive} />
       </div>
 
-      {/* Bottom accent line with animation */}
-      <div className={`absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r ${currentVariant.accent} 
-        rounded-b-lg opacity-80 group-hover:opacity-100 transition-opacity duration-300`}></div>
-        
-      {/* Pulse effect for active price changes */}
-      <div className={`absolute -inset-0.5 bg-gradient-to-r ${currentVariant.accent} rounded-lg opacity-0
-        filter blur-md transition-opacity duration-300 ${Math.random() > 0.8 ? 'animate-pulse opacity-10' : ''}`}></div>
+      {/* Bottom accent line */}
+      <div className={`absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r ${currentVariant.accent} rounded-b-lg`}></div>
     </div>
   );
 };
@@ -271,70 +221,30 @@ const MarketOverview = () => {
     }
   ]);
 
-  // State for timeframe and selected market
-  const [timeframe, setTimeframe] = useState('24h');
-  const [selectedMarket, setSelectedMarket] = useState(null);
-  
-  // Handle market card selection
-  const handleMarketSelect = (id) => {
-    setSelectedMarket(selectedMarket === id ? null : id);
-  };
-
   // Simulate real-time updates
   useEffect(() => {
     const interval = setInterval(() => {
       setMarketData(prevData => 
-        prevData.map(item => {
-          // Generate more realistic price movements
-          const priceChange = item.price * (Math.random() - 0.48) * 0.01;
-          const newPrice = item.price + priceChange;
-          const newChange = item.change + priceChange;
-          const newPercentage = (newChange / (newPrice - newChange)) * 100;
-          
-          return {
-            ...item,
-            price: newPrice,
-            change: newChange,
-            changePercent: newPercentage,
-            chartData: [...item.chartData.slice(1), newPrice]
-          };
-        })
+        prevData.map(item => ({
+          ...item,
+          price: item.price + (Math.random() - 0.5) * 50,
+          change: item.change + (Math.random() - 0.5) * 10,
+          changePercent: item.changePercent + (Math.random() - 0.5) * 2,
+          chartData: [...item.chartData.slice(1), item.price + (Math.random() - 0.5) * 100]
+        }))
       );
-    }, 3000); // Update every 3 seconds for more dynamic feeling
+    }, 5000); // Update every 5 seconds
 
     return () => clearInterval(interval);
   }, []);
 
   return (
-    <div className="p-6 bg-slate-900/40 rounded-xl border border-slate-800/50 backdrop-blur-sm">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h3 className="text-xl font-bold text-white mb-1">Market Overview</h3>
-          <p className="text-gray-400 text-sm">Real-time crypto price movements</p>
-        </div>
-        
+    <div className=" p-6">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-semibold text-white">Market Overview</h3>
         <div className="flex items-center space-x-2">
-          {/* Timeframe selector */}
-          <div className="bg-slate-800/50 rounded-lg p-1 flex items-center space-x-1">
-            {['1h', '24h', '7d', '30d'].map((time) => (
-              <button
-                key={time}
-                onClick={() => setTimeframe(time)}
-                className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${
-                  timeframe === time
-                    ? 'bg-blue-600 text-white shadow-md'
-                    : 'text-gray-400 hover:text-white'
-                }`}
-              >
-                {time}
-              </button>
-            ))}
-          </div>
-          
-          <div className="flex items-center space-x-2 ml-4">
-            <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-            <span className="text-xs text-gray-400">Live</span>
-          </div>
+          <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+          <span className="text-xs text-gray-400">Live</span>
         </div>
       </div>
       
@@ -342,24 +252,17 @@ const MarketOverview = () => {
       <div className="overflow-x-auto">
         <div className="flex space-x-4 pb-2" style={{ minWidth: 'max-content' }}>
           {marketData.map((item) => (
-            <div 
+            <MarketCard
               key={item.id}
-              onClick={() => handleMarketSelect(item.id)}
-              className={`transition-all duration-300 ${
-                selectedMarket && selectedMarket !== item.id ? 'opacity-50 scale-95' : 'opacity-100'
-              }`}
-            >
-              <MarketCard
-                symbol={item.symbol}
-                name={item.name}
-                price={item.price}
-                change={item.change}
-                changePercent={item.changePercent}
-                chartData={item.chartData}
-                colorVariant={item.colorVariant}
-                currency={item.currency}
-              />
-            </div>
+              symbol={item.symbol}
+              name={item.name}
+              price={item.price}
+              change={item.change}
+              changePercent={item.changePercent}
+              chartData={item.chartData}
+              colorVariant={item.colorVariant}
+              currency={item.currency}
+            />
           ))}
         </div>
       </div>

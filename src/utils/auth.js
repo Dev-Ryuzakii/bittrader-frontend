@@ -18,36 +18,7 @@ const getAuthToken = () => {
 };
 
 const isAuthenticated = () => {
-  const token = getAuthToken();
-  if (!token) return false;
-  
-  try {
-    // Basic check for token format
-    if (!token.startsWith('Bearer ')) return false;
-    
-    // Extract the actual token part
-    const actualToken = token.split(' ')[1];
-    if (!actualToken) return false;
-    
-    // For JWT tokens, check if it's expired (basic validation)
-    try {
-      const payload = JSON.parse(atob(actualToken.split('.')[1]));
-      if (payload.exp && payload.exp * 1000 < Date.now()) {
-        // Token is expired, clear it
-        clearAuth();
-        return false;
-      }
-    } catch (e) {
-      // Not a JWT or couldn't parse, but token exists so assume it's valid
-      // The server will validate it properly
-    }
-    
-    return true;
-  } catch (error) {
-    console.error('Token validation error:', error);
-    clearAuth();
-    return false;
-  }
+  return !!getAuthToken();
 };
 
 // Handle redirects

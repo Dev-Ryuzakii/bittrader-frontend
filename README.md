@@ -1,83 +1,13 @@
-# Bittrader Frontend
+# React + Vite
 
-A comprehensive trading platform frontend built with React, Vite, and TradingView integration.
+This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
-## Features
+Currently, two official plugins are available:
 
-- Real-time market data visualization with TradingView charts
-- Advanced trading interface with order placement capabilities
-- Account management and position tracking
-- Technical analysis tools and indicators
-- Community and social trading features
-- AI-powered trading assistant
-- Responsive design for desktop and mobile
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
 
-## TradingView Chart Integration
+## Expanding the ESLint configuration
 
-This project features a fully integrated TradingView chart component that provides:
-
-- Candlestick charts for all major asset classes (forex, crypto, stocks, indices)
-- Multiple timeframe options from 1-minute to monthly charts
-- Technical indicators and drawing tools
-- Volume profile analysis
-- Custom themes and chart settings
-
-For more details, see the [TradingView Integration Guide](/docs/TradingViewIntegration.md).
-
-## Getting Started
-
-### Prerequisites
-
-- Node.js 16+ 
-- npm or yarn
-
-### Installation
-
-```bash
-# Clone the repository
-git clone https://github.com/yourusername/bittrader-frontend.git
-cd bittrader-frontend
-
-# Install dependencies
-npm install
-
-# Start development server
-npm run dev
-```
-
-## Project Structure
-
-- `/src/components/UI` - UI components including TradingView chart
-- `/src/utils` - Utility functions and helpers
-- `/src/api` - API integration for market data and trading
-- `/src/contexts` - React context providers
-- `/docs` - Documentation
-
-## Using the TradingView Chart Component
-
-```jsx
-import AdvancedTradingViewChart from './components/UI/AdvancedTradingViewChart';
-
-function TradingPage() {
-  return (
-    <div className="chart-container">
-      <AdvancedTradingViewChart 
-        symbol="EURUSD"
-        theme="dark"
-        height={600}
-        interval="D"
-        showToolbar={true}
-        showVolumeProfile={true}
-      />
-    </div>
-  );
-}
-```
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
+If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+# bittrader-frontend

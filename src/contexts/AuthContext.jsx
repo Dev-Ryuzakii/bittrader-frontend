@@ -17,36 +17,20 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
 
   useEffect(() => {
-    const checkAuthStatus = async () => {
+    const checkAuthStatus = () => {
       try {
         const token = auth.getAuthToken();
-        const basicAuthCheck = auth.isAuthenticated();
+        const authenticated = auth.isAuthenticated();
         
-        if (!basicAuthCheck) {
-          setIsAuthenticated(false);
-          setUser(null);
-          setIsLoading(false);
-          return;
-        }
+        setIsAuthenticated(authenticated);
         
-        // If we have a token, validate it with the server
-        try {
-          const { authAPI } = await import('../api/api.js');
-          await authAPI.validateToken();
-          
-          // Token is valid, set authenticated state
-          setIsAuthenticated(true);
-          
+        if (authenticated) {
           // Try to get user data from localStorage
           const userData = localStorage.getItem('user');
           if (userData) {
             setUser(JSON.parse(userData));
           }
-        } catch (error) {
-          // Token validation failed, clear auth state
-          console.error('Token validation failed:', error);
-          auth.clearAuth();
-          setIsAuthenticated(false);
+        } else {
           setUser(null);
         }
       } catch (error) {
