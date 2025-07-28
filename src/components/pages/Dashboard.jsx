@@ -117,21 +117,24 @@ const Dashboard = () => {
   // Use real accounts if available, otherwise show demo accounts
   const displayAccounts = brokerAccounts.length > 0 ? brokerAccounts : demoAccounts;
 
-  // Transform broker accounts to match the expected format for AccountSlider
-  const formattedAccounts = displayAccounts.map(account => ({
-    ...account,
-    accountName: account.account_name || account.broker_name || account.accountName || 'Unnamed Account',
-    balance: account.balance || 0,
-    pnl: account.pnl || 0,
-    equity: account.equity || account.balance || 0,
-    // Use colorVariant + 2 to skip the first two variants (1 is for total, 2 starts individual accounts)
-    colorVariant: (account.colorVariant || 0) + 2
-  }));
+  // Filter only active accounts and transform to match the expected format for AccountSlider
+  const formattedAccounts = displayAccounts
+    .filter(account => account.is_active !== false) // Show demo accounts (no is_active property) and active broker accounts
+    .map(account => ({
+      ...account,
+      accountName: account.account_name || account.broker_name || account.accountName || 'Unnamed Account',
+      balance: account.is_active !== false ? (account.balance || 0) : 0, // Show balance only for active accounts
+      pnl: account.is_active !== false ? (account.pnl || 0) : 0,
+      equity: account.is_active !== false ? (account.equity || account.balance || 0) : 0,
+      // Use colorVariant + 2 to skip the first two variants (1 is for total, 2 starts individual accounts)
+      colorVariant: (account.colorVariant || 0) + 2
+    }));
 
-  // Calculate totals
-  const totalBalance = formattedAccounts.reduce((sum, account) => sum + (account.balance || 0), 0);
-  const totalPnl = formattedAccounts.reduce((sum, account) => sum + (account.pnl || 0), 0);
-  const totalEquity = formattedAccounts.reduce((sum, account) => sum + (account.equity || 0), 0);
+  // Calculate totals (only from active accounts)
+  const activeAccounts = displayAccounts.filter(account => account.is_active !== false);
+  const totalBalance = activeAccounts.reduce((sum, account) => sum + (account.balance || 0), 0);
+  const totalPnl = activeAccounts.reduce((sum, account) => sum + (account.pnl || 0), 0);
+  const totalEquity = activeAccounts.reduce((sum, account) => sum + (account.equity || 0), 0);
 
   // Stats data
   const stats = [
@@ -211,7 +214,7 @@ const Dashboard = () => {
             <span className="text-sm text-gray-400">{formattedAccounts.length} account{formattedAccounts.length !== 1 ? 's' : ''}</span>
             {brokerAccounts.length === 0 && (
               <button 
-                onClick={() => window.location.href = '/accounts'}
+                onClick={() => window.location.href = '/accounts-aggregation'}
                 className="text-blue-400 hover:text-blue-300 text-sm transition-colors"
               >
                 Connect Account
@@ -347,63 +350,56 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-6">
-          <div className="flex items-center space-x-3 mb-4">
-            <div className="p-2 bg-blue-500/10 rounded-lg">
-              <BarChart3 size={20} className="text-blue-400" />
+     
+
+      {/* Simple Footer */}
+      <footer className="mt-16 border-t border-[#2A2A2A] pt-6 pb-6">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
+          {/* Left side - Logo and company info */}
+          <div className="flex items-center space-x-6">
+            <div className="flex items-center space-x-2">
+              <div className="w-6 h-6 bg-blue-600 rounded flex items-center justify-center">
+                <div className="w-2 h-2 bg-white rounded-sm"></div>
+              </div>
+              <span className="text-lg font-bold text-white">Bitetrader</span>
             </div>
-            <h3 className="text-lg font-semibold text-white">Quick Actions</h3>
+            <nav className="hidden md:flex items-center space-x-6">
+              <a href="#" className="text-gray-400 hover:text-white text-sm transition-colors">Overview</a>
+              <a href="#" className="text-gray-400 hover:text-white text-sm transition-colors">Features</a>
+              <a href="#" className="text-gray-400 hover:text-white text-sm transition-colors">Pricing</a>
+              <a href="#" className="text-gray-400 hover:text-white text-sm transition-colors">Careers</a>
+              <a href="#" className="text-gray-400 hover:text-white text-sm transition-colors">Help</a>
+              <a href="#" className="text-gray-400 hover:text-white text-sm transition-colors">Privacy</a>
+            </nav>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <button className="bg-blue-600/10 hover:bg-blue-600/20 border border-blue-600/20 text-blue-400 px-4 py-3 rounded-lg transition-colors text-sm">
-              View Analytics
-            </button>
-            <button className="bg-green-600/10 hover:bg-green-600/20 border border-green-600/20 text-green-400 px-4 py-3 rounded-lg transition-colors text-sm">
-              Strategy Lab
-            </button>
-            <button className="bg-purple-600/10 hover:bg-purple-600/20 border border-purple-600/20 text-purple-400 px-4 py-3 rounded-lg transition-colors text-sm">
-              AI Assistant
-            </button>
-            <button className="bg-orange-600/10 hover:bg-orange-600/20 border border-orange-600/20 text-orange-400 px-4 py-3 rounded-lg transition-colors text-sm">
-              Research
-            </button>
+
+          {/* Right side - Newsletter signup */}
+          <div className="flex items-center space-x-4">
+            <span className="text-sm text-gray-400">Stay up to date</span>
+            <div className="flex space-x-2">
+              <input 
+                type="email" 
+                placeholder="Enter your email" 
+                className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg px-3 py-2 text-white text-sm w-48 focus:outline-none focus:border-blue-600"
+              />
+              <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm transition-colors">
+                Subscribe
+              </button>
+            </div>
           </div>
         </div>
 
-        <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-6">
-          <div className="flex items-center space-x-3 mb-4">
-            <div className="p-2 bg-green-500/10 rounded-lg">
-              <Zap size={20} className="text-green-400" />
-            </div>
-            <h3 className="text-lg font-semibold text-white">Recent Activity</h3>
-          </div>
-          <div className="space-y-3">
-            <div className="flex items-center justify-between py-2">
-              <div>
-                <p className="text-white text-sm">Strategy Updated</p>
-                <p className="text-gray-400 text-xs">Momentum Strategy v2.1</p>
-              </div>
-              <span className="text-green-400 text-xs">2m ago</span>
-            </div>
-            <div className="flex items-center justify-between py-2">
-              <div>
-                <p className="text-white text-sm">Trade Executed</p>
-                <p className="text-gray-400 text-xs">EUR/USD Buy +$1,247</p>
-              </div>
-              <span className="text-blue-400 text-xs">15m ago</span>
-            </div>
-            <div className="flex items-center justify-between py-2">
-              <div>
-                <p className="text-white text-sm">Account Connected</p>
-                <p className="text-gray-400 text-xs">MT5 Demo Account</p>
-              </div>
-              <span className="text-purple-400 text-xs">1h ago</span>
-            </div>
+        {/* Bottom copyright */}
+        <div className="mt-6 pt-4 border-t border-[#2A2A2A] flex flex-col md:flex-row md:items-center md:justify-between space-y-2 md:space-y-0">
+          <div className="flex items-center space-x-4 text-sm text-gray-400">
+            <span>© 2077 Untitled UI. All rights reserved.</span>
+            <span className="hidden md:inline">•</span>
+            <a href="#" className="hover:text-white transition-colors">Terms</a>
+            <a href="#" className="hover:text-white transition-colors">Privacy</a>
+            <a href="#" className="hover:text-white transition-colors">Cookies</a>
           </div>
         </div>
-      </div>
+      </footer>
     </div>
   );
 };

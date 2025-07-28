@@ -1,6 +1,8 @@
 import React, { useState } from 'react'
 import { Routes, Route, useLocation } from 'react-router-dom'
 import { useAuth } from './contexts/AuthContext.jsx'
+import { ToastProvider } from './contexts/ToastContext.jsx'
+import { ConfirmProvider } from './contexts/ConfirmContext.jsx'
 import ProtectedRoute from './components/ProtectedRoute.jsx'
 import Hero from './components/pages/Hero'
 import SignIn from './components/auth/SignIn'
@@ -31,89 +33,93 @@ const App = () => {
   const showNavigation = isAuthenticated && !isPublicRoute;
 
   return (
-    <div className="flex h-screen bg-[#0A0A0A]">
-      {showNavigation && (
-        <Sidebar 
-          isMobileMenuOpen={isMobileMenuOpen} 
-          setIsMobileMenuOpen={setIsMobileMenuOpen} 
-        />
-      )}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {showNavigation && (
-          <Navbar 
-            isMobileMenuOpen={isMobileMenuOpen} 
-            setIsMobileMenuOpen={setIsMobileMenuOpen} 
-          />
-        )}
-        <main className={`flex-1 overflow-auto ${showNavigation ? 'bg-[#0A0A0A]' : ''}`}>
-          <Routes>
-            <Route path='/' element={<Hero />} />
-            <Route path='/signin' element={<SignIn />} />
-            <Route path='/signup' element={<SignUp />} />
-            <Route path='/dashboard' element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            } />
-            <Route path='/ai-assistant' element={
-              <ProtectedRoute>
-                <div>AI Assistant Page</div>
-              </ProtectedRoute>
-            } />
-            <Route path='/analyst-insights' element={
-              <ProtectedRoute>
-                <AnalystInsights />
-              </ProtectedRoute>
-            } />
-            <Route path='/strategy-lab' element={
-              <ProtectedRoute>
-                <StrategyLab />
-              </ProtectedRoute>
-            } />
-            <Route path='/account-aggregation' element={
-              <ProtectedRoute>
-                <AccountAggregation />
-              </ProtectedRoute>
-            } />
-            <Route path='/community' element={
-              <ProtectedRoute>
-                <Community />
-              </ProtectedRoute>
-            } />
-            <Route path='/research' element={
-              <ProtectedRoute>
-                <Research />
-              </ProtectedRoute>
-            } />
-            <Route path='/analytics' element={
-              <ProtectedRoute>
-                <Analytics />
-              </ProtectedRoute>
-            } />
-            <Route path='/settings' element={
-              <ProtectedRoute>
-                <Settings />
-              </ProtectedRoute>
-            } />
-            <Route path='/support' element={
-              <ProtectedRoute>
-                <Support />
-              </ProtectedRoute>
-            } />
-            <Route path='/card-showcase' element={
-              <ProtectedRoute>
-                <CardShowcase />
-              </ProtectedRoute>
-            } />
-            <Route path='/transactions' element={
-              <ProtectedRoute>
-                <Transactions />
-              </ProtectedRoute>
-            } />
-          </Routes>
-        </main>
-      </div>
-    </div>
+    <ToastProvider>
+      <ConfirmProvider>
+        <div className="flex h-screen bg-[#0A0A0A]">
+          {showNavigation && (
+            <Sidebar 
+              isMobileMenuOpen={isMobileMenuOpen} 
+              setIsMobileMenuOpen={setIsMobileMenuOpen} 
+            />
+          )}
+          <div className="flex-1 flex flex-col overflow-hidden">
+            {showNavigation && (
+              <Navbar 
+                isMobileMenuOpen={isMobileMenuOpen} 
+                setIsMobileMenuOpen={setIsMobileMenuOpen} 
+              />
+            )}
+            <main className={`flex-1 overflow-auto ${showNavigation ? 'bg-[#0A0A0A]' : ''}`}>
+              <Routes>
+                <Route path='/' element={<Hero />} />
+                <Route path='/signin' element={<SignIn />} />
+                <Route path='/signup' element={<SignUp />} />
+                <Route path='/dashboard' element={
+                  <ProtectedRoute>
+                    <Dashboard />
+                  </ProtectedRoute>
+                } />
+                <Route path='/ai-assistant' element={
+                  <ProtectedRoute>
+                    <div>AI Assistant Page</div>
+                  </ProtectedRoute>
+                } />
+                <Route path='/analyst-insights' element={
+                  <ProtectedRoute>
+                    <AnalystInsights />
+                  </ProtectedRoute>
+                } />
+                <Route path='/strategy-lab' element={
+                  <ProtectedRoute>
+                    <StrategyLab />
+                  </ProtectedRoute>
+                } />
+                <Route path='/account-aggregation' element={
+                  <ProtectedRoute>
+                    <AccountAggregation />
+                  </ProtectedRoute>
+                } />
+                <Route path='/community' element={
+                  <ProtectedRoute>
+                    <Community />
+                  </ProtectedRoute>
+                } />
+                <Route path='/research' element={
+                  <ProtectedRoute>
+                    <Research />
+                  </ProtectedRoute>
+                } />
+                <Route path='/analytics' element={
+                  <ProtectedRoute>
+                    <Analytics />
+                  </ProtectedRoute>
+                } />
+                <Route path='/settings' element={
+                  <ProtectedRoute>
+                    <Settings />
+                  </ProtectedRoute>
+                } />
+                <Route path='/support' element={
+                  <ProtectedRoute>
+                    <Support />
+                  </ProtectedRoute>
+                } />
+                <Route path='/card-showcase' element={
+                  <ProtectedRoute>
+                    <CardShowcase />
+                  </ProtectedRoute>
+                } />
+                <Route path='/transactions' element={
+                  <ProtectedRoute>
+                    <Transactions />
+                  </ProtectedRoute>
+                } />
+              </Routes>
+            </main>
+          </div>
+        </div>
+      </ConfirmProvider>
+    </ToastProvider>
   )
 }
 

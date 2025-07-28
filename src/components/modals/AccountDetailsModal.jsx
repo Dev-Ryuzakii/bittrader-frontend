@@ -14,6 +14,13 @@ const AccountDetailsModal = ({ isOpen, onClose, account }) => {
   }, [isOpen, account]);
 
   const fetchAccountDetails = async () => {
+    // Check if account is disconnected
+    if (!account.is_active) {
+      setError('Account is disconnected. Please connect the account to view details.');
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     setError(null);
     
@@ -52,8 +59,18 @@ const AccountDetailsModal = ({ isOpen, onClose, account }) => {
             </div>
           </div>
         ) : error ? (
-          <div className="bg-red-500/10 border border-red-500/50 rounded-lg p-4 text-red-400">
-            {error}
+          <div className="text-center py-12">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-yellow-500/10 mb-4">
+              <Activity className="text-yellow-500" size={24} />
+            </div>
+            <h3 className="text-white text-xl font-semibold mb-2">Account Disconnected</h3>
+            <p className="text-gray-400 mb-6">{error}</p>
+            <div className="text-sm text-gray-500">
+              <p>To view account details:</p>
+              <p>• Go back to the Accounts page</p>
+              <p>• Toggle the connection switch to "ON"</p>
+              <p>• Return here to view live account data</p>
+            </div>
           </div>
         ) : details ? (
           <div className="space-y-6">

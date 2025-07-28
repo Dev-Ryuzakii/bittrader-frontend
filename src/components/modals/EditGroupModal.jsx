@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { groupChatAPI } from '../../api/community.js'
+import { useToast } from '../../contexts/ToastContext'
 
 const EditGroupModal = ({ isOpen, onClose, group, onGroupUpdated, onGroupDeleted }) => {
   const [formData, setFormData] = useState({
@@ -9,6 +10,7 @@ const EditGroupModal = ({ isOpen, onClose, group, onGroupUpdated, onGroupDeleted
   })
   const [loading, setLoading] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState(false)
+  const { toast } = useToast()
   const [deleteLoading, setDeleteLoading] = useState(false)
 
   useEffect(() => {
@@ -37,7 +39,7 @@ const EditGroupModal = ({ isOpen, onClose, group, onGroupUpdated, onGroupDeleted
       onClose()
     } catch (error) {
       console.error('Failed to update group:', error)
-      alert('Failed to update group. Please try again.')
+      toast.error('Failed to update group. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -53,7 +55,7 @@ const EditGroupModal = ({ isOpen, onClose, group, onGroupUpdated, onGroupDeleted
       onClose()
     } catch (error) {
       console.error('Failed to delete group:', error)
-      alert('Failed to delete group. Please try again.')
+      toast.error('Failed to delete group. Please try again.')
     } finally {
       setDeleteLoading(false)
     }

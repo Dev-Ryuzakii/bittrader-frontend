@@ -11,6 +11,7 @@ import {
   Filter,
   Search
 } from 'lucide-react';
+import { useToast } from '../../contexts/ToastContext';
 
 const StrategyLab = () => {
   const [strategies, setStrategies] = useState([]);
@@ -19,6 +20,7 @@ const StrategyLab = () => {
   const [activeTab, setActiveTab] = useState('browse');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const { toast } = useToast();
 
   useEffect(() => {
     // Mock data for demo - replace with actual API calls
@@ -203,7 +205,7 @@ const StrategyCard = ({ strategy, isFeatured = false }) => {
     setDownloading(true);
     // Simulate download
     setTimeout(() => {
-      alert(`Strategy "${strategy.name}" downloaded successfully!`);
+      toast.success(`Strategy "${strategy.name}" downloaded successfully!`);
       setDownloading(false);
     }, 2000);
   };

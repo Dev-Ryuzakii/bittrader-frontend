@@ -7,6 +7,8 @@ import AccountDetailsModal from '../modals/AccountDetailsModal';
 import Loader from '../UI/Loader';
 import { getAccounts, connectAccount, deleteAccount, updateAccount, toggleAccountStatus } from '../../api/broker';
 import { useAuth } from '../../contexts/AuthContext';
+import { useToast } from '../../contexts/ToastContext';
+import { useConfirm } from '../../contexts/ConfirmContext';
 
 const AccountAggregation = () => {
   const [accounts, setAccounts] = useState([]);
@@ -19,6 +21,8 @@ const AccountAggregation = () => {
   const [selectedAccount, setSelectedAccount] = useState(null);
   const [viewingAccount, setViewingAccount] = useState(null);
   const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { toast } = useToast();
+  const { confirm } = useConfirm();
 
   // Define color variants for account cards
   const colorVariants = [
@@ -59,14 +63,14 @@ const AccountAggregation = () => {
         setAccounts([]);
         // If it's an auth error, the client.js will handle redirect
         if (result.error.includes('unauthorized') || result.error.includes('403')) {
-          alert('Session expired. Please login again.');
+          toast.error('Session expired. Please login again.');
         }
       }
     } catch (error) {
       console.error('Failed to fetch accounts:', error);
       setAccounts([]);
       if (error.message.includes('unauthorized') || error.message.includes('403')) {
-        alert('Session expired. Please login again.');
+        toast.error('Session expired. Please login again.');
       }
     } finally {
       setLoading(false);
@@ -81,7 +85,7 @@ const AccountAggregation = () => {
 
   const handleConnect = async (formData) => {
     if (!isAuthenticated) {
-      alert('Please login to connect an account.');
+      toast.warning('Please login to connect an account.');
       return;
     }
 
@@ -91,42 +95,52 @@ const AccountAggregation = () => {
       if (result.success) {
         setShowConnectionModal(false);
         fetchAccounts();
-        alert('Account connected successfully!');
+        toast.success('Account connected successfully!');
       } else {
         console.error('Connection error:', result.error);
-        alert(`Connection failed: ${result.error}`);
+        toast.error(`Connection failed: ${result.error}`);
       }
     } catch (error) {
       console.error('Connection error:', error);
-      alert(`Connection failed: ${error.message}`);
+      toast.error(`Connection failed: ${error.message}`);
     }
   };
 
   const handleDeleteAccount = async (accountId, accountName) => {
     if (!isAuthenticated) {
-      alert('Please login to delete an account.');
+      toast.warning('Please login to delete an account.');
       return;
     }
 
-    const confirmDelete = window.confirm(`Are you sure you want to delete account "${accountName}"? This action cannot be undone.`);
-    if (!confirmDelete) return;
+    const confirmed = await confirm({
+      title: 'Delete Account',
+      message: `Are you sure you want to delete account "${accountName}"? This action cannot be undone.`,
+      confirmText: 'Delete',
+      variant: 'danger'
+    });
+
+    if (!confirmed) return;
 
     try {
       const result = await deleteAccount(accountId);
       if (result.success) {
         fetchAccounts();
-        alert('Account deleted successfully!');
+        toast.success('Account deleted successfully!');
       } else {
         console.error('Delete error:', result.error);
-        alert(`Delete failed: ${result.error}`);
+        toast.error(`Delete failed: ${result.error}`);
       }
     } catch (error) {
       console.error('Delete error:', error);
-      alert(`Delete failed: ${error.message}`);
+      toast.error(`Delete failed: ${error.message}`);
     }
   };
 
   const handleViewAccount = (account) => {
+    if (!account.is_active) {
+      toast.warning('Please connect the account first to view details.');
+      return;
+    }
     setViewingAccount(account);
     setShowDetailsModal(true);
   };
@@ -138,7 +152,7 @@ const AccountAggregation = () => {
 
   const handleToggleConnection = async (account) => {
     if (!isAuthenticated) {
-      alert('Please login to toggle account connection.');
+      toast.warning('Please login to toggle account connection.');
       return;
     }
 
@@ -147,14 +161,14 @@ const AccountAggregation = () => {
       if (result.success) {
         fetchAccounts();
         const status = !account.is_active ? 'connected' : 'disconnected';
-        alert(`Account ${status} successfully!`);
+        toast.success(`Account ${status} successfully!`);
       } else {
         console.error('Toggle error:', result.error);
-        alert(`Failed to toggle connection: ${result.error}`);
+        toast.error(`Failed to toggle connection: ${result.error}`);
       }
     } catch (error) {
       console.error('Toggle error:', error);
-      alert(`Failed to toggle connection: ${error.message}`);
+      toast.error(`Failed to toggle connection: ${error.message}`);
     }
   };
 
@@ -167,7 +181,7 @@ const AccountAggregation = () => {
         setShowEditModal(false);
         setSelectedAccount(null);
         fetchAccounts();
-        alert('Account updated successfully!');
+        toast.success('Account updated successfully!');
       } else {
         console.error('Update error:', result.error);
         throw new Error(result.error);
@@ -241,7 +255,9 @@ const AccountAggregation = () => {
                           </td>
                           <td className="p-4 text-white">{account.platform}</td>
                           <td className="p-4 text-white">{account.account_name || account.name || `${account.platform} Account`}</td>
-                          <td className="p-4 text-white">${account.balance?.toFixed(2) || '0.00'}</td>
+                          <td className="p-4 text-white">
+                            {account.is_active ? `$${account.balance?.toFixed(2) || '0.00'}` : '----'}
+                          </td>
                           <td className="p-4">
                             <label className="relative inline-flex items-center cursor-pointer">
                               <input 
@@ -257,7 +273,13 @@ const AccountAggregation = () => {
                             <div className="flex space-x-2">
                               <button 
                                 onClick={() => handleViewAccount(account)}
-                                className="p-2 text-gray-400 hover:text-white hover:bg-[#2A2A2A] rounded-lg transition-colors"
+                                className={`p-2 text-gray-400 rounded-lg transition-colors ${
+                                  account.is_active 
+                                    ? 'hover:text-white hover:bg-[#2A2A2A] cursor-pointer' 
+                                    : 'opacity-50 cursor-not-allowed'
+                                }`}
+                                disabled={!account.is_active}
+                                title={!account.is_active ? 'Connect account to view details' : 'View account details'}
                               >
                                 <Eye size={16} />
                               </button>
@@ -308,7 +330,9 @@ const AccountAggregation = () => {
                         </div>
                         <div>
                           <p className="text-gray-400 text-sm">Balance</p>
-                          <p className="text-white font-medium">${account.balance?.toFixed(2) || '0.00'}</p>
+                          <p className="text-white font-medium">
+                            {account.is_active ? `$${account.balance?.toFixed(2) || '0.00'}` : '----'}
+                          </p>
                         </div>
                       </div>
 
@@ -335,7 +359,13 @@ const AccountAggregation = () => {
                         <div className="flex space-x-2">
                           <button 
                             onClick={() => handleViewAccount(account)}
-                            className="p-2 text-gray-400 hover:text-white hover:bg-[#2A2A2A] rounded-lg transition-colors"
+                            className={`p-2 text-gray-400 rounded-lg transition-colors ${
+                              account.is_active 
+                                ? 'hover:text-white hover:bg-[#2A2A2A] cursor-pointer' 
+                                : 'opacity-50 cursor-not-allowed'
+                            }`}
+                            disabled={!account.is_active}
+                            title={!account.is_active ? 'Connect account to view details' : 'View account details'}
                           >
                             <Eye size={16} />
                           </button>
