@@ -3,7 +3,7 @@ import FormField from '../UI/FormField';
 
 const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelect, onPlaceTrade }) => {
   const [formData, setFormData] = useState({
-    symbol: 'BTC/USD',
+    symbol: '',
     type: 'market',
     trade_type: 'buy',
     volume: 0.01,
@@ -89,7 +89,7 @@ const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelec
               Select Trading Account
             </label>
             <select 
-              className="w-full bg-[#222222] border border-[#333333] rounded-lg px-3 py-2 text-white"
+              className="w-full bg-[#222222] border border-[#333333] rounded-lg px-3 py-2 text-gray-300"
               onChange={(e) => {
                 const accountId = e.target.value;
                 const account = accounts.find(acc => acc.id?.toString() === accountId);
@@ -112,19 +112,14 @@ const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelec
             <label className="block text-sm font-medium text-gray-300 mb-1">
               Symbol
             </label>
-            <select
+            <input
+              type="text"
               name="symbol"
-              className="w-full bg-[#222222] border border-[#333333] rounded-lg px-3 py-2 text-white"
               value={formData.symbol}
               onChange={handleInputChange}
-            >
-              <option value="BTC/USD">BTC/USD</option>
-              <option value="ETH/USD">ETH/USD</option>
-              <option value="EUR/USD">EUR/USD</option>
-              <option value="GBP/USD">GBP/USD</option>
-              <option value="USD/JPY">USD/JPY</option>
-              <option value="XAU/USD">XAU/USD (Gold)</option>
-            </select>
+              placeholder="e.g. BTC/USD"
+              className="w-full bg-[#222222] border border-[#333333] rounded-lg px-3 py-2 text-gray-300 placeholder-gray-500"
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-4 mb-4">
@@ -168,7 +163,7 @@ const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelec
                 onChange={handleInputChange}
                 min="0.01"
                 step="0.01"
-                className="w-full bg-[#222222] border border-[#333333] rounded-lg px-3 py-2 text-white"
+                className="w-full bg-[#222222] border border-[#333333] rounded-lg px-3 py-2 text-gray-300"
               />
             </div>
           </div>
@@ -192,14 +187,7 @@ const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelec
             />
           </div>
 
-          <FormField
-            label="Comment (Optional)"
-            name="comment"
-            type="text"
-            value={formData.comment}
-            onChange={handleInputChange}
-            placeholder="Add a note about this trade"
-          />
+          
 
           <div className="flex justify-end space-x-3 mt-6">
             <button

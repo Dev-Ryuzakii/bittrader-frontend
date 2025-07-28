@@ -22,7 +22,9 @@ const FormField = ({ label, name, type, placeholder, icon: Icon, value, onChange
           placeholder={placeholder}
           value={value}
           onChange={onChange}
-          className="w-full pl-10 pr-10 py-2 rounded-md bg-[#fff] bg-opacity-6 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className={`w-full pl-10 pr-10 py-2 rounded-md bg-[#222222] border border-[#333333] text-gray-300 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+            type === 'number' ? '[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none' : ''
+          }`}
         />
         {isPassword && (
           <button

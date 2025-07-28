@@ -1,23 +1,102 @@
 import { api } from './client';
 
-export const connectAccount = (accountData) => {
-  return api.post('/api/v1/broker/connect', accountData);
+export const connectAccount = async (accountData) => {
+  try {
+    const response = await api.post('/api/v1/broker/connect', accountData);
+    return {
+      success: true,
+      data: response
+    };
+  } catch (error) {
+    console.error('Error connecting account:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to connect account'
+    };
+  }
+};
+
+// Delete a broker account
+export const deleteAccount = async (accountId) => {
+  try {
+    const response = await api.delete(`/api/v1/broker/${accountId}`);
+    return {
+      success: true,
+      data: response
+    };
+  } catch (error) {
+    console.error('Error deleting account:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to delete account'
+    };
+  }
+};
+
+// Update a broker account (toggle active status, change password, etc.)
+export const updateAccount = async (accountId, updateData) => {
+  try {
+    const response = await api.patch(`/api/v1/broker/${accountId}`, updateData);
+    return {
+      success: true,
+      data: response
+    };
+  } catch (error) {
+    console.error('Error updating account:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to update account'
+    };
+  }
+};
+
+// Toggle account active status
+export const toggleAccountStatus = async (accountId) => {
+  try {
+    const response = await api.patch(`/api/v1/broker/${accountId}/toggle`);
+    return {
+      success: true,
+      data: response
+    };
+  } catch (error) {
+    console.error('Error toggling account status:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to toggle account status'
+    };
+  }
+};
+
+// Get detailed account information
+export const getAccountDetails = async (accountId) => {
+  try {
+    const response = await api.get(`/api/v1/broker/${accountId}/details`);
+    return {
+      success: true,
+      data: response
+    };
+  } catch (error) {
+    console.error('Error fetching account details:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to fetch account details'
+    };
+  }
 };
 
 export const getAccounts = async () => {
   try {
-    // This endpoint exists: GET /api/v1/ - Get Broker Accounts
-    // Since api.js already has baseURL with /api/v1, we just use '/'
-    const response = await api.get('/');
+    // Using the correct endpoint: GET /api/v1/broker/
+    const response = await api.get('/api/v1/broker/');
     return {
       success: true,
-      data: response.data || []
+      data: response || []
     };
   } catch (error) {
     console.error('Error fetching broker accounts:', error);
     return {
       success: false,
-      error: error.response?.data?.detail || error.message || 'Failed to fetch broker accounts',
+      error: error.message || 'Failed to fetch broker accounts',
       data: [] // Return empty array as fallback
     };
   }
@@ -29,13 +108,13 @@ export const placeTrade = async (accountId, tradeData) => {
     const response = await api.post(`/api/v1/broker/${accountId}/trade`, tradeData);
     return {
       success: true,
-      data: response.data
+      data: response
     };
   } catch (error) {
     console.error('Error placing trade:', error);
     return {
       success: false,
-      error: error.response?.data?.detail || error.message || 'Failed to place trade'
+      error: error.message || 'Failed to place trade'
     };
   }
 };
@@ -46,13 +125,13 @@ export const getAccountBalance = async (accountId) => {
     const response = await api.get(`/api/v1/broker/${accountId}/balance`);
     return {
       success: true,
-      data: response.data
+      data: response
     };
   } catch (error) {
     console.error('Error fetching account balance:', error);
     return {
       success: false,
-      error: error.response?.data?.detail || error.message || 'Failed to fetch account balance'
+      error: error.message || 'Failed to fetch account balance'
     };
   }
 };
@@ -63,13 +142,13 @@ export const getPositions = async (accountId) => {
     const response = await api.get(`/api/v1/broker/${accountId}/positions`);
     return {
       success: true,
-      data: response.data
+      data: response
     };
   } catch (error) {
     console.error('Error fetching positions:', error);
     return {
       success: false,
-      error: error.response?.data?.detail || error.message || 'Failed to fetch positions'
+      error: error.message || 'Failed to fetch positions'
     };
   }
 };
@@ -77,16 +156,16 @@ export const getPositions = async (accountId) => {
 // Close a position
 export const closePosition = async (accountId, positionId) => {
   try {
-    const response = await api.post(`/broker/${accountId}/positions/${positionId}/close`);
+    const response = await api.post(`/api/v1/broker/${accountId}/positions/${positionId}/close`);
     return {
       success: true,
-      data: response.data
+      data: response
     };
   } catch (error) {
     console.error('Error closing position:', error);
     return {
       success: false,
-      error: error.response?.data?.detail || error.message || 'Failed to close position'
+      error: error.message || 'Failed to close position'
     };
   }
 };

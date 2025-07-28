@@ -53,13 +53,14 @@ const request = async (endpoint, options = {}) => {
         auth.redirectToLogin();
         return null;
       }
-      throw new Error(data.detail || 'Request failed');
+      const errorMessage = data.detail || data.message || `HTTP ${response.status}: ${response.statusText}`;
+      throw new Error(errorMessage);
     }
 
     return data;
   } catch (error) {
     console.error('Request failed:', {
-      error,
+      error: error.message,
       endpoint,
       options
     });
@@ -75,6 +76,10 @@ export const api = {
   }),
   put: (endpoint, data) => request(endpoint, {
     method: 'PUT',
+    body: JSON.stringify(data)
+  }),
+  patch: (endpoint, data) => request(endpoint, {
+    method: 'PATCH',
     body: JSON.stringify(data)
   }),
   delete: (endpoint) => request(endpoint, { method: 'DELETE' })

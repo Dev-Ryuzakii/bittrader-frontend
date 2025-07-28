@@ -3,28 +3,44 @@ import AccountCard from '../UI/AccountCard';
 import AccountSlider from '../UI/AccountSlider';
 import MarketOverview from '../UI/MarketOverview';
 import TradingViewWidget from '../UI/TradingViewWidget';
-import FallbackChart from '../UI/FallbackChart';
-import ErrorBoundary from '../UI/ErrorBoundary';
 import TradeModal from '../modals/TradeModal';
 import TransactionsTable from '../UI/TransactionsTable';
+import Loader from '../UI/Loader';
 import { TrendingUp, Users, Activity, Target, Plus, BarChart3, Zap } from 'lucide-react';
 import { getTransactions } from '../../api/transactions';
 import { getAccounts, placeTrade } from '../../api/broker';
+import { useAuth } from '../../contexts/AuthContext';
 
 const Dashboard = () => {
   const [transactions, setTransactions] = useState([]);
   const [transactionsLoading, setTransactionsLoading] = useState(true);
   const [brokerAccounts, setBrokerAccounts] = useState([]);
+  const [accountsLoading, setAccountsLoading] = useState(true);
   const [isTradeModalOpen, setIsTradeModalOpen] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState(null);
   const [tradeStatus, setTradeStatus] = useState({ loading: false, success: false, error: null });
+  const [selectedSymbol, setSelectedSymbol] = useState('BTCUSD');
+  const { isAuthenticated } = useAuth();
+
+  // Define color variants for account cards (same as in AccountAggregation)
+  const colorVariants = [
+    { bg: 'bg-blue-600/20', text: 'text-blue-400', border: 'border-blue-600/30' },
+    { bg: 'bg-green-600/20', text: 'text-green-400', border: 'border-green-600/30' },
+    { bg: 'bg-purple-600/20', text: 'text-purple-400', border: 'border-purple-600/30' },
+    { bg: 'bg-orange-600/20', text: 'text-orange-400', border: 'border-orange-600/30' },
+    { bg: 'bg-pink-600/20', text: 'text-pink-400', border: 'border-pink-600/30' },
+    { bg: 'bg-cyan-600/20', text: 'text-cyan-400', border: 'border-cyan-600/30' },
+  ];
 
   // Fetch transactions and accounts on component mount
   useEffect(() => {
     const fetchData = async () => {
-      // Don't let API errors block the dashboard from loading
-      setTransactionsLoading(true);
-      
+      if (!isAuthenticated) {
+        setTransactionsLoading(false);
+        setAccountsLoading(false);
+        return;
+      }
+
       // Fetch transactions with error isolation
       try {
         const transactionsResponse = await getTransactions({ limit: 5 });
@@ -34,32 +50,33 @@ const Dashboard = () => {
       } catch (transactionError) {
         console.log('⚠️ Transactions API unavailable, dashboard will work without transaction data');
       }
+      setTransactionsLoading(false);
       
       // Fetch broker accounts with error isolation  
       try {
         const accountsResponse = await getAccounts();
         if (accountsResponse.success && accountsResponse.data && accountsResponse.data.length > 0) {
           console.log('✅ Broker accounts loaded:', accountsResponse.data);
-          setBrokerAccounts(accountsResponse.data);
-          setSelectedAccount(accountsResponse.data[0]);
+          // Assign color variants to accounts
+          const accountsWithColors = accountsResponse.data.map((account, index) => ({
+            ...account,
+            colorVariant: index % colorVariants.length
+          }));
+          setBrokerAccounts(accountsWithColors);
+          setSelectedAccount(accountsWithColors[0]);
         } else {
-          console.log('⚠️ No broker accounts found, using demo accounts');
-          if (demoAccounts.length > 0) {
-            setSelectedAccount(demoAccounts[0]);
-          }
+          console.log('⚠️ No broker accounts found');
+          setBrokerAccounts([]);
         }
       } catch (brokerError) {
-        console.log('⚠️ Broker API unavailable, using demo accounts');
-        if (demoAccounts.length > 0) {
-          setSelectedAccount(demoAccounts[0]);
-        }
+        console.log('⚠️ Broker API unavailable');
+        setBrokerAccounts([]);
       }
-      
-      setTransactionsLoading(false);
+      setAccountsLoading(false);
     };
 
     fetchData();
-  }, []);
+  }, [isAuthenticated]);
   
   // Handle placing a trade
   const handlePlaceTrade = async (accountId, tradeData) => {
@@ -82,38 +99,39 @@ const Dashboard = () => {
     }
   };
 
-  // Demo data - this will later come from backend when accounts are linked
+  // Demo data - only used when no real accounts are connected
   const demoAccounts = [
     {
-      id: 1,
-      accountName: "PepperStone",
-      balance: 17228.17,
-      pnl: 5459.05,
-      equity: 9475.12,
-      colorVariant: 2
-    },
-    {
-      id: 2,
-      accountName: "FXPRO",
-      balance: 27413.21,
-      pnl: 11512.47,
-      equity: 3715.31,
-      colorVariant: 3
-    },
-    {
-      id: 3,
-      accountName: "FINALTO",
-      balance: 24148.06,
-      pnl: 17721.76,
-      equity: 4312.91,
-      colorVariant: 4
+      id: 'demo-1',
+      accountName: "Demo Account 1",
+      account_name: "Demo Account 1",
+      broker_name: "Demo Broker",
+      balance: 10000.00,
+      pnl: 0.00,
+      equity: 10000.00,
+      colorVariant: 2,
+      is_demo: true
     }
   ];
 
-  // Calculate total balance
-  const totalBalance = demoAccounts.reduce((sum, account) => sum + account.balance, 0);
-  const totalPnl = demoAccounts.reduce((sum, account) => sum + account.pnl, 0);
-  const totalEquity = demoAccounts.reduce((sum, account) => sum + account.equity, 0);
+  // Use real accounts if available, otherwise show demo accounts
+  const displayAccounts = brokerAccounts.length > 0 ? brokerAccounts : demoAccounts;
+
+  // Transform broker accounts to match the expected format for AccountSlider
+  const formattedAccounts = displayAccounts.map(account => ({
+    ...account,
+    accountName: account.account_name || account.broker_name || account.accountName || 'Unnamed Account',
+    balance: account.balance || 0,
+    pnl: account.pnl || 0,
+    equity: account.equity || account.balance || 0,
+    // Use colorVariant + 2 to skip the first two variants (1 is for total, 2 starts individual accounts)
+    colorVariant: (account.colorVariant || 0) + 2
+  }));
+
+  // Calculate totals
+  const totalBalance = formattedAccounts.reduce((sum, account) => sum + (account.balance || 0), 0);
+  const totalPnl = formattedAccounts.reduce((sum, account) => sum + (account.pnl || 0), 0);
+  const totalEquity = formattedAccounts.reduce((sum, account) => sum + (account.equity || 0), 0);
 
   // Stats data
   const stats = [
@@ -190,20 +208,41 @@ const Dashboard = () => {
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold text-white">Portfolio Overview</h2>
           <div className="flex items-center space-x-2">
-            <span className="text-sm text-gray-400">{demoAccounts.length + 1} cards</span>
-            <button className="text-blue-400 hover:text-blue-300 text-sm transition-colors">
-              Manage
-            </button>
+            <span className="text-sm text-gray-400">{formattedAccounts.length} account{formattedAccounts.length !== 1 ? 's' : ''}</span>
+            {brokerAccounts.length === 0 && (
+              <button 
+                onClick={() => window.location.href = '/accounts'}
+                className="text-blue-400 hover:text-blue-300 text-sm transition-colors"
+              >
+                Connect Account
+              </button>
+            )}
           </div>
         </div>
         
-        {/* Account Slider */}
-        <AccountSlider
-          totalBalance={totalBalance}
-          totalPnl={totalPnl}
-          totalEquity={totalEquity}
-          accounts={demoAccounts}
-        />
+        {accountsLoading ? (
+          <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-8 text-center">
+            <Loader size="md" text="Loading accounts..." />
+          </div>
+        ) : brokerAccounts.length === 0 ? (
+          <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-8 text-center">
+            <div className="text-gray-400 mb-4">No trading accounts connected</div>
+            <button 
+              onClick={() => window.location.href = '/accounts'}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors inline-flex items-center space-x-2"
+            >
+              <Plus size={16} />
+              <span>Connect Your First Account</span>
+            </button>
+          </div>
+        ) : (
+          <AccountSlider
+            totalBalance={totalBalance}
+            totalPnl={totalPnl}
+            totalEquity={totalEquity}
+            accounts={formattedAccounts}
+          />
+        )}
       </div>
 
       {/* Market Overview */}
@@ -216,9 +255,16 @@ const Dashboard = () => {
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-4">
             <h2 className="text-xl font-semibold text-white">Live Trading Chart</h2>
+            <button
+              onClick={() => setIsTradeModalOpen(true)}
+              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors text-sm font-medium flex items-center space-x-2"
+            >
+              <Plus size={16} />
+              <span>Place Trade</span>
+            </button>
             {selectedAccount && (
               <div className="bg-blue-600/20 text-blue-400 px-3 py-1 rounded-full text-sm">
-                Trading on: {selectedAccount.broker_name || selectedAccount.accountName}
+                Trading on: {selectedAccount.account_name || selectedAccount.broker_name || selectedAccount.accountName}
               </div>
             )}
           </div>
@@ -227,12 +273,7 @@ const Dashboard = () => {
               className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg text-sm text-white px-3 py-1"
               onChange={(e) => {
                 const accountId = e.target.value;
-                // First check demo accounts
-                let account = demoAccounts.find(a => a.id.toString() === accountId);
-                // If not found in demo accounts, check broker accounts
-                if (!account && brokerAccounts.length > 0) {
-                  account = brokerAccounts.find(a => a.id === accountId);
-                }
+                const account = formattedAccounts.find(a => a.id.toString() === accountId);
                 if (account) {
                   setSelectedAccount(account);
                 }
@@ -240,22 +281,20 @@ const Dashboard = () => {
               value={selectedAccount?.id?.toString() || ''}
             >
               <option value="" disabled>Select account</option>
-              {demoAccounts.map((account) => (
-                <option key={`demo-${account.id}`} value={account.id}>
-                  {account.accountName}
-                </option>
-              ))}
-              {brokerAccounts && brokerAccounts.length > 0 && brokerAccounts.map((account) => (
+              {formattedAccounts.map((account) => (
                 <option key={account.id} value={account.id}>
-                  {account.broker_name || 'Broker'} - {account.login || 'Account'}
+                  {account.account_name || account.broker_name || account.accountName}
+                  {account.is_demo ? ' (Demo)' : ''}
                 </option>
               ))}
             </select>
           </div>
         </div>
         
-        <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg overflow-hidden">
-            <TradingViewWidget />
+        <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg overflow-hidden" style={{ minHeight: '680px' }}>
+          <div style={{ height: '660px', width: '100%' }}>
+            <TradingViewWidget symbol={selectedSymbol} theme="dark" />
+          </div>
         </div>
         
         {/* Trading status message */}
@@ -279,7 +318,7 @@ const Dashboard = () => {
             // Reset trade status when closing modal
             setTradeStatus({ loading: false, success: false, error: null });
           }}
-          accounts={[...demoAccounts, ...brokerAccounts]}
+          accounts={formattedAccounts}
           selectedAccount={selectedAccount}
           onAccountSelect={setSelectedAccount}
           onPlaceTrade={handlePlaceTrade}

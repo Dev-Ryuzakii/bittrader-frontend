@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { X, Loader2, Eye, EyeOff } from 'lucide-react';
-import { connectAccount } from '../../api/broker';
 
 const ConnectionModal = ({ isOpen, onClose, onSubmit, platform }) => {
   const [formData, setFormData] = useState({
+    account_name: '',
     broker_name: '',
     server: '',
     login: '',
@@ -19,8 +19,20 @@ const ConnectionModal = ({ isOpen, onClose, onSubmit, platform }) => {
     setError(null);
 
     try {
-      const response = await connectAccount({ ...formData, platform });
-      onSubmit(response);
+      const response = await onSubmit({ 
+        ...formData, 
+        platform,
+        // Ensure we're sending the account_name in the correct format expected by backend
+        name: formData.account_name // Backend might expect 'name' instead of 'account_name'
+      });
+      // Reset form after successful submission
+      setFormData({
+        account_name: '',
+        broker_name: '',
+        server: '',
+        login: '',
+        password: '',
+      });
     } catch (error) {
       setError(error.message);
       console.error('Connection error:', error);
@@ -48,6 +60,20 @@ const ConnectionModal = ({ isOpen, onClose, onSubmit, platform }) => {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-200 mb-1">
+              Account Name
+            </label>
+            <input
+              type="text"
+              required
+              value={formData.account_name}
+              onChange={(e) => setFormData({ ...formData, account_name: e.target.value })}
+              className="w-full px-3 py-2 bg-[#2A2A2A] text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
+              placeholder="Enter a name for this account"
+            />
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-200 mb-1">
               Broker Name

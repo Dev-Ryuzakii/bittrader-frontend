@@ -1,76 +1,98 @@
-import React, { useEffect, useRef } from 'react';
-import { createChart, CandlestickSeries } from 'lightweight-charts';
+import React, { useEffect, useRef, memo, useState } from 'react';
 
-const TradingViewWidget = () => {
-  const chartContainerRef = useRef();
-  const candlestickSeriesRef = useRef();
-  const chartRef = useRef();
+const TradingViewWidget = ({ symbol = '', theme = 'dark' }) => {
+  const containerRef = useRef();
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Create the chart
-    chartRef.current = createChart(chartContainerRef.current, {
-      width: chartContainerRef.current.clientWidth,
-      height: 400,
-      layout: {
-        background: { color: '#1e1e1e' },
-        textColor: '#d1d4dc',
-      },
-      grid: {
-        vertLines: { color: '#2c2c2e' },
-        horzLines: { color: '#2c2c2e' },
-      },
-      timeScale: {
-        timeVisible: true,
-        secondsVisible: true,
-      },
-    });
+    setIsLoading(true);
+    
+    // Clear any existing content
+    if (containerRef.current) {
+      containerRef.current.innerHTML = '';
+    }
 
-    // Add candlestick series using v5 API
-    candlestickSeriesRef.current = chartRef.current.addSeries(CandlestickSeries, {
-      upColor: '#26a69a',
-      downColor: '#ef5350',
-      borderVisible: false,
-      wickUpColor: '#26a69a',
-      wickDownColor: '#ef5350',
-    });
-
-    // Initial dummy data
-    candlestickSeriesRef.current.setData([
-      { time: Math.floor(Date.now() / 1000) - 60, open: 100, high: 110, low: 90, close: 105 },
-    ]);
-
-    // Simulate live data every second
-    const interval = setInterval(() => {
-      const lastBarTime = Math.floor(Date.now() / 1000);
-      const lastPrice = Math.random() * (110 - 90) + 90;
-
-      candlestickSeriesRef.current.update({
-        time: lastBarTime,
-        open: lastPrice - 2,
-        high: lastPrice + 2,
-        low: lastPrice - 3,
-        close: lastPrice,
-      });
-    }, 1000);
-
-    // Cleanup on unmount
-    return () => {
-      clearInterval(interval);
-      chartRef.current.remove();
+    const script = document.createElement('script');
+    script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js';
+    script.type = 'text/javascript';
+    script.async = true;
+    
+    script.onload = () => {
+      setTimeout(() => setIsLoading(false), 2000); // Give time for widget to load
     };
-  }, []);
+    
+    script.innerHTML = `
+      {
+        "width": "100%",
+        "height": "640",
+        "symbol": "${symbol}",
+        "interval": "",
+        "timezone": "Etc/UTC",
+        "theme": "${theme}",
+        "style": "1",
+        "locale": "en",
+        "toolbar_bg": "#f1f3f6",
+        "enable_publishing": false,
+        "allow_symbol_change": true,
+        "calendar": false,
+        "studies": [
+          "MACD@tv-basicstudies",
+          "RSI@tv-basicstudies"
+        ],
+        "show_popup_button": true,
+        "popup_width": "1000",
+        "popup_height": "650",
+        "support_host": "https://www.tradingview.com"
+      }`;
+
+    if (containerRef.current) {
+      containerRef.current.appendChild(script);
+    }
+
+    return () => {
+      if (containerRef.current) {
+        containerRef.current.innerHTML = '';
+      }
+    };
+  }, [symbol, theme]);
 
   return (
-    <div
-      ref={chartContainerRef}
-      style={{
-        position: 'relative',
-        width: '100%',
-        height: '400px',
-        margin: '0 auto',
-      }}
-    />
+    <div className="tradingview-widget-container" style={{ height: '660px', width: '100%', position: 'relative' }}>
+      {isLoading && (
+        <div 
+          style={{ 
+            position: 'absolute', 
+            top: 0, 
+            left: 0, 
+            right: 0, 
+            bottom: 0, 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            backgroundColor: '#1A1A1A',
+            zIndex: 10
+          }}
+        >
+          <div style={{ color: '#9DB2BD', fontSize: '16px' }}>Loading chart...</div>
+        </div>
+      )}
+      <div
+        className="tradingview-widget-container__widget"
+        ref={containerRef}
+        style={{ height: '640px', width: '100%' }}
+      ></div>
+      <div className="tradingview-widget-copyright" style={{ fontSize: '13px', lineHeight: '20px', textAlign: 'center', marginTop: '0px' }}>
+        <a
+          href="https://www.tradingview.com/"
+          rel="noopener nofollow"
+          target="_blank"
+          style={{ color: '#9DB2BD', fontSize: '13px', textDecoration: 'none' }}
+        >
+          Track all markets on TradingView
+        </a>
+      </div>
+    </div>
   );
 };
 
-export default TradingViewWidget;
+export default memo(TradingViewWidget);

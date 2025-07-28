@@ -1,54 +1,664 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react';
+import { 
+  Star, 
+  Download, 
+  Code, 
+  TrendingUp, 
+  Zap, 
+  Settings, 
+  Plus,
+  CheckCircle,
+  Filter,
+  Search
+} from 'lucide-react';
 
 const StrategyLab = () => {
+  const [strategies, setStrategies] = useState([]);
+  const [featuredStrategies, setFeaturedStrategies] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('browse');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('all');
+
+  useEffect(() => {
+    // Mock data for demo - replace with actual API calls
+    setTimeout(() => {
+      setFeaturedStrategies([
+        {
+          id: 1,
+          name: "Professional Scalping Strategy",
+          description: "High-frequency trading strategy optimized for major forex pairs with advanced risk management.",
+          complexity: "advanced",
+          category: "scalping",
+          rating: 4.8,
+          downloads: 1247,
+          min_balance: 5000,
+          parameters: {
+            "Risk Per Trade": "1%",
+            "Stop Loss": "10 pips",
+            "Take Profit": "15 pips"
+          },
+          supported_symbols: ["EURUSD", "GBPUSD", "USDJPY"],
+          timeframes: ["1m", "5m"]
+        },
+        {
+          id: 2,
+          name: "Momentum Swing Strategy",
+          description: "Captures medium-term price movements using technical indicators and market momentum.",
+          complexity: "intermediate",
+          category: "swing_trading",
+          rating: 4.6,
+          downloads: 892,
+          min_balance: 2000,
+          parameters: {
+            "RSI Period": "14",
+            "MACD Fast": "12",
+            "MACD Slow": "26"
+          },
+          supported_symbols: ["BTCUSD", "ETHUSD", "SPX"],
+          timeframes: ["4h", "1d"]
+        },
+        {
+          id: 3,
+          name: "Grid Trading Bot",
+          description: "Automated grid trading system for range-bound markets with dynamic position sizing.",
+          complexity: "beginner",
+          category: "grid_trading",
+          rating: 4.4,
+          downloads: 654,
+          min_balance: 1000,
+          parameters: {
+            "Grid Size": "20 pips",
+            "Max Positions": "10",
+            "Position Size": "0.1 lots"
+          },
+          supported_symbols: ["EURUSD", "GBPUSD"],
+          timeframes: ["15m", "1h"]
+        }
+      ]);
+      setStrategies([
+        {
+          id: 4,
+          name: "Breakout Hunter",
+          description: "Identifies and trades key support and resistance breakouts with high probability setups.",
+          complexity: "intermediate",
+          category: "breakout",
+          rating: 4.3,
+          downloads: 432,
+          min_balance: 3000,
+          parameters: {},
+          supported_symbols: ["XAUUSD", "BTCUSD"],
+          timeframes: ["1h", "4h"]
+        },
+        {
+          id: 5,
+          name: "Mean Reversion Pro",
+          description: "Statistical arbitrage strategy using mean reversion principles for consistent profits.",
+          complexity: "advanced",
+          category: "mean_reversion",
+          rating: 4.7,
+          downloads: 321,
+          min_balance: 10000,
+          parameters: {},
+          supported_symbols: ["NASDAQ", "SPX"],
+          timeframes: ["1d"]
+        }
+      ]);
+      setLoading(false);
+    }, 1000);
+  }, []);
+
+  const filteredStrategies = [...featuredStrategies, ...strategies].filter(strategy => {
+    const matchesSearch = strategy.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         strategy.description.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = selectedCategory === 'all' || strategy.category === selectedCategory;
+    return matchesSearch && matchesCategory;
+  });
+
   return (
-    <div className="p-6">
-      <h1 className="text-3xl font-bold mb-6">Strategy Lab</h1>
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        <div className="bg-white p-6 rounded-lg shadow-md">
-          <h2 className="text-xl font-semibold mb-4">Strategy Builder</h2>
-          <div className="space-y-4">
-            <div className="p-4 bg-gray-50 rounded-md">
-              <h3 className="font-medium">Create Strategy</h3>
-              <p className="text-sm text-gray-600">Build and customize your trading strategies</p>
-            </div>
-            <div className="p-4 bg-gray-50 rounded-md">
-              <h3 className="font-medium">Template Library</h3>
-              <p className="text-sm text-gray-600">Pre-built strategy templates</p>
-            </div>
-          </div>
-        </div>
+    <div className="p-4 md:p-6 space-y-6 max-w-7xl mx-auto">
+      {/* Header */}
+      <div className="mb-8">
+        <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">Strategy Lab</h1>
+        <p className="text-lg text-gray-400">
+          Discover, test, and deploy professional trading strategies
+        </p>
+      </div>
 
-        <div className="bg-white p-6 rounded-lg shadow-md">
-          <h2 className="text-xl font-semibold mb-4">Backtest Engine</h2>
-          <div className="space-y-4">
-            <div className="p-4 bg-gray-50 rounded-md">
-              <h3 className="font-medium">Run Backtest</h3>
-              <p className="text-sm text-gray-600">Test strategies against historical data</p>
-            </div>
-            <div className="p-4 bg-gray-50 rounded-md">
-              <h3 className="font-medium">Performance Analytics</h3>
-              <p className="text-sm text-gray-600">Detailed strategy performance metrics</p>
-            </div>
+      {/* Search and Filter Bar */}
+      <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-4 mb-6">
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <input
+              type="text"
+              placeholder="Search strategies..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 bg-[#2A2A2A] border border-[#3A3A3A] rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
+            />
           </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-lg shadow-md">
-          <h2 className="text-xl font-semibold mb-4">Strategy Optimization</h2>
-          <div className="space-y-4">
-            <div className="p-4 bg-gray-50 rounded-md">
-              <h3 className="font-medium">Parameter Optimization</h3>
-              <p className="text-sm text-gray-600">Fine-tune your strategy parameters</p>
-            </div>
-            <div className="p-4 bg-gray-50 rounded-md">
-              <h3 className="font-medium">Risk Management</h3>
-              <p className="text-sm text-gray-600">Configure risk parameters and limits</p>
-            </div>
+          <div className="flex items-center space-x-2">
+            <Filter className="text-gray-400 w-4 h-4" />
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="bg-[#2A2A2A] border border-[#3A3A3A] rounded-lg text-white px-3 py-2 focus:outline-none focus:border-blue-500"
+            >
+              <option value="all">All Categories</option>
+              <option value="scalping">Scalping</option>
+              <option value="swing_trading">Swing Trading</option>
+              <option value="grid_trading">Grid Trading</option>
+              <option value="breakout">Breakout</option>
+              <option value="mean_reversion">Mean Reversion</option>
+            </select>
           </div>
         </div>
       </div>
-    </div>
-  )
-}
 
-export default StrategyLab
+      {/* Tab Navigation */}
+      <div className="mb-6">
+        <nav className="flex space-x-1 bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-1">
+          {[
+            { id: 'browse', label: 'Browse Strategies' },
+            { id: 'defaults', label: 'Default Strategies' },
+            { id: 'custom', label: 'Request Custom' },
+            { id: 'my-strategies', label: 'My Strategies' }
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                activeTab === tab.id
+                  ? 'bg-blue-600 text-white'
+                  : 'text-gray-400 hover:text-white hover:bg-[#2A2A2A]'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </nav>
+      </div>
+
+      {/* Tab Content */}
+      {activeTab === 'browse' && (
+        <StrategyBrowser strategies={filteredStrategies} loading={loading} />
+      )}
+      
+      {activeTab === 'defaults' && <DefaultStrategies />}
+      
+      {activeTab === 'custom' && <CustomStrategyRequest />}
+      
+      {activeTab === 'my-strategies' && <MyStrategies />}
+    </div>
+  );
+};
+
+// Strategy Card Component
+const StrategyCard = ({ strategy, isFeatured = false }) => {
+  const [downloading, setDownloading] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
+
+  const handleDownload = async () => {
+    setDownloading(true);
+    // Simulate download
+    setTimeout(() => {
+      alert(`Strategy "${strategy.name}" downloaded successfully!`);
+      setDownloading(false);
+    }, 2000);
+  };
+
+  const getComplexityColor = (complexity) => {
+    switch (complexity) {
+      case 'beginner': return 'bg-green-600/20 text-green-400';
+      case 'intermediate': return 'bg-yellow-600/20 text-yellow-400';
+      case 'advanced': return 'bg-red-600/20 text-red-400';
+      default: return 'bg-gray-600/20 text-gray-400';
+    }
+  };
+
+  return (
+    <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-6 hover:border-[#3A3A3A] transition-colors">
+      {/* Header */}
+      <div className="flex justify-between items-start mb-4">
+        <div className="flex-1">
+          <div className="flex items-center space-x-2 mb-2">
+            <h3 className="text-lg font-semibold text-white">{strategy.name}</h3>
+            {isFeatured && (
+              <span className="bg-blue-600/20 text-blue-400 px-2 py-1 rounded-full text-xs font-medium">
+                Featured
+              </span>
+            )}
+          </div>
+          <div className="flex items-center space-x-2">
+            <span className={`px-2 py-1 rounded-full text-xs font-medium ${getComplexityColor(strategy.complexity)}`}>
+              {strategy.complexity}
+            </span>
+            <span className="bg-gray-600/20 text-gray-400 px-2 py-1 rounded-full text-xs">
+              {strategy.category.replace('_', ' ')}
+            </span>
+          </div>
+        </div>
+        <div className="flex items-center space-x-1">
+          <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+          <span className="text-sm font-medium text-white">{strategy.rating}</span>
+        </div>
+      </div>
+
+      {/* Description */}
+      <p className="text-gray-400 text-sm mb-4 line-clamp-2">
+        {strategy.description}
+      </p>
+
+      {/* Stats */}
+      <div className="flex justify-between items-center mb-4 text-sm text-gray-400">
+        <div className="flex items-center space-x-1">
+          <Download className="w-4 h-4" />
+          <span>{strategy.downloads} downloads</span>
+        </div>
+        <div>Min: ${strategy.min_balance.toLocaleString()}</div>
+      </div>
+
+      {/* Actions */}
+      <div className="flex space-x-2">
+        <button
+          onClick={handleDownload}
+          disabled={downloading}
+          className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-600/50 text-white px-4 py-2 rounded-lg transition-colors text-sm font-medium flex items-center justify-center space-x-2"
+        >
+          <Download className="w-4 h-4" />
+          <span>{downloading ? 'Downloading...' : 'Download'}</span>
+        </button>
+        <button
+          onClick={() => setShowDetails(!showDetails)}
+          className="bg-gray-600/20 hover:bg-gray-600/30 text-gray-400 hover:text-white px-4 py-2 rounded-lg transition-colors text-sm font-medium flex items-center space-x-2"
+        >
+          <Code className="w-4 h-4" />
+          <span>Details</span>
+        </button>
+      </div>
+
+      {/* Expandable Details */}
+      {showDetails && (
+        <div className="mt-4 p-4 bg-[#0A0A0A] rounded-lg border border-[#2A2A2A]">
+          <div className="space-y-3">
+            <div>
+              <h4 className="text-sm font-medium text-white mb-2">Supported Symbols</h4>
+              <div className="flex flex-wrap gap-1">
+                {strategy.supported_symbols.map((symbol) => (
+                  <span key={symbol} className="bg-gray-600/20 text-gray-400 px-2 py-1 rounded text-xs">
+                    {symbol}
+                  </span>
+                ))}
+              </div>
+            </div>
+            <div>
+              <h4 className="text-sm font-medium text-white mb-2">Timeframes</h4>
+              <div className="flex flex-wrap gap-1">
+                {strategy.timeframes.map((tf) => (
+                  <span key={tf} className="bg-gray-600/20 text-gray-400 px-2 py-1 rounded text-xs">
+                    {tf}
+                  </span>
+                ))}
+              </div>
+            </div>
+            {Object.keys(strategy.parameters).length > 0 && (
+              <div>
+                <h4 className="text-sm font-medium text-white mb-2">Key Parameters</h4>
+                <div className="space-y-1">
+                  {Object.entries(strategy.parameters).map(([key, value]) => (
+                    <div key={key} className="flex justify-between text-xs">
+                      <span className="text-gray-400">{key}:</span>
+                      <span className="text-white">{value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Strategy Browser Component
+const StrategyBrowser = ({ strategies, loading }) => {
+  if (loading) {
+    return (
+      <div className="text-center py-12">
+        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+        <p className="text-gray-400 mt-4">Loading strategies...</p>
+      </div>
+    );
+  }
+
+  if (strategies.length === 0) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-gray-400 mb-4">No strategies found matching your criteria.</p>
+      </div>
+    );
+  }
+
+  const featuredStrategies = strategies.slice(0, 3);
+  const otherStrategies = strategies.slice(3);
+
+  return (
+    <div className="space-y-8">
+      {/* Featured Strategies */}
+      {featuredStrategies.length > 0 && (
+        <div>
+          <h2 className="text-2xl font-semibold text-white mb-6">Featured Strategies</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {featuredStrategies.map((strategy) => (
+              <StrategyCard key={strategy.id} strategy={strategy} isFeatured />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* All Strategies */}
+      {otherStrategies.length > 0 && (
+        <div>
+          <h2 className="text-2xl font-semibold text-white mb-6">All Strategies</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {otherStrategies.map((strategy) => (
+              <StrategyCard key={strategy.id} strategy={strategy} />
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Default Strategies Component
+const DefaultStrategies = () => {
+  const defaultStrategies = [
+    {
+      id: 'default-1',
+      name: 'Moving Average Crossover',
+      description: 'Classic strategy using two moving averages to identify trend changes and entry points.',
+      complexity: 'beginner',
+      rating: 4.2,
+      min_balance: 500
+    },
+    {
+      id: 'default-2',
+      name: 'RSI Divergence Strategy',
+      description: 'Uses RSI divergence patterns to identify potential reversal points in the market.',
+      complexity: 'intermediate',
+      rating: 4.5,
+      min_balance: 1000
+    },
+    {
+      id: 'default-3',
+      name: 'Bollinger Bands Squeeze',
+      description: 'Identifies low volatility periods and trades the subsequent breakouts.',
+      complexity: 'intermediate',
+      rating: 4.3,
+      min_balance: 1500
+    }
+  ];
+
+  return (
+    <div>
+      <div className="mb-6">
+        <h2 className="text-2xl font-semibold text-white mb-2">Default Strategies</h2>
+        <p className="text-gray-400">
+          Professional strategies developed by our team, ready to use out of the box.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {defaultStrategies.map((strategy) => (
+          <div key={strategy.id} className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-6 hover:border-[#3A3A3A] transition-colors">
+            <div className="flex justify-between items-start mb-4">
+              <div>
+                <h3 className="text-lg font-semibold text-white mb-2">{strategy.name}</h3>
+                <span className="bg-blue-600/20 text-blue-400 px-2 py-1 rounded-full text-xs font-medium flex items-center w-fit">
+                  <Zap className="w-3 h-3 mr-1" />
+                  Default Strategy
+                </span>
+              </div>
+              <div className="flex items-center space-x-1">
+                <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                <span className="text-sm font-medium text-white">{strategy.rating}</span>
+              </div>
+            </div>
+            
+            <p className="text-gray-400 text-sm mb-4">
+              {strategy.description}
+            </p>
+            
+            <div className="flex justify-between items-center mb-4">
+              <span className="bg-green-600/20 text-green-400 px-2 py-1 rounded-full text-xs">
+                {strategy.complexity}
+              </span>
+              <div className="text-sm text-gray-400">
+                Min: ${strategy.min_balance.toLocaleString()}
+              </div>
+            </div>
+            
+            <div className="flex space-x-2">
+              <button className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors text-sm font-medium flex items-center justify-center space-x-2">
+                <Download className="w-4 h-4" />
+                <span>Download</span>
+              </button>
+              <button className="bg-gray-600/20 hover:bg-gray-600/30 text-gray-400 hover:text-white px-4 py-2 rounded-lg transition-colors text-sm font-medium flex items-center space-x-2">
+                <Settings className="w-4 h-4" />
+                <span>Deploy</span>
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// Custom Strategy Request Component
+const CustomStrategyRequest = () => {
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    trading_style: '',
+    symbols: '',
+    timeframes: '',
+    budget: '',
+    expected_timeline: '',
+    risk_tolerance: 'medium',
+    additional_requirements: '',
+    contact_email: ''
+  });
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSubmitting(true);
+
+    // Simulate API call
+    setTimeout(() => {
+      setSubmitted(true);
+      setSubmitting(false);
+    }, 2000);
+  };
+
+  if (submitted) {
+    return (
+      <div className="text-center py-12">
+        <div className="mb-4">
+          <CheckCircle className="w-16 h-16 text-green-500 mx-auto" />
+        </div>
+        <h2 className="text-2xl font-bold text-white mb-2">Request Submitted!</h2>
+        <p className="text-gray-400 mb-6">
+          We've received your custom strategy request. Our team will review it and get back to you within 24-48 hours.
+        </p>
+        <button
+          onClick={() => setSubmitted(false)}
+          className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-colors"
+        >
+          Submit Another Request
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-2xl mx-auto">
+      <div className="mb-6">
+        <h2 className="text-2xl font-semibold text-white mb-2">Request Custom Strategy</h2>
+        <p className="text-gray-400">
+          Need a custom trading strategy? Fill out this form and our expert developers will create one tailored to your needs.
+        </p>
+      </div>
+
+      <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-6">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div>
+            <label className="block text-sm font-medium text-white mb-2">Strategy Title</label>
+            <input
+              type="text"
+              value={formData.title}
+              onChange={(e) => setFormData({...formData, title: e.target.value})}
+              placeholder="e.g., Custom Scalping Strategy for EURUSD"
+              className="w-full px-4 py-2 bg-[#2A2A2A] border border-[#3A3A3A] rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-white mb-2">Description</label>
+            <textarea
+              value={formData.description}
+              onChange={(e) => setFormData({...formData, description: e.target.value})}
+              placeholder="Describe your trading strategy requirements in detail..."
+              rows={4}
+              className="w-full px-4 py-2 bg-[#2A2A2A] border border-[#3A3A3A] rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 resize-none"
+              required
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-white mb-2">Trading Style</label>
+              <input
+                type="text"
+                value={formData.trading_style}
+                onChange={(e) => setFormData({...formData, trading_style: e.target.value})}
+                placeholder="e.g., Scalping, Swing Trading"
+                className="w-full px-4 py-2 bg-[#2A2A2A] border border-[#3A3A3A] rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-white mb-2">Budget (USD)</label>
+              <input
+                type="number"
+                value={formData.budget}
+                onChange={(e) => setFormData({...formData, budget: e.target.value})}
+                placeholder="5000"
+                min="100"
+                className="w-full px-4 py-2 bg-[#2A2A2A] border border-[#3A3A3A] rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
+                required
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-white mb-2">Symbols (comma-separated)</label>
+            <input
+              type="text"
+              value={formData.symbols}
+              onChange={(e) => setFormData({...formData, symbols: e.target.value})}
+              placeholder="EURUSD, GBPUSD, USDJPY"
+              className="w-full px-4 py-2 bg-[#2A2A2A] border border-[#3A3A3A] rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
+              required
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-white mb-2">Expected Timeline</label>
+              <input
+                type="text"
+                value={formData.expected_timeline}
+                onChange={(e) => setFormData({...formData, expected_timeline: e.target.value})}
+                placeholder="e.g., 2-3 weeks"
+                className="w-full px-4 py-2 bg-[#2A2A2A] border border-[#3A3A3A] rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-white mb-2">Risk Tolerance</label>
+              <select
+                value={formData.risk_tolerance}
+                onChange={(e) => setFormData({...formData, risk_tolerance: e.target.value})}
+                className="w-full px-4 py-2 bg-[#2A2A2A] border border-[#3A3A3A] rounded-lg text-white focus:outline-none focus:border-blue-500"
+              >
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-white mb-2">Contact Email</label>
+            <input
+              type="email"
+              value={formData.contact_email}
+              onChange={(e) => setFormData({...formData, contact_email: e.target.value})}
+              placeholder="your@email.com"
+              className="w-full px-4 py-2 bg-[#2A2A2A] border border-[#3A3A3A] rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-white mb-2">Additional Requirements (Optional)</label>
+            <textarea
+              value={formData.additional_requirements}
+              onChange={(e) => setFormData({...formData, additional_requirements: e.target.value})}
+              placeholder="Any specific requirements, features, or constraints..."
+              rows={3}
+              className="w-full px-4 py-2 bg-[#2A2A2A] border border-[#3A3A3A] rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 resize-none"
+            />
+          </div>
+
+          <div className="bg-blue-600/10 border border-blue-600/20 rounded-lg p-4">
+            <p className="text-blue-400 text-sm">
+              Our team will review your request and provide a detailed quote including development timeline and cost. 
+              Custom strategy development typically ranges from $500-$5000 depending on complexity.
+            </p>
+          </div>
+
+          <button
+            type="submit"
+            disabled={submitting}
+            className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-600/50 text-white px-6 py-3 rounded-lg transition-colors font-medium"
+          >
+            {submitting ? 'Submitting...' : 'Submit Request'}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+// My Strategies Component
+const MyStrategies = () => {
+  return (
+    <div className="text-center py-12">
+      <h2 className="text-2xl font-semibold text-white mb-4">My Strategies</h2>
+      <p className="text-gray-400 mb-6">View and manage your downloaded and deployed strategies.</p>
+      <button className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-colors">
+        Coming Soon
+      </button>
+    </div>
+  );
+};
+
+export default StrategyLab;
