@@ -20,6 +20,7 @@ import AccountAggregation from './components/pages/AccountAggregation'
 import Community from './components/pages/Community'
 import CardShowcase from './components/pages/CardShowcase'
 import Transactions from './components/pages/Transactions'
+import AI_Assistant from './components/pages/AI_Assistant.jsx'
 
 const App = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -61,7 +62,7 @@ const App = () => {
                 } />
                 <Route path='/ai-assistant' element={
                   <ProtectedRoute>
-                    <div>AI Assistant Page</div>
+                    <AI_Assistant />
                   </ProtectedRoute>
                 } />
                 <Route path='/analyst-insights' element={
