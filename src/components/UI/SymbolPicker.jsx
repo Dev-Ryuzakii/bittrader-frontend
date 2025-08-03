@@ -1,176 +1,252 @@
-import React, { useState, useEffect } from 'react';
-import { symbolMappingService } from '../../api/symbolMapping';
-import { ChevronDown, Check, X } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Search, TrendingUp, Star, CheckCircle, AlertCircle } from 'lucide-react';
+import { useTradingSymbol } from '../../contexts/TradingSymbolContext';
+import { SymbolAvailabilityBadge } from './SymbolMappingIndicator';
 
-const SymbolPicker = ({ accountIds, onSymbolSelect, selectedSymbol, className = "" }) => {
-  const [symbols, setSymbols] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [isOpen, setIsOpen] = useState(false);
+const SymbolPicker = ({ 
+  selectedSymbol, 
+  onSymbolSelect, 
+  accounts = [],
+  showFavorites = true,
+  showAvailability = true,
+  className = '' 
+}) => {
+  const { getAvailableSymbols, checkSymbolAvailability, updateSelectedSymbol } = useTradingSymbol();
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [favorites, setFavorites] = useState(['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD']);
 
-  useEffect(() => {
-    if (accountIds && accountIds.length > 0) {
-      fetchAvailableSymbols();
+  const accountIds = accounts.map(acc => acc.id);
+  const availableSymbols = getAvailableSymbols(accountIds);
+
+  // Filter and search symbols
+  const filteredSymbols = useMemo(() => {
+    let symbols = availableSymbols;
+
+    // Filter by category
+    if (selectedCategory === 'favorites') {
+      symbols = symbols.filter(symbol => favorites.includes(symbol));
+    } else if (selectedCategory !== 'all') {
+      symbols = symbols.filter(symbol => {
+        const category = getSymbolCategory(symbol);
+        return category === selectedCategory;
+      });
     }
-  }, [accountIds]);
 
-  const fetchAvailableSymbols = async () => {
-    setLoading(true);
-    try {
-      // Get symbols available across all selected accounts
-      const response = await symbolMappingService.getStandardSymbols();
-      
-      if (response.success) {
-        // Filter symbols that are available in at least one account
-        const availableSymbols = [];
-        for (const symbol of response.standard_symbols) {
-          const availability = await checkSymbolAvailability(symbol, accountIds);
-          if (availability && Object.values(availability).some(acc => acc.available)) {
-            availableSymbols.push({
-              symbol,
-              availability
-            });
-          }
+    // Filter by search term
+    if (searchTerm) {
+      symbols = symbols.filter(symbol =>
+        symbol.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // Sort by availability and name
+    return symbols.sort((a, b) => {
+      if (showAvailability && accounts.length > 0) {
+        const aAvailability = checkSymbolAvailability(a, accountIds);
+        const bAvailability = checkSymbolAvailability(b, accountIds);
+        const aAvailableCount = Object.values(aAvailability).filter(av => av.available).length;
+        const bAvailableCount = Object.values(bAvailability).filter(av => av.available).length;
+        
+        if (aAvailableCount !== bAvailableCount) {
+          return bAvailableCount - aAvailableCount; // More available first
         }
-        setSymbols(availableSymbols);
       }
-    } catch (error) {
-      console.error('Failed to fetch symbols:', error);
-    } finally {
-      setLoading(false);
-    }
+      return a.localeCompare(b);
+    });
+  }, [availableSymbols, selectedCategory, searchTerm, favorites, showAvailability, accounts, accountIds, checkSymbolAvailability]);
+
+  const getSymbolCategory = (symbol) => {
+    if (symbol.includes('USD') || symbol.includes('EUR') || symbol.includes('GBP')) return 'forex';
+    if (symbol.includes('BTC') || symbol.includes('ETH') || symbol.includes('USDT')) return 'crypto';
+    if (symbol.includes('.') || symbol.includes('_')) return 'stocks';
+    return 'other';
   };
 
-  const checkSymbolAvailability = async (symbol, accountIds) => {
-    try {
-      const response = await symbolMappingService.validateSymbolAcrossAccounts(symbol, accountIds);
-      return response.account_availability;
-    } catch (error) {
-      return {};
-    }
+  const categories = [
+    { id: 'all', label: 'All Symbols', count: availableSymbols.length },
+    { id: 'favorites', label: 'Favorites', count: favorites.filter(f => availableSymbols.includes(f)).length },
+    { id: 'forex', label: 'Forex', count: availableSymbols.filter(s => getSymbolCategory(s) === 'forex').length },
+    { id: 'crypto', label: 'Crypto', count: availableSymbols.filter(s => getSymbolCategory(s) === 'crypto').length },
+    { id: 'stocks', label: 'Stocks', count: availableSymbols.filter(s => getSymbolCategory(s) === 'stocks').length }
+  ];
+
+  const handleSymbolSelect = (symbol) => {
+    onSymbolSelect(symbol);
+    updateSelectedSymbol(symbol);
   };
 
-  const filteredSymbols = symbols.filter(({ symbol }) =>
-    symbol.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const toggleFavorite = (symbol, e) => {
+    e.stopPropagation();
+    setFavorites(prev => 
+      prev.includes(symbol) 
+        ? prev.filter(f => f !== symbol)
+        : [...prev, symbol]
+    );
+  };
 
-  const selectedSymbolData = symbols.find(s => s.symbol === selectedSymbol);
-  const availableCount = selectedSymbolData?.availability 
-    ? Object.values(selectedSymbolData.availability).filter(acc => acc.available).length 
-    : 0;
+  const getSymbolIcon = (symbol) => {
+    const category = getSymbolCategory(symbol);
+    const icons = {
+      forex: '💱',
+      crypto: '₿',
+      stocks: '📈',
+      other: '📊'
+    };
+    return icons[category] || icons.other;
+  };
 
   return (
-    <div className={`relative ${className}`}>
-      <label className="block text-sm font-medium text-gray-300 mb-2">
-        Select Trading Symbol:
-      </label>
-      
-      {/* Custom Dropdown */}
-      <div className="relative">
-        <button
-          type="button"
-          onClick={() => setIsOpen(!isOpen)}
-          disabled={loading}
-          className={`w-full bg-[#222] border border-[#333] rounded-lg px-3 py-2 text-left text-gray-300 
-            hover:border-[#444] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
-            ${loading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-        >
-          <span className="block truncate">
-            {selectedSymbol || 'Choose a symbol...'}
-          </span>
-          <span className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-            <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-          </span>
-        </button>
+    <div className={`symbol-picker ${className}`}>
+      {/* Search Bar */}
+      <div className="relative mb-4">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+        <input
+          type="text"
+          placeholder="Search symbols..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full pl-10 pr-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
+        />
+      </div>
 
-        {/* Dropdown Panel */}
-        {isOpen && (
-          <div className="absolute z-10 mt-1 w-full bg-[#222] border border-[#333] rounded-lg shadow-lg max-h-60 overflow-hidden">
-            {/* Search Input */}
-            <div className="p-2 border-b border-[#333]">
-              <input
-                type="text"
-                placeholder="Search symbols..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full bg-[#333] border border-[#444] rounded px-2 py-1 text-sm text-gray-300 
-                  placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              />
-            </div>
+      {/* Category Tabs */}
+      <div className="flex space-x-1 mb-4 bg-gray-800 p-1 rounded-lg">
+        {categories.map((category) => (
+          <button
+            key={category.id}
+            onClick={() => setSelectedCategory(category.id)}
+            className={`flex-1 px-3 py-2 text-xs font-medium rounded-md transition-colors ${
+              selectedCategory === category.id
+                ? 'bg-blue-600 text-white'
+                : 'text-gray-400 hover:text-white hover:bg-gray-700'
+            }`}
+          >
+            {category.label}
+            {category.count > 0 && (
+              <span className="ml-1 text-xs opacity-75">({category.count})</span>
+            )}
+          </button>
+        ))}
+      </div>
 
-            {/* Symbol List */}
-            <div className="overflow-y-auto max-h-48">
-              {filteredSymbols.length > 0 ? (
-                filteredSymbols.map(({ symbol, availability }) => {
-                  const accountsWithSymbol = Object.values(availability || {}).filter(acc => acc.available).length;
-                  const isSelected = symbol === selectedSymbol;
-                  
-                  return (
-                    <button
-                      key={symbol}
-                      type="button"
-                      onClick={() => {
-                        onSymbolSelect(symbol);
-                        setIsOpen(false);
-                      }}
-                      className={`w-full text-left px-3 py-2 hover:bg-[#333] focus:outline-none focus:bg-[#333]
-                        ${isSelected ? 'bg-blue-600/20 text-blue-400' : 'text-gray-300'}`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium">{symbol}</span>
+      {/* Symbol List */}
+      <div className="max-h-80 overflow-y-auto">
+        {filteredSymbols.length === 0 ? (
+          <div className="text-center py-8 text-gray-400">
+            <TrendingUp className="h-8 w-8 mx-auto mb-2 opacity-50" />
+            <p className="text-sm">No symbols found</p>
+            {searchTerm && (
+              <p className="text-xs mt-1">Try adjusting your search terms</p>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-1">
+            {filteredSymbols.map((symbol) => {
+              const availability = showAvailability && accounts.length > 0 
+                ? checkSymbolAvailability(symbol, accountIds) 
+                : {};
+              const availableCount = Object.values(availability).filter(av => av.available).length;
+              const isFavorite = favorites.includes(symbol);
+              const isSelected = selectedSymbol === symbol;
+
+              return (
+                <button
+                  key={symbol}
+                  onClick={() => handleSymbolSelect(symbol)}
+                  className={`w-full p-3 text-left rounded-lg transition-colors ${
+                    isSelected
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-800 hover:bg-gray-700 text-gray-100'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3 min-w-0 flex-1">
+                      <span className="text-lg">{getSymbolIcon(symbol)}</span>
+                      <div className="min-w-0 flex-1">
                         <div className="flex items-center space-x-2">
-                          <span className="text-xs text-gray-400">
-                            {accountsWithSymbol}/{accountIds.length} accounts
+                          <span className="font-medium truncate">{symbol}</span>
+                          {isSelected && <CheckCircle className="h-4 w-4 text-blue-200" />}
+                        </div>
+                        <div className="flex items-center space-x-2 mt-1">
+                          <span className="text-xs text-gray-400 capitalize">
+                            {getSymbolCategory(symbol)}
                           </span>
-                          {isSelected && <Check className="h-4 w-4 text-blue-400" />}
+                          {showAvailability && accounts.length > 0 && (
+                            <SymbolAvailabilityBadge symbol={symbol} accounts={accounts} />
+                          )}
                         </div>
                       </div>
-                    </button>
-                  );
-                })
-              ) : (
-                <div className="px-3 py-2 text-gray-400 text-sm">
-                  {loading ? 'Loading symbols...' : 'No symbols found'}
-                </div>
-              )}
-            </div>
+                    </div>
+                    
+                    <div className="flex items-center space-x-2">
+                      {showFavorites && (
+                        <button
+                          onClick={(e) => toggleFavorite(symbol, e)}
+                          className={`p-1 rounded transition-colors ${
+                            isFavorite 
+                              ? 'text-yellow-400 hover:text-yellow-300' 
+                              : 'text-gray-400 hover:text-yellow-400'
+                          }`}
+                        >
+                          <Star className={`h-4 w-4 ${isFavorite ? 'fill-current' : ''}`} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
           </div>
         )}
       </div>
 
-      {/* Symbol Availability Details */}
-      {selectedSymbol && selectedSymbolData && (
-        <div className="mt-3 p-3 bg-[#2A2A2A] rounded-lg border border-[#333]">
-          <h4 className="text-sm font-medium text-white mb-2">Symbol Availability:</h4>
-          <div className="space-y-1">
-            {Object.entries(selectedSymbolData.availability || {}).map(([accountId, acc]) => (
-              <div key={accountId} className="flex items-center justify-between text-sm">
-                <span className="text-gray-400">Account {accountId.slice(-6)}</span>
-                <div className="flex items-center space-x-2">
-                  {acc.available ? (
-                    <>
-                      <span className="text-green-400">{acc.broker_symbol}</span>
-                      <Check className="h-3 w-3 text-green-400" />
-                    </>
-                  ) : (
-                    <>
-                      <span className="text-red-400">Not available</span>
-                      <X className="h-3 w-3 text-red-400" />
-                    </>
-                  )}
-                </div>
-              </div>
-            ))}
+      {/* Summary */}
+      {accounts.length > 0 && (
+        <div className="mt-4 p-3 bg-gray-800 rounded-lg border border-gray-700">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-gray-400">
+              {filteredSymbols.length} symbols available
+            </span>
+            <span className="text-gray-400">
+              {accounts.length} account{accounts.length > 1 ? 's' : ''} connected
+            </span>
           </div>
         </div>
       )}
+    </div>
+  );
+};
 
-      {/* Loading State */}
-      {loading && (
-        <div className="mt-2 text-sm text-gray-400">
-          Loading symbols...
-        </div>
-      )}
+export const CompactSymbolPicker = ({ 
+  selectedSymbol, 
+  onSymbolSelect, 
+  accounts = [],
+  popularSymbols = ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'BTCUSD']
+}) => {
+  const { getAvailableSymbols } = useTradingSymbol();
+  const accountIds = accounts.map(acc => acc.id);
+  const availableSymbols = getAvailableSymbols(accountIds);
+  
+  const displaySymbols = popularSymbols.filter(symbol => 
+    availableSymbols.includes(symbol)
+  ).slice(0, 5);
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      {displaySymbols.map((symbol) => (
+        <button
+          key={symbol}
+          onClick={() => onSymbolSelect(symbol)}
+          className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+            selectedSymbol === symbol
+              ? 'bg-blue-600 text-white'
+              : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+          }`}
+        >
+          {symbol}
+        </button>
+      ))}
     </div>
   );
 };

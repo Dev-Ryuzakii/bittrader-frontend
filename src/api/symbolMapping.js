@@ -1,6 +1,6 @@
 /**
- * Symbol Mapping API Service
- * Handles symbol normalization and broker-specific mappings
+ * Enhanced Symbol Mapping API Service
+ * Handles automatic symbol normalization and broker-specific mappings
  */
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -8,6 +8,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 class SymbolMappingService {
   constructor() {
     this.baseURL = `${API_BASE_URL}/api/v1/symbol-mapping`;
+    this.brokerAccountsURL = `${API_BASE_URL}/api/v1/broker-accounts`;
   }
 
   /**
@@ -22,16 +23,82 @@ class SymbolMappingService {
   }
 
   /**
-   * Debug method to check authentication and base URL
+   * Get account symbols with automatic mapping status
+   * @param {string} accountId - Account ID
+   * @returns {Promise<Object>} Account symbols response
    */
-  debugInfo() {
-    const token = localStorage.getItem('access_token');
-    console.log('SymbolMapping Service Debug Info:', {
-      baseURL: this.baseURL,
-      hasToken: !!token,
-      tokenPrefix: token ? token.substring(0, 10) + '...' : 'No token',
-      headers: this.getAuthHeaders()
-    });
+  async getAccountSymbols(accountId) {
+    try {
+      const response = await fetch(`${this.brokerAccountsURL}/${accountId}/symbols`, {
+        method: 'GET',
+        headers: this.getAuthHeaders()
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error(`Error getting account symbols for ${accountId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Refresh symbols for an account
+   * @param {string} accountId - Account ID
+   * @returns {Promise<Object>} Refresh response
+   */
+  async refreshAccountSymbols(accountId) {
+    try {
+      const response = await fetch(`${this.brokerAccountsURL}/${accountId}/refresh-symbols`, {
+        method: 'PUT',
+        headers: this.getAuthHeaders()
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error(`Error refreshing symbols for ${accountId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Poll symbol mapping status for account connection
+   * @param {string} accountId - Account ID
+   * @param {number} maxAttempts - Maximum polling attempts
+   * @returns {Promise<Object>} Final account status
+   */
+  async pollSymbolMappingStatus(accountId, maxAttempts = 30) {
+    for (let attempts = 0; attempts < maxAttempts; attempts++) {
+      try {
+        const response = await fetch(`${this.brokerAccountsURL}/${accountId}`, {
+          method: 'GET',
+          headers: this.getAuthHeaders()
+        });
+
+        if (response.ok) {
+          const account = await response.json();
+          if (account.symbols_mapped) {
+            return account; // Success!
+          }
+        }
+
+        // Wait 1 second before next attempt
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      } catch (error) {
+        console.error(`Error polling symbol mapping status (attempt ${attempts + 1}):`, error);
+      }
+    }
+
+    throw new Error("Symbol mapping timed out");
   }
 
   /**
