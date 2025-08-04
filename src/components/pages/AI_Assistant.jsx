@@ -1,5 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { symbolMappingService } from '../../api/symbolMapping';
+import { chatAPI, aiToolsAPI, executeAITool, formatAIResponse, getDefaultPromptForTool } from '../../api/chat';
+import { 
+  BarChart3, 
+  Target, 
+  Scale, 
+  TrendingUp, 
+  Calculator, 
+  Search, 
+  Shield, 
+  Microscope, 
+  FlaskConical,
+  Bot 
+} from 'lucide-react';
 
 // Tabs for different AI features
 const TABS = {
@@ -12,43 +24,61 @@ const TABS = {
   PATTERNS: 'patterns',
 };
 
-// Quick action buttons for ChatGPT-like dropdown
+// Quick action buttons for comprehensive AI features
 const QUICK_ACTIONS = [
   { 
     id: 'sentiment',
-    icon: '📊', 
+    icon: BarChart3, 
     label: 'Market Sentiment',
-    description: 'Analyze current market sentiment for trading pairs' 
+    description: 'Analyze current market sentiment for trading pairs'
   },
   { 
     id: 'strategy',
-    icon: '🎯', 
-    label: 'Create Strategy',
-    description: 'Generate custom trading strategies based on market conditions' 
+    icon: Target, 
+    label: 'Strategy Suggestions',
+    description: 'Get AI-powered strategy suggestions based on market conditions'
   },
   { 
     id: 'risk',
-    icon: '⚖️',
+    icon: Scale,
     label: 'Risk Analysis',
-    description: 'Calculate risk/reward ratios and position sizing'
+    description: 'Comprehensive portfolio risk analysis and recommendations'
   },
   { 
     id: 'patterns',
-    icon: '📈',
+    icon: TrendingUp,
     label: 'Chart Patterns',
-    description: 'Detect technical analysis patterns in price charts'
+    description: 'Detect chart patterns and generate trading signals'
   },
   { 
     id: 'position',
-    icon: '🔢',
+    icon: Calculator,
     label: 'Position Size',
-    description: 'Calculate optimal position size for your risk tolerance'
+    description: 'Calculate optimal position size based on risk management'
   },
   { 
     id: 'trade-eval',
-    icon: '🔍',
+    icon: Search,
     label: 'Trade Evaluation',
-    description: 'Evaluate and analyze your trading performance'
+    description: 'Comprehensive evaluation of trading performance'
+  },
+  { 
+    id: 'stop-loss',
+    icon: Shield,
+    label: 'Stop Loss Suggestions',
+    description: 'Get intelligent stop loss suggestions'
+  },
+  { 
+    id: 'analyze-trade',
+    icon: Microscope,
+    label: 'Analyze Trade',
+    description: 'Analyze individual trade for learning purposes'
+  },
+  { 
+    id: 'strategy-lab',
+    icon: FlaskConical,
+    label: 'Strategy Lab Analysis',
+    description: 'Analyze your Strategy Lab strategies with AI insights'
   },
 ];
 
@@ -60,40 +90,19 @@ function AI_Assistant({
   error, 
   chatHistory, 
   handleSend,
-  activeTab,
-  setActiveTab,
-  sentimentData,
-  strategyData,
-  riskData,
-  patternData,
-  handleTabAction,
-  symbols,
-  setSymbols,
-  symbol,
-  setSymbol,
-  entryPrice,
-  setEntryPrice,
-  stopLoss,
-  setStopLoss,
-  direction,
-  setDirection,
-  riskPercentage,
-  setRiskPercentage,
-  timeframe,
-  setTimeframe,
-  tradeId,
-  setTradeId,
   handleQuickAction,
+  selectedTool,
+  setSelectedTool,
 }) {
-  // State for feature dropdown
-  const [showFeatureDropdown, setShowFeatureDropdown] = useState(false);
+  // State for tool dropdown
+  const [showToolDropdown, setShowToolDropdown] = useState(false);
   const dropdownRef = useRef(null);
   
   // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setShowFeatureDropdown(false);
+        setShowToolDropdown(false);
       }
     }
     
@@ -102,197 +111,269 @@ function AI_Assistant({
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [dropdownRef]);
+  
   return (
     <div className="min-h-screen flex flex-col bg-[#111]">
-      {/* Main Content Area */}
-      <div className="flex-grow flex flex-col justify-center items-center p-6">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-white mb-2">ChatGPT</h1>
-        </div>
-
-        {/* Chat Messages - Show when there's chat history */}
-        {chatHistory.length > 0 && (
-          <div className="w-full max-w-4xl space-y-4 mb-8">
-            {chatHistory.map((message, index) => (
-              <div 
-                key={index} 
-                className={`px-6 py-4 rounded-lg ${
-                  message.sender === 'user' 
-                    ? 'bg-[#2a2a33] ml-12' 
-                    : 'bg-[#2d2d8a] mr-12'
-                }`}
-              >
-                <p className="text-white font-medium">
-                  {message.sender === 'user' ? 'You' : 'AI Assistant'}
-                </p>
-                <p className="text-gray-200 whitespace-pre-wrap">{message.content}</p>
+      {/* Chat Messages Area */}
+      <div className="flex-grow flex flex-col">
+        {chatHistory.length === 0 ? (
+          /* Welcome Screen */
+          <div className="flex-grow flex flex-col justify-center items-center p-6">
+            <div className="text-center mb-12 max-w-2xl">
+              <h1 className="text-4xl font-bold text-white mb-4">AI Trading Assistant</h1>
+              <p className="text-gray-400 text-lg mb-8">
+                Get comprehensive trading analysis, strategy suggestions, and market insights powered by AI
+              </p>
+              
+              {/* Tool Selection Grid
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
+                {QUICK_ACTIONS.map((tool) => (
+                  <button
+                    key={tool.id}
+                    onClick={() => {
+                      setSelectedTool(tool);
+                      handleQuickAction(tool.id);
+                    }}
+                    className="bg-[#1A1A1A] hover:bg-[#2A2A2A] border border-[#333] rounded-lg p-4 text-left transition-colors group"
+                  >
+                    <div className="text-2xl mb-2">{tool.icon}</div>
+                    <div className="text-white font-medium text-sm mb-1">{tool.label}</div>
+                    <div className="text-gray-400 text-xs">{tool.description}</div>
+                  </button>
+                ))}
+              </div> */}
+              
+              {/* Sample Prompts */}
+              <div className="space-y-2">
+                <h3 className="text-white text-sm font-medium mb-3">Try asking:</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  <button 
+                    className="bg-[#1A1A1A] hover:bg-[#2A2A2A] text-gray-300 text-sm p-3 rounded-lg text-left transition-colors"
+                    onClick={() => setPrompt("Analyze EURUSD sentiment and suggest entry points")}
+                  >
+                    "Analyze EURUSD sentiment and suggest entry points"
+                  </button>
+                  <button 
+                    className="bg-[#1A1A1A] hover:bg-[#2A2A2A] text-gray-300 text-sm p-3 rounded-lg text-left transition-colors"
+                    onClick={() => setPrompt("Create a risk management strategy for my portfolio")}
+                  >
+                    "Create a risk management strategy for my portfolio"
+                  </button>
+                  <button 
+                    className="bg-[#1A1A1A] hover:bg-[#2A2A2A] text-gray-300 text-sm p-3 rounded-lg text-left transition-colors"
+                    onClick={() => setPrompt("Calculate position size for 2% risk on GBPUSD")}
+                  >
+                    "Calculate position size for 2% risk on GBPUSD"
+                  </button>
+                  <button 
+                    className="bg-[#1A1A1A] hover:bg-[#2A2A2A] text-gray-300 text-sm p-3 rounded-lg text-left transition-colors"
+                    onClick={() => setPrompt("Detect chart patterns on major forex pairs")}
+                  >
+                    "Detect chart patterns on major forex pairs"
+                  </button>
+                </div>
               </div>
-            ))}
-            
-            {loading && (
-              <div className="bg-[#2d2d8a] px-6 py-4 rounded-lg mr-12">
-                <p className="text-white font-medium">AI Assistant</p>
-                <p className="text-gray-200">Thinking...</p>
-              </div>
-            )}
-            
-            {error && (
-              <div className="bg-[#8a2d2d] px-6 py-4 rounded-lg">
-                <p className="text-white font-medium">Error</p>
-                <p className="text-gray-200">{error}</p>
-              </div>
-            )}
+            </div>
+          </div>
+        ) : (
+          /* Chat Messages */
+          <div className="flex-grow p-6 overflow-y-auto">
+            <div className="max-w-4xl mx-auto space-y-6">
+              {chatHistory.map((message, index) => (
+                <div key={index} className="flex gap-4">
+                  {/* Avatar */}
+                  <div className="flex-shrink-0">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                      message.sender === 'user' 
+                        ? 'bg-blue-600' 
+                        : 'bg-green-600'
+                    }`}>
+                      {message.sender === 'user' ? (
+                        <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                        </svg>
+                      ) : (
+                        <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* Message Content */}
+                  <div className="flex-grow">
+                    <div className="text-white font-medium text-sm mb-1">
+                      {message.sender === 'user' ? 'You' : 'AI Trading Assistant'}
+                    </div>
+                    <div className="text-gray-200 whitespace-pre-wrap leading-relaxed">
+                      {message.content}
+                    </div>
+                  </div>
+                </div>
+              ))}
+              
+              {/* Loading Message */}
+              {loading && (
+                <div className="flex gap-4">
+                  <div className="flex-shrink-0">
+                    <div className="w-8 h-8 rounded-full bg-green-600 flex items-center justify-center">
+                      <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                  </div>
+                  <div className="flex-grow">
+                    <div className="text-white font-medium text-sm mb-1">AI Trading Assistant</div>
+                    <div className="flex items-center space-x-2">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-500"></div>
+                      <span className="text-gray-400">Analyzing your request...</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         )}
-
-        {/* Examples, Capabilities, Limitations - Show only when no chat history */}
-        {chatHistory.length === 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl w-full mb-12">
-            {/* Examples */}
-            <div className="text-center">
-              <div className="flex justify-center mb-4">
-                <div className="w-12 h-12 bg-[#2a2a33] rounded-full flex items-center justify-center">
-                  <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd" />
+        
+        {/* Error Display */}
+        {error && (
+          <div className="px-6 pb-2">
+            <div className="max-w-4xl mx-auto">
+              <div className="bg-red-900/20 border border-red-600/30 rounded-lg p-4 flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <svg className="h-5 w-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
+                  <span className="text-red-400 text-sm">{error}</span>
                 </div>
-              </div>
-              <h3 className="text-white text-lg font-semibold mb-4">Examples</h3>
-              <div className="space-y-3">
                 <button 
-                  className="w-full bg-[#2a2a33] hover:bg-[#333] text-gray-200 p-3 rounded-lg text-sm transition-colors text-left"
-                  onClick={() => setPrompt("Analyze BTCUSD sentiment for today")}
+                  onClick={() => setError("")}
+                  className="text-red-400 hover:text-red-300"
                 >
-                  "Analyze BTCUSD sentiment for today" →
-                </button>
-                <button 
-                  className="w-full bg-[#2a2a33] hover:bg-[#333] text-gray-200 p-3 rounded-lg text-sm transition-colors text-left"
-                  onClick={() => setPrompt("Create a scalping strategy for EURUSD")}
-                >
-                  "Create a scalping strategy for EURUSD" →
-                </button>
-                <button 
-                  className="w-full bg-[#2a2a33] hover:bg-[#333] text-gray-200 p-3 rounded-lg text-sm transition-colors text-left"
-                  onClick={() => setPrompt("Calculate position size for 2% risk on GBPUSD")}
-                >
-                  "Calculate position size for 2% risk on GBPUSD" →
-                </button>
-              </div>
-            </div>
-
-            {/* Capabilities */}
-            <div className="text-center">
-              <div className="flex justify-center mb-4">
-                <div className="w-12 h-12 bg-[#2a2a33] rounded-full flex items-center justify-center">
-                  <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd" />
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
-                </div>
-              </div>
-              <h3 className="text-white text-lg font-semibold mb-4">Capabilities</h3>
-              <div className="space-y-3 text-gray-300 text-sm">
-                <div className="bg-[#2a2a33] p-3 rounded-lg">
-                  Market sentiment analysis for trading pairs
-                </div>
-                <div className="bg-[#2a2a33] p-3 rounded-lg">
-                  Custom trading strategy generation
-                </div>
-                <div className="bg-[#2a2a33] p-3 rounded-lg">
-                  Risk management and position sizing
-                </div>
-              </div>
-            </div>
-
-            {/* Limitations */}
-            <div className="text-center">
-              <div className="flex justify-center mb-4">
-                <div className="w-12 h-12 bg-[#2a2a33] rounded-full flex items-center justify-center">
-                  <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                  </svg>
-                </div>
-              </div>
-              <h3 className="text-white text-lg font-semibold mb-4">Limitations</h3>
-              <div className="space-y-3 text-gray-300 text-sm">
-                <div className="bg-[#2a2a33] p-3 rounded-lg">
-                  May occasionally generate incorrect trading information
-                </div>
-                <div className="bg-[#2a2a33] p-3 rounded-lg">
-                  Not real-time market data - use for educational purposes
-                </div>
-                <div className="bg-[#2a2a33] p-3 rounded-lg">
-                  Limited knowledge of current market events
-                </div>
+                </button>
               </div>
             </div>
           </div>
         )}
       </div>
 
-      {/* Input Box - Always visible */}
-      <div className="relative mx-4 mb-6 mt-2">
-        {/* Quick Features Dropdown */}
-        <div className="relative max-w-4xl mx-auto" ref={dropdownRef}>
-          <div className="flex gap-4">
-            <div className="relative flex-grow bg-[#333] rounded-xl flex items-center">
-              {/* Feature toggle button */}
-              <button 
-                onClick={() => setShowFeatureDropdown(!showFeatureDropdown)}
-                className="absolute left-3 text-gray-400 hover:text-white p-1 rounded transition-colors z-10"
-                title="Quick actions"
+      {/* Input Area - Fixed at Bottom */}
+      <div className="border-t border-[#333] bg-[#111] p-6">
+        <div className="max-w-4xl mx-auto">
+          <div className="relative" ref={dropdownRef}>
+            <div className="flex items-center bg-[#1A1A1A] rounded-xl border border-[#333] focus-within:border-[#555]">
+              {/* Tool Selector Button */}
+              <button
+                onClick={() => setShowToolDropdown(!showToolDropdown)}
+                className="flex items-center gap-2 px-4 py-3 text-gray-400 hover:text-white transition-colors border-r border-[#333]"
+                title="Select AI Tool"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 3v18M3 12h18"></path>
+                {selectedTool?.icon ? (
+                  <selectedTool.icon className="w-5 h-5" />
+                ) : (
+                  <Bot className="w-5 h-5" />
+                )}
+                <span className="text-sm hidden sm:inline">{selectedTool?.label || 'General Chat'}</span>
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                 </svg>
               </button>
               
-              {/* Input with padding for the icon */}
-              <input
+              {/* Text Input */}
+              <textarea
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
-                className="w-full bg-transparent text-white p-4 pl-12 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Ask me about market analysis, trading strategies, or risk management..."
-                onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSend();
+                  }
+                }}
+                placeholder={`Ask ${selectedTool?.label || 'the AI assistant'} about trading analysis, strategies, or risk management...`}
+                className="flex-grow bg-transparent text-white px-4 py-3 resize-none focus:outline-none min-h-[48px] max-h-32"
+                rows="1"
+                style={{ 
+                  height: 'auto',
+                  minHeight: '48px'
+                }}
+                onInput={(e) => {
+                  e.target.style.height = 'auto';
+                  e.target.style.height = Math.min(e.target.scrollHeight, 128) + 'px';
+                }}
               />
+              
+              {/* Send Button */}
+              <button
+                onClick={handleSend}
+                disabled={loading || !prompt.trim()}
+                className={`p-3 m-2 rounded-lg transition-colors ${
+                  loading || !prompt.trim()
+                    ? 'bg-[#333] text-gray-500 cursor-not-allowed'
+                    : 'bg-blue-600 text-white hover:bg-blue-700'
+                }`}
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                </svg>
+              </button>
             </div>
             
-            <button 
-              onClick={handleSend}
-              disabled={loading || !prompt.trim()}
-              className={`px-6 py-2 rounded-xl font-semibold text-white ${
-                loading || !prompt.trim() ? 'bg-[#444] cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
-              } transition-colors`}
-            >
-              Send
-            </button>
-          </div>
-          
-          {/* Feature Dropdown Menu */}
-          {showFeatureDropdown && (
-            <div className="absolute z-20 left-0 right-0 mt-2 bg-[#333] rounded-xl shadow-lg overflow-hidden">
-              <div className="p-2 bg-[#222] border-b border-[#444] text-white font-medium">
-                Quick Actions
-              </div>
-              
-              {QUICK_ACTIONS.map((action) => (
+            {/* Tool Dropdown */}
+            {showToolDropdown && (
+              <div className="absolute bottom-full left-0 right-0 mb-2 bg-[#1A1A1A] border border-[#333] rounded-lg shadow-lg overflow-hidden z-50">
+                <div className="p-3 border-b border-[#333]">
+                  <h3 className="text-white font-medium text-sm">AI Trading Tools</h3>
+                </div>
+                
+                {/* General Chat Option */}
                 <button
-                  key={action.id}
-                  className="w-full px-4 py-3 flex items-center gap-3 hover:bg-[#444] text-left text-white transition-colors"
                   onClick={() => {
-                    handleQuickAction(action.id);
-                    setShowFeatureDropdown(false);
+                    setSelectedTool(null);
+                    setShowToolDropdown(false);
                   }}
+                  className={`w-full px-4 py-3 flex items-center gap-3 hover:bg-[#2A2A2A] text-left transition-colors ${
+                    !selectedTool ? 'bg-[#2A2A2A]' : ''
+                  }`}
                 >
-                  <span className="text-xl">{action.icon}</span>
+                  <Bot className="w-5 h-5 text-gray-400" />
                   <div>
-                    <div className="font-medium">{action.label}</div>
-                    <div className="text-sm text-gray-300">{action.description}</div>
+                    <div className="text-white font-medium text-sm">General Chat</div>
+                    <div className="text-gray-400 text-xs">Open-ended trading conversations</div>
                   </div>
                 </button>
-              ))}
-            </div>
-          )}
+                
+                {/* Tool Options */}
+                {QUICK_ACTIONS.map((tool) => (
+                  <button
+                    key={tool.id}
+                    onClick={() => {
+                      setSelectedTool(tool);
+                      setShowToolDropdown(false);
+                    }}
+                    className={`w-full px-4 py-3 flex items-center gap-3 hover:bg-[#2A2A2A] text-left transition-colors ${
+                      selectedTool?.id === tool.id ? 'bg-[#2A2A2A]' : ''
+                    }`}
+                  >
+                    <tool.icon className="w-5 h-5 text-gray-400" />
+                    <div>
+                      <div className="text-white font-medium text-sm">{tool.label}</div>
+                      <div className="text-gray-400 text-xs">{tool.description}</div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          
+          {/* Footer Text */}
+          <div className="text-center mt-3">
+            <p className="text-gray-500 text-xs">
+              AI Trading Assistant can make mistakes. Check important trading info and use proper risk management.
+            </p>
+          </div>
         </div>
       </div>
     </div>
@@ -306,27 +387,9 @@ function AI_AssistantWrapper() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [chatHistory, setChatHistory] = useState([]);
-  
-  // Tab state
-  const [activeTab, setActiveTab] = useState(TABS.CHAT);
-  
-  // Form states
-  const [symbol, setSymbol] = useState("");
-  const [timeframe, setTimeframe] = useState("1h");
-  const [direction, setDirection] = useState("buy");
-  const [entryPrice, setEntryPrice] = useState("");
-  const [stopLoss, setStopLoss] = useState("");
-  const [riskPercentage, setRiskPercentage] = useState("1");
-  const [tradeId, setTradeId] = useState("");
-  const [symbols, setSymbols] = useState([]);
-  
-  // Data states
-  const [sentimentData, setSentimentData] = useState(null);
-  const [strategyData, setStrategyData] = useState(null);
-  const [riskData, setRiskData] = useState(null);
-  const [patternData, setPatternData] = useState(null);
+  const [selectedTool, setSelectedTool] = useState(null);
 
-  // Handle chat send
+  // Handle chat send with enhanced API
   async function handleSend(e) {
     if (e) e.preventDefault();
     if (!prompt.trim()) return;
@@ -344,199 +407,140 @@ function AI_AssistantWrapper() {
     setPrompt(""); // Clear input immediately
     
     try {
-      // Call API endpoint
-      const response = await fetch("/api/ai/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: userPrompt })
-      });
+      let data;
       
-      if (!response.ok) {
-        throw new Error(`Error: ${response.status} ${response.statusText}`);
+      // Use specific tool API if a tool is selected
+      if (selectedTool) {
+        const toolOptions = prepareToolOptions(selectedTool.id, userPrompt);
+        data = await executeAITool(selectedTool.id, userPrompt, toolOptions);
+      } else {
+        // Use enhanced chat for general conversation
+        data = await chatAPI.enhancedChat(userPrompt, {
+          include_market_data: true,
+          include_account_data: true,
+          include_trading_history: true,
+          analysis_type: "comprehensive"
+        });
       }
       
-      const data = await response.json();
+      // Format and add AI response to chat
+      let responseText = "";
+      if (selectedTool) {
+        responseText = formatAIResponse(selectedTool.id, data);
+      } else {
+        responseText = data.data?.message || data.message || "Sorry, I couldn't generate a response.";
+      }
       
-      // Add AI response to chat
       setChatHistory(prev => [...prev, {
         sender: 'ai',
-        content: data.message || (data.data && data.data.message) || data.response || "Sorry, I couldn't generate a response."
+        content: responseText
       }]);
+      
     } catch (err) {
       setError(err.message || "An error occurred while communicating with the AI service.");
       console.error("AI chat error:", err);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  // Handle tab-specific actions
-  async function handleTabAction(tab) {
-    setLoading(true);
-    setError("");
-    
-    try {
-      let endpoint = "";
-      let requestData = {};
       
-      // Determine endpoint and data based on tab
-      switch (tab) {
-        case TABS.SENTIMENT:
-          endpoint = "/api/ai/sentiment";
-          requestData = { symbol, timeframe };
-          break;
-        case TABS.STRATEGY:
-          endpoint = "/api/ai/strategy";
-          requestData = { symbol, timeframe };
-          break;
-        case TABS.RISK:
-        case TABS.POSITION_SIZE:
-          endpoint = "/api/ai/risk";
-          requestData = { 
-            symbol, 
-            direction,
-            entryPrice: parseFloat(entryPrice),
-            stopLoss: parseFloat(stopLoss),
-            riskPercentage: parseFloat(riskPercentage)
-          };
-          break;
-        case TABS.TRADE_EVAL:
-          endpoint = "/api/ai/evaluate-trade";
-          requestData = { tradeId, symbol };
-          break;
-        case TABS.PATTERNS:
-          endpoint = "/api/ai/patterns";
-          requestData = { symbol, timeframe };
-          break;
-        default:
-          throw new Error("Unknown tab action");
-      }
-      
-      // Call API
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(requestData)
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Error: ${response.status} ${response.statusText}`);
-      }
-      
-      const data = await response.json();
-      
-      // Update corresponding data state based on tab
-      switch (tab) {
-        case TABS.SENTIMENT:
-          setSentimentData(data);
-          break;
-        case TABS.STRATEGY:
-          setStrategyData(data);
-          break;
-        case TABS.RISK:
-        case TABS.POSITION_SIZE:
-          setRiskData(data);
-          break;
-        case TABS.TRADE_EVAL:
-          // Handle trade evaluation response
-          break;
-        case TABS.PATTERNS:
-          setPatternData(data);
-          break;
-      }
-    } catch (err) {
-      setError(err.message || "An error occurred while communicating with the AI service.");
-      console.error("AI action error:", err);
+      // Add error message to chat
+      setChatHistory(prev => [...prev, {
+        sender: 'ai',
+        content: `Sorry, I encountered an error: ${err.message}`
+      }]);
     } finally {
       setLoading(false);
     }
   }
 
   // Handle quick action button clicks
-  const handleQuickAction = (actionId) => {
-    // Handle different quick actions by sending appropriate prompts to chat
-    switch(actionId) {
+  const handleQuickAction = async (actionId) => {
+    // Find the selected tool
+    const tool = QUICK_ACTIONS.find(a => a.id === actionId);
+    if (!tool) return;
+    
+    // Set the selected tool
+    setSelectedTool(tool);
+    
+    // Set a default prompt for the tool
+    const defaultPrompt = getDefaultPromptForTool(actionId);
+    setPrompt(defaultPrompt);
+    
+    // Optionally auto-send the default prompt
+    // Uncomment the next line if you want to auto-send
+    // setTimeout(() => handleSend(), 100);
+  };
+
+  // Helper function to prepare tool options based on tool type
+  const prepareToolOptions = (toolId, message) => {
+    switch(toolId) {
       case 'sentiment':
-        setPrompt("Analyze the current market sentiment for BTCUSD and provide insights on potential price movements.");
-        break;
+        return { symbols: null };
       case 'strategy':
-        setPrompt("Create a comprehensive trading strategy for EURUSD including entry/exit rules and risk management.");
-        break;
+        return { analysis_type: "comprehensive" };
       case 'risk':
-        setPrompt("Help me analyze the risk/reward ratio for a trade on GBPUSD with entry at 1.2500, stop loss at 1.2450, and take profit at 1.2600.");
-        break;
+        return { include_open_positions: true };
       case 'patterns':
-        setPrompt("Detect and analyze current chart patterns on the 4H timeframe for major currency pairs.");
-        break;
+        return { symbol: "EURUSD", timeframe: "H4" };
       case 'position':
-        setPrompt("Calculate the optimal position size for a trade with 2% account risk on EURUSD.");
-        break;
+        return { 
+          tradeSetup: {
+            symbol: "EURUSD",
+            entry_price: 1.1000,
+            stop_loss: 1.0950,
+            risk_percentage: 2.0
+          }
+        };
       case 'trade-eval':
-        setPrompt("Evaluate my recent trading performance and suggest improvements to my strategy.");
-        break;
+        return { timeframe_days: 30 };
+      case 'stop-loss':
+        return { 
+          tradeSetup: {
+            symbol: "EURUSD",
+            entry_price: 1.1000,
+            direction: "BUY",
+            timeframe: "H4"
+          }
+        };
+      case 'analyze-trade':
+        return { trade_id: "latest" };
+      case 'strategy-lab':
+        return { include_performance: true, include_insights: true };
       default:
-        break;
+        return {};
     }
   };
 
-  // Load available symbols on component mount
+  // Load conversation history on component mount
   useEffect(() => {
-    async function fetchSymbols() {
+    async function fetchConversationHistory() {
       try {
-        const response = await fetch("/api/symbols");
-        if (response.ok) {
-          const data = await response.json();
-          setSymbols(data.symbols || []);
+        const data = await chatAPI.getConversationHistory(5);
+        if (data.conversations && data.conversations.length > 0) {
+          // Convert conversation history to chat format
+          const recentChats = data.conversations.flatMap(conv => [
+            { sender: 'user', content: conv.user_message },
+            { sender: 'ai', content: conv.assistant_response }
+          ]);
+          setChatHistory(recentChats.slice(-6)); // Show last 6 messages (3 conversations)
         }
       } catch (error) {
-        console.error("Error fetching symbols:", error);
+        console.error("Error fetching conversation history:", error);
       }
     }
     
-    fetchSymbols();
+    fetchConversationHistory();
   }, []);
 
   return (
     <AI_Assistant
-      // Chat props
       prompt={prompt}
       setPrompt={setPrompt}
       loading={loading}
       error={error}
+      setError={setError}
       chatHistory={chatHistory}
       handleSend={handleSend}
-      
-      // Tab props
-      activeTab={activeTab}
-      setActiveTab={setActiveTab}
-      
-      // Data props
-      sentimentData={sentimentData}
-      strategyData={strategyData}
-      riskData={riskData}
-      patternData={patternData}
-      
-      // Form props
-      symbol={symbol}
-      setSymbol={setSymbol}
-      symbols={symbols}
-      setSymbols={setSymbols}
-      timeframe={timeframe}
-      setTimeframe={setTimeframe}
-      direction={direction}
-      setDirection={setDirection}
-      entryPrice={entryPrice}
-      setEntryPrice={setEntryPrice}
-      stopLoss={stopLoss}
-      setStopLoss={setStopLoss}
-      riskPercentage={riskPercentage}
-      setRiskPercentage={setRiskPercentage}
-      tradeId={tradeId}
-      setTradeId={setTradeId}
-      
-      // Action handlers
-      handleTabAction={handleTabAction}
       handleQuickAction={handleQuickAction}
+      selectedTool={selectedTool}
+      setSelectedTool={setSelectedTool}
     />
   );
 }

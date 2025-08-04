@@ -6,7 +6,7 @@ import TradingViewWidget from '../UI/TradingViewWidget';
 import TradeModal from '../modals/TradeModal';
 import TransactionsTable from '../UI/TransactionsTable';
 import Loader from '../UI/Loader';
-import { TrendingUp, Users, Activity, Target, Plus, BarChart3, Zap } from 'lucide-react';
+import { TrendingUp, Users, Activity, Target, Plus, BarChart3, Zap, Signal } from 'lucide-react';
 import { getTransactions } from '../../api/transactions';
 import { getAccounts, placeTrade } from '../../api/broker';
 import { useAuth } from '../../contexts/AuthContext';
@@ -20,6 +20,7 @@ const Dashboard = () => {
   const [selectedAccount, setSelectedAccount] = useState(null);
   const [tradeStatus, setTradeStatus] = useState({ loading: false, success: false, error: null });
   const [selectedSymbol, setSelectedSymbol] = useState('BTCUSD');
+  const [activeSection, setActiveSection] = useState('market'); // 'market' or 'signals'
   const { isAuthenticated } = useAuth();
 
   // Define color variants for account cards (same as in AccountAggregation)
@@ -99,27 +100,12 @@ const Dashboard = () => {
     }
   };
 
-  // Demo data - only used when no real accounts are connected
-  const demoAccounts = [
-    {
-      id: 'demo-1',
-      accountName: "Demo Account 1",
-      account_name: "Demo Account 1",
-      broker_name: "Demo Broker",
-      balance: 10000.00,
-      pnl: 0.00,
-      equity: 10000.00,
-      colorVariant: 2,
-      is_demo: true
-    }
-  ];
-
-  // Use real accounts if available, otherwise show demo accounts
-  const displayAccounts = brokerAccounts.length > 0 ? brokerAccounts : demoAccounts;
+  // Use only real broker accounts - no demo accounts
+  const displayAccounts = brokerAccounts;
 
   // Filter only active accounts and transform to match the expected format for AccountSlider
   const formattedAccounts = displayAccounts
-    .filter(account => account.is_active !== false) // Show demo accounts (no is_active property) and active broker accounts
+    .filter(account => account.is_active !== false) // Show only active broker accounts
     .map(account => ({
       ...account,
       accountName: account.account_name || account.broker_name || account.accountName || 'Unnamed Account',
@@ -214,7 +200,7 @@ const Dashboard = () => {
             <span className="text-sm text-gray-400">{formattedAccounts.length} account{formattedAccounts.length !== 1 ? 's' : ''}</span>
             {brokerAccounts.length === 0 && (
               <button 
-                onClick={() => window.location.href = '/accounts-aggregation'}
+                onClick={() => window.location.href = '/accounts'}
                 className="text-blue-400 hover:text-blue-300 text-sm transition-colors"
               >
                 Connect Account
@@ -238,6 +224,17 @@ const Dashboard = () => {
               <span>Connect Your First Account</span>
             </button>
           </div>
+        ) : formattedAccounts.length === 0 ? (
+          <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-8 text-center">
+            <div className="text-gray-400 mb-4">No trading accounts connected</div>
+            <button 
+              onClick={() => window.location.href = '/accounts'}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors inline-flex items-center space-x-2"
+            >
+              <Plus size={16} />
+              <span>Connect Your First Account</span>
+            </button>
+          </div>
         ) : (
           <AccountSlider
             totalBalance={totalBalance}
@@ -248,59 +245,110 @@ const Dashboard = () => {
         )}
       </div>
 
-      {/* Market Overview */}
+      {/* Market Overview / Signal Strategy Section */}
       <div className="mb-8">
-        <MarketOverview />
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center space-x-1">
+            <button
+              onClick={() => setActiveSection('market')}
+              className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+                activeSection === 'market'
+                  ? 'bg-blue-600 text-white'
+                  : 'text-gray-400 hover:text-white hover:bg-[#2A2A2A]'
+              }`}
+            >
+              <BarChart3 size={16} />
+              <span>Market Overview</span>
+            </button>
+            <button
+              onClick={() => setActiveSection('signals')}
+              className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+                activeSection === 'signals'
+                  ? 'bg-blue-600 text-white'
+                  : 'text-gray-400 hover:text-white hover:bg-[#2A2A2A]'
+              }`}
+            >
+              <Signal size={16} />
+              <span>Signal Strategy</span>
+            </button>
+          </div>
+        </div>
+        
+        {/* Content based on active section */}
+        {activeSection === 'market' ? (
+          <MarketOverview />
+        ) : (
+          <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-8 text-center">
+            <div className="flex flex-col items-center space-y-4">
+              <div className="w-16 h-16 bg-blue-600/20 rounded-full flex items-center justify-center">
+                <Signal size={32} className="text-blue-400" />
+              </div>
+              <div>
+                <h3 className="text-xl font-semibold text-white mb-2">Signal Strategy</h3>
+                <p className="text-gray-400 mb-4">Advanced trading signals and automated strategies</p>
+                <div className="bg-orange-600/20 text-orange-400 px-4 py-2 rounded-lg inline-block">
+                  Coming Soon
+                </div>
+              </div>
+              <p className="text-sm text-gray-500 max-w-md">
+                We're working on bringing you AI-powered trading signals and automated strategy execution. 
+                Stay tuned for this exciting feature!
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* TradingView Chart Section */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center space-x-4">
-            <h2 className="text-xl font-semibold text-white">Live Trading Chart</h2>
-            <button
-              onClick={() => setIsTradeModalOpen(true)}
-              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors text-sm font-medium flex items-center space-x-2"
-            >
-              <Plus size={16} />
-              <span>Place Trade</span>
-            </button>
-            {selectedAccount && (
-              <div className="bg-blue-600/20 text-blue-400 px-3 py-1 rounded-full text-sm">
-                Trading on: {selectedAccount.account_name || selectedAccount.broker_name || selectedAccount.accountName}
-              </div>
-            )}
+        <div className="mb-8">
+          <div className="flex flex-col space-y-4 mb-4 lg:flex-row lg:items-center lg:justify-between lg:space-y-0">
+            <div className="flex flex-col space-y-3 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-4">
+          <h2 className="text-xl font-semibold text-white">Live Trading Chart</h2>
+          <button
+            onClick={() => setIsTradeModalOpen(true)}
+            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors text-sm font-medium flex items-center justify-center space-x-2 w-full sm:w-auto"
+          >
+            <Plus size={16} />
+            <span>Place Trade</span>
+          </button>
+          {selectedAccount && (
+            <div className="bg-blue-600/20 text-blue-400 px-3 py-1 rounded-full text-sm text-center sm:text-left">
+              <span className="hidden sm:inline">Trading on: </span>
+              {selectedAccount.account_name || selectedAccount.broker_name || selectedAccount.accountName}
+            </div>
+          )}
+            </div>
+            <div className="flex items-center space-x-2">
+              <span className="text-sm text-gray-400 hidden sm:inline">Account:</span>
+              <select
+                className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg text-sm text-white px-3 py-2 flex-1 sm:flex-initial min-w-0"
+                onChange={(e) => {
+                  const accountId = e.target.value;
+              const account = formattedAccounts.find(a => a.id.toString() === accountId);
+              if (account) {
+            setSelectedAccount(account);
+              }
+            }}
+            value={selectedAccount?.id?.toString() || ''}
+          >
+            <option value="" disabled>Select account</option>
+            {formattedAccounts.map((account) => (
+              <option key={account.id} value={account.id}>
+            {account.account_name || account.broker_name || account.accountName}
+            {account.is_demo ? ' (Demo)' : ''}
+              </option>
+            ))}
+          </select>
+            </div>
           </div>
-          <div className="flex items-center space-x-2">
-            <select 
-              className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg text-sm text-white px-3 py-1"
-              onChange={(e) => {
-                const accountId = e.target.value;
-                const account = formattedAccounts.find(a => a.id.toString() === accountId);
-                if (account) {
-                  setSelectedAccount(account);
-                }
-              }}
-              value={selectedAccount?.id?.toString() || ''}
-            >
-              <option value="" disabled>Select account</option>
-              {formattedAccounts.map((account) => (
-                <option key={account.id} value={account.id}>
-                  {account.account_name || account.broker_name || account.accountName}
-                  {account.is_demo ? ' (Demo)' : ''}
-                </option>
-              ))}
-            </select>
+          
+          <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg overflow-hidden" style={{ minHeight: '700px' }}>
+            <div className="h-96 sm:h-[700px] lg:h-[660px] w-full">
+          <TradingViewWidget symbol={selectedSymbol} theme="dark" />
+            </div>
           </div>
-        </div>
-        
-        <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg overflow-hidden" style={{ minHeight: '680px' }}>
-          <div style={{ height: '660px', width: '100%' }}>
-            <TradingViewWidget symbol={selectedSymbol} theme="dark" />
-          </div>
-        </div>
-        
-        {/* Trading status message */}
+          
+          {/* Trading status message */}
         {tradeStatus.success && (
           <div className="mt-2 bg-green-900/30 border border-green-700 text-green-200 px-4 py-2 rounded">
             Trade placed successfully

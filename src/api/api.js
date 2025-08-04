@@ -8,8 +8,8 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  // Increase timeout if needed
-  timeout: 10000,
+  // Increase timeout for AI processing
+  timeout: 30000, // 30 seconds for AI endpoints
 });
 
 // Add interceptors if needed (for tokens, logging, etc.)
