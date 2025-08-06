@@ -105,7 +105,7 @@ const Dashboard = () => {
 
   // Filter only active accounts and transform to match the expected format for AccountSlider
   const formattedAccounts = displayAccounts
-    .filter(account => account.is_active !== false) // Show only active broker accounts
+    .filter(account => account.is_active !== false) // Show demo accounts (no is_active property) and active broker accounts
     .map(account => ({
       ...account,
       accountName: account.account_name || account.broker_name || account.accountName || 'Unnamed Account',
@@ -122,41 +122,7 @@ const Dashboard = () => {
   const totalPnl = activeAccounts.reduce((sum, account) => sum + (account.pnl || 0), 0);
   const totalEquity = activeAccounts.reduce((sum, account) => sum + (account.equity || 0), 0);
 
-  // Stats data
-  const stats = [
-    {
-      title: "Total Profit",
-      value: "+$34,691.28",
-      change: "+12.5%",
-      icon: TrendingUp,
-      color: "text-green-400",
-      bgColor: "bg-green-500/10"
-    },
-    {
-      title: "Active Strategies",
-      value: "8",
-      change: "+2 this week",
-      icon: Target,
-      color: "text-blue-400",
-      bgColor: "bg-blue-500/10"
-    },
-    {
-      title: "Win Rate",
-      value: "73.2%",
-      change: "+5.1%",
-      icon: Activity,
-      color: "text-purple-400",
-      bgColor: "bg-purple-500/10"
-    },
-    {
-      title: "Community Rank",
-      value: "#147",
-      change: "↑23 positions",
-      icon: Users,
-      color: "text-orange-400",
-      bgColor: "bg-orange-500/10"
-    }
-  ];
+  
 
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-7xl mx-auto">
@@ -200,7 +166,7 @@ const Dashboard = () => {
             <span className="text-sm text-gray-400">{formattedAccounts.length} account{formattedAccounts.length !== 1 ? 's' : ''}</span>
             {brokerAccounts.length === 0 && (
               <button 
-                onClick={() => window.location.href = '/accounts'}
+                onClick={() => window.location.href = '/account-aggregation'}
                 className="text-blue-400 hover:text-blue-300 text-sm transition-colors"
               >
                 Connect Account
@@ -217,18 +183,7 @@ const Dashboard = () => {
           <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-8 text-center">
             <div className="text-gray-400 mb-4">No trading accounts connected</div>
             <button 
-              onClick={() => window.location.href = '/accounts'}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors inline-flex items-center space-x-2"
-            >
-              <Plus size={16} />
-              <span>Connect Your First Account</span>
-            </button>
-          </div>
-        ) : formattedAccounts.length === 0 ? (
-          <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-8 text-center">
-            <div className="text-gray-400 mb-4">No trading accounts connected</div>
-            <button 
-              onClick={() => window.location.href = '/accounts'}
+              onClick={() => window.location.href = '/account-aggregation'}
               className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors inline-flex items-center space-x-2"
             >
               <Plus size={16} />
@@ -248,12 +203,12 @@ const Dashboard = () => {
       {/* Market Overview / Signal Strategy Section */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center space-x-1">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={() => setActiveSection('market')}
               className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
                 activeSection === 'market'
-                  ? 'bg-blue-600 text-white'
+                  ? 'bg-blue-600/90 text-white'
                   : 'text-gray-400 hover:text-white hover:bg-[#2A2A2A]'
               }`}
             >
@@ -264,7 +219,7 @@ const Dashboard = () => {
               onClick={() => setActiveSection('signals')}
               className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
                 activeSection === 'signals'
-                  ? 'bg-blue-600 text-white'
+                  ? 'bg-blue-600/90 text-white'
                   : 'text-gray-400 hover:text-white hover:bg-[#2A2A2A]'
               }`}
             >
@@ -280,13 +235,13 @@ const Dashboard = () => {
         ) : (
           <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-8 text-center">
             <div className="flex flex-col items-center space-y-4">
-              <div className="w-16 h-16 bg-blue-600/20 rounded-full flex items-center justify-center">
-                <Signal size={32} className="text-blue-400" />
+              <div className="w-16 h-16 bg-purple-600/20 rounded-full flex items-center justify-center">
+                <Signal size={32} className="text-purple-400" />
               </div>
               <div>
                 <h3 className="text-xl font-semibold text-white mb-2">Signal Strategy</h3>
                 <p className="text-gray-400 mb-4">Advanced trading signals and automated strategies</p>
-                <div className="bg-orange-600/20 text-orange-400 px-4 py-2 rounded-lg inline-block">
+                <div className="bg-orange-600/20 text-orange-400 px-4 py-2 rounded-lg inline-block border border-orange-600/30">
                   Coming Soon
                 </div>
               </div>
@@ -303,42 +258,42 @@ const Dashboard = () => {
         <div className="mb-8">
           <div className="flex flex-col space-y-4 mb-4 lg:flex-row lg:items-center lg:justify-between lg:space-y-0">
             <div className="flex flex-col space-y-3 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-4">
-          <h2 className="text-xl font-semibold text-white">Live Trading Chart</h2>
-          <button
-            onClick={() => setIsTradeModalOpen(true)}
-            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors text-sm font-medium flex items-center justify-center space-x-2 w-full sm:w-auto"
-          >
-            <Plus size={16} />
-            <span>Place Trade</span>
-          </button>
-          {selectedAccount && (
-            <div className="bg-blue-600/20 text-blue-400 px-3 py-1 rounded-full text-sm text-center sm:text-left">
-              <span className="hidden sm:inline">Trading on: </span>
-              {selectedAccount.account_name || selectedAccount.broker_name || selectedAccount.accountName}
-            </div>
-          )}
+              <h2 className="text-xl font-semibold text-white">Live Trading Chart</h2>
+              <button
+                onClick={() => setIsTradeModalOpen(true)}
+                className="bg-green-600/90 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition-colors text-sm font-medium flex items-center justify-center space-x-2 w-auto"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Place Trade</span>
+              </button>
+              {selectedAccount && (
+                <div className="bg-blue-600/20 text-blue-400 px-3 py-1 rounded-full text-sm text-center sm:text-left truncate max-w-[200px] border border-blue-600/30">
+                  <span className="hidden sm:inline">Trading on: </span>
+                  {selectedAccount.account_name || selectedAccount.broker_name || selectedAccount.accountName}
+                </div>
+              )}
             </div>
             <div className="flex items-center space-x-2">
               <span className="text-sm text-gray-400 hidden sm:inline">Account:</span>
               <select
-                className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg text-sm text-white px-3 py-2 flex-1 sm:flex-initial min-w-0"
+                className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg text-sm text-white px-3 py-2 w-full sm:w-auto max-w-[200px] focus:outline-none focus:border-blue-600/70 focus:ring-1 focus:ring-blue-600/30"
                 onChange={(e) => {
                   const accountId = e.target.value;
-              const account = formattedAccounts.find(a => a.id.toString() === accountId);
-              if (account) {
-            setSelectedAccount(account);
-              }
-            }}
-            value={selectedAccount?.id?.toString() || ''}
-          >
-            <option value="" disabled>Select account</option>
-            {formattedAccounts.map((account) => (
-              <option key={account.id} value={account.id}>
-            {account.account_name || account.broker_name || account.accountName}
-            {account.is_demo ? ' (Demo)' : ''}
-              </option>
-            ))}
-          </select>
+                  const account = formattedAccounts.find(a => a.id.toString() === accountId);
+                  if (account) {
+                    setSelectedAccount(account);
+                  }
+                }}
+                value={selectedAccount?.id?.toString() || ''}
+              >
+                <option value="" disabled>Select account</option>
+                {formattedAccounts.map((account) => (
+                  <option key={account.id} value={account.id}>
+                    {account.account_name || account.broker_name || account.accountName}
+                    {account.is_demo ? ' (Demo)' : ''}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
           
@@ -350,13 +305,13 @@ const Dashboard = () => {
           
           {/* Trading status message */}
         {tradeStatus.success && (
-          <div className="mt-2 bg-green-900/30 border border-green-700 text-green-200 px-4 py-2 rounded">
+          <div className="mt-2 bg-green-900/30 border border-green-700/50 text-green-400 px-4 py-2 rounded">
             Trade placed successfully
           </div>
         )}
         
         {tradeStatus.error && (
-          <div className="mt-2 bg-red-900/30 border border-red-700 text-red-200 px-4 py-2 rounded">
+          <div className="mt-2 bg-red-900/30 border border-red-700/50 text-red-400 px-4 py-2 rounded">
             Error placing trade: {tradeStatus.error}
           </div>
         )}
@@ -382,13 +337,13 @@ const Dashboard = () => {
           <h2 className="text-xl font-semibold text-white">Recent Transactions</h2>
           <button 
             onClick={() => window.location.href = '/transactions'} 
-            className="text-blue-400 hover:text-blue-300 text-sm transition-colors"
+            className="text-blue-400 hover:text-blue-300 text-sm transition-colors flex items-center"
           >
-            View all
+            View all <span className="ml-1">→</span>
           </button>
         </div>
         
-        <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg overflow-hidden">
+        <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg overflow-hidden shadow-sm">
           <TransactionsTable 
             transactions={transactions}
             loading={transactionsLoading}
@@ -406,18 +361,18 @@ const Dashboard = () => {
           {/* Left side - Logo and company info */}
           <div className="flex items-center space-x-6">
             <div className="flex items-center space-x-2">
-              <div className="w-6 h-6 bg-blue-600 rounded flex items-center justify-center">
+              <div className="w-6 h-6 bg-blue-600/80 rounded flex items-center justify-center">
                 <div className="w-2 h-2 bg-white rounded-sm"></div>
               </div>
               <span className="text-lg font-bold text-white">Bitetrader</span>
             </div>
             <nav className="hidden md:flex items-center space-x-6">
-              <a href="#" className="text-gray-400 hover:text-white text-sm transition-colors">Overview</a>
-              <a href="#" className="text-gray-400 hover:text-white text-sm transition-colors">Features</a>
-              <a href="#" className="text-gray-400 hover:text-white text-sm transition-colors">Pricing</a>
-              <a href="#" className="text-gray-400 hover:text-white text-sm transition-colors">Careers</a>
-              <a href="#" className="text-gray-400 hover:text-white text-sm transition-colors">Help</a>
-              <a href="#" className="text-gray-400 hover:text-white text-sm transition-colors">Privacy</a>
+              <a href="#" className="text-gray-400 hover:text-blue-400 text-sm transition-colors">Overview</a>
+              <a href="#" className="text-gray-400 hover:text-blue-400 text-sm transition-colors">Features</a>
+              <a href="#" className="text-gray-400 hover:text-blue-400 text-sm transition-colors">Pricing</a>
+              <a href="#" className="text-gray-400 hover:text-blue-400 text-sm transition-colors">Careers</a>
+              <a href="#" className="text-gray-400 hover:text-blue-400 text-sm transition-colors">Help</a>
+              <a href="#" className="text-gray-400 hover:text-blue-400 text-sm transition-colors">Privacy</a>
             </nav>
           </div>
 
@@ -428,9 +383,9 @@ const Dashboard = () => {
               <input 
                 type="email" 
                 placeholder="Enter your email" 
-                className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg px-3 py-2 text-white text-sm w-48 focus:outline-none focus:border-blue-600"
+                className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg px-3 py-2 text-white text-sm w-48 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600/50"
               />
-              <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm transition-colors">
+              <button className="bg-blue-600/90 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm transition-colors">
                 Subscribe
               </button>
             </div>
@@ -442,9 +397,9 @@ const Dashboard = () => {
           <div className="flex items-center space-x-4 text-sm text-gray-400">
             <span>© 2077 Untitled UI. All rights reserved.</span>
             <span className="hidden md:inline">•</span>
-            <a href="#" className="hover:text-white transition-colors">Terms</a>
-            <a href="#" className="hover:text-white transition-colors">Privacy</a>
-            <a href="#" className="hover:text-white transition-colors">Cookies</a>
+            <a href="#" className="hover:text-blue-400 transition-colors">Terms</a>
+            <a href="#" className="hover:text-blue-400 transition-colors">Privacy</a>
+            <a href="#" className="hover:text-blue-400 transition-colors">Cookies</a>
           </div>
         </div>
       </footer>

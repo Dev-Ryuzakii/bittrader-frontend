@@ -69,6 +69,29 @@ export const authAPI = {
   }
 };
 
+// User Profile API functions
+export const userAPI = {
+  getProfile: async () => {
+    try {
+      const response = await api.get('/profile');
+      return response.data;
+    } catch (error) {
+      console.error('Get profile error:', error);
+      throw error;
+    }
+  },
+  
+  updateProfile: async (profileData) => {
+    try {
+      const response = await api.put('/profile', profileData);
+      return response.data;
+    } catch (error) {
+      console.error('Update profile error:', error);
+      throw error;
+    }
+  }
+};
+
 // Trading API functions
 export const tradingAPI = {
   placeOrder: async (orderData) => {

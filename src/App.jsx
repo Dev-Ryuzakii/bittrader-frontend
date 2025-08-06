@@ -23,6 +23,7 @@ import Community from './components/pages/Community'
 import CardShowcase from './components/pages/CardShowcase'
 import Transactions from './components/pages/Transactions'
 import AI_Assistant from './components/pages/AI_Assistant.jsx'
+import Search from './components/pages/Search.jsx'
 
 const App = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -116,6 +117,11 @@ const App = () => {
                   <Route path='/transactions' element={
                     <ProtectedRoute>
                       <Transactions />
+                    </ProtectedRoute>
+                  } />
+                  <Route path='/search' element={
+                    <ProtectedRoute>
+                      <Search />
                     </ProtectedRoute>
                   } />
                 </Routes>

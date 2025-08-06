@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import { 
   X, 
@@ -11,19 +11,23 @@ import {
   DollarSign,
   Activity,
   Search,
-  Star,
-  Globe
+  RefreshCw
 } from 'lucide-react';
-import { debounce } from 'lodash';
 import { 
   placeTrade, 
   placePendingOrder, 
   placePairTrade, 
   placeMultiAccountTrade,
-  getLivePrice,
-  getPopularSymbols,
-  searchSymbols
+  getLivePrice 
 } from '../../api/broker';
+import PairTradingPanel from './PairTradingPanel';
+import { 
+  getSymbolPrice, 
+  getPopularSymbols, 
+  searchSymbols, 
+  mockSearchSymbols, 
+  formatSymbolsForPicker 
+} from '../../utils/symbolpicker';
 
 const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelect, onPlaceTrade }) => {
   const [activeTab, setActiveTab] = useState('market');
@@ -61,6 +65,11 @@ const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelec
     volume2: 0.01,
     trade_type1: 'buy',
     trade_type2: 'sell',
+    correlation_type: 'SIMPLE',
+    stop_loss1: '',
+    stop_loss2: '',
+    take_profit1: '',
+    take_profit2: '',
     correlation_threshold: 0.8,
     comment: '',
   });
@@ -79,13 +88,28 @@ const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelec
 
   // Fetch live price when symbol changes
   useEffect(() => {
-    if (isOpen && marketData.symbol) {
+    if (isOpen && selectedAccount && marketData.symbol) {
       fetchLivePrice(marketData.symbol);
     }
-  }, [isOpen, marketData.symbol]);
+  }, [isOpen, marketData.symbol, selectedAccount]);
 
   const fetchLivePrice = async (symbol) => {
     try {
+      // Try to use the symbolpicker's getSymbolPrice function first
+      if (selectedAccount) {
+        const response = await getSymbolPrice(selectedAccount.id, symbol);
+        if (response) {
+          setLivePrice({
+            bid: response.bid,
+            ask: response.ask,
+            spread: response.spread,
+            time: response.time
+          });
+          return;
+        }
+      }
+      
+      // Fall back to the broker API's getLivePrice if symbolpicker fails
       const response = await getLivePrice(symbol);
       if (response.success) {
         setLivePrice(response.data);
@@ -189,7 +213,7 @@ const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelec
     }
   };
 
-  const handlePairTrade = async () => {
+  const handlePairTrade = async (direction) => {
     if (!selectedAccount) {
       setError('Please select an account to trade with');
       return;
@@ -202,9 +226,33 @@ const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelec
       const volume1 = parseFloat(pairData.volume1);
       const volume2 = parseFloat(pairData.volume2);
       const threshold = parseFloat(pairData.correlation_threshold);
+      const stopLoss1 = pairData.stop_loss1 ? parseFloat(pairData.stop_loss1) : null;
+      const stopLoss2 = pairData.stop_loss2 ? parseFloat(pairData.stop_loss2) : null;
+      const takeProfit1 = pairData.take_profit1 ? parseFloat(pairData.take_profit1) : null;
+      const takeProfit2 = pairData.take_profit2 ? parseFloat(pairData.take_profit2) : null;
 
       if (isNaN(volume1) || volume1 <= 0 || isNaN(volume2) || volume2 <= 0) {
         throw new Error('Volumes must be greater than 0');
+      }
+
+      // Set trade directions based on the direction parameter
+      let trade_type1, trade_type2;
+      
+      if (direction === 'BUY') {
+        trade_type1 = 'buy';
+        trade_type2 = 'sell';
+      } else if (direction === 'SELL') {
+        trade_type1 = 'sell';
+        trade_type2 = 'buy';
+      } else {
+        // Fallback to data from state if no direction provided
+        trade_type1 = pairData.trade_type1;
+        trade_type2 = pairData.trade_type2;
+        
+        // Only require trade types for SIMPLE mode when no direction is provided
+        if (pairData.correlation_type === 'SIMPLE' && (!trade_type1 || !trade_type2)) {
+          throw new Error('Trade directions are required for Simple mode');
+        }
       }
 
       const payload = {
@@ -212,8 +260,13 @@ const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelec
         symbol2: pairData.symbol2,
         volume1,
         volume2,
-        trade_type1: pairData.trade_type1,
-        trade_type2: pairData.trade_type2,
+        trade_type1,
+        trade_type2,
+        correlation_type: pairData.correlation_type,
+        stop_loss1: stopLoss1,
+        stop_loss2: stopLoss2,
+        take_profit1: takeProfit1,
+        take_profit2: takeProfit2,
         correlation_threshold: threshold,
         comment: pairData.comment,
       };
@@ -221,7 +274,22 @@ const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelec
       const response = await placePairTrade(selectedAccount.id, payload);
       
       if (response.success) {
-        toast.success(`Pair trade placed: ${response.data.trades?.length || 1} orders executed`);
+        toast.success(`Pair trade placed: ${response.message || 'Success'}`);
+        
+        // If we have correlation analysis, show it in a toast notification
+        if (response.correlation_analysis) {
+          const analysis = response.correlation_analysis;
+          toast.success(
+            <div>
+              <p><strong>Statistical Analysis:</strong></p>
+              <p>Correlation: {analysis.correlation?.toFixed(2)}</p>
+              <p>Z-Score: {analysis.z_score?.toFixed(2)}</p>
+              <p>{analysis.recommendation}</p>
+            </div>,
+            { duration: 6000 }
+          );
+        }
+        
         onClose();
       } else {
         throw new Error(response.error || 'Failed to place pair trade');
@@ -293,7 +361,7 @@ const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelec
         <div className="flex justify-between items-center p-6 border-b border-[#2A2A2A]">
           <h3 className="text-2xl font-bold text-white flex items-center gap-2">
             <Activity className="w-6 h-6" />
-             Trading Panel
+            Trading Panel
           </h3>
           <button 
             className="text-gray-400 hover:text-white transition-colors" 
@@ -347,20 +415,20 @@ const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelec
         </div>
 
         {/* Tabs */}
-        <div className="px-4 sm:px-6">
-          <div className="flex flex-col sm:flex-row sm:space-x-1 space-y-1 sm:space-y-0 bg-[#222] p-1 rounded-lg mb-6">
+        <div className="px-6">
+          <div className="flex space-x-1 bg-[#222] p-1 rounded-lg mb-6">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex-1 flex items-center justify-center gap-2 px-2 sm:px-4 py-3 rounded-md transition-colors ${
+                className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-md transition-colors ${
                   activeTab === tab.id
                     ? 'bg-blue-600 text-white'
                     : 'text-gray-400 hover:text-white hover:bg-[#333]'
                 }`}
               >
                 <tab.icon className="w-4 h-4" />
-                <span className="font-medium text-sm sm:text-base">{tab.label}</span>
+                <span className="font-medium">{tab.label}</span>
               </button>
             ))}
           </div>
@@ -411,274 +479,27 @@ const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelec
   );
 };
 
-// Symbol Picker Component
-const SymbolPicker = ({ 
-  selectedSymbol, 
-  onSymbolSelect, 
-  placeholder = "Search symbols..." 
-}) => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [symbols, setSymbols] = useState([]);
-  const [popularSymbols, setPopularSymbols] = useState([]);
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [highlightedIndex, setHighlightedIndex] = useState(-1);
-  
-  const searchInputRef = useRef(null);
-  const dropdownRef = useRef(null);
-
-  // Debounced search function
-  const debouncedSearch = useRef(
-    debounce(async (term) => {
-      if (term.length < 2) {
-        setSymbols([]);
-        return;
-      }
-
-      setLoading(true);
-      try {
-        const response = await searchSymbols(term, 15);
-        if (response.success) {
-          setSymbols(response.data.symbols || []);
-        }
-      } catch (error) {
-        console.error('Symbol search error:', error);
-        setSymbols([]);
-      } finally {
-        setLoading(false);
-      }
-    }, 300)
-  ).current;
-
-  // Load popular symbols on mount
-  useEffect(() => {
-    loadPopularSymbols();
-  }, []);
-
-  // Search when term changes
-  useEffect(() => {
-    if (searchTerm) {
-      debouncedSearch(searchTerm);
-    } else {
-      setSymbols([]);
-    }
-  }, [searchTerm, debouncedSearch]);
-
-  // Click outside to close dropdown
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setIsDropdownOpen(false);
-        setHighlightedIndex(-1);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
-
-  const loadPopularSymbols = async () => {
-    try {
-      const response = await getPopularSymbols();
-      if (response.success && response.data.popular_symbols) {
-        // Flatten major pairs for quick access
-        const majorPairs = response.data.popular_symbols.major_pairs || [];
-        setPopularSymbols(majorPairs.filter(s => s.available));
-      }
-    } catch (error) {
-      console.error('Error loading popular symbols:', error);
-    }
-  };
-
-  const handleInputChange = (e) => {
-    const value = e.target.value;
-    setSearchTerm(value);
-    setIsDropdownOpen(true);
-    setHighlightedIndex(-1);
-  };
-
-  const handleSymbolSelect = (symbol) => {
-    onSymbolSelect(symbol.symbol);
-    setSearchTerm('');
-    setIsDropdownOpen(false);
-    setHighlightedIndex(-1);
-  };
-
-  const handleKeyDown = (e) => {
-    const symbolList = searchTerm ? symbols : popularSymbols;
-    
-    switch (e.key) {
-      case 'ArrowDown':
-        e.preventDefault();
-        setHighlightedIndex(prev => 
-          prev < symbolList.length - 1 ? prev + 1 : 0
-        );
-        break;
-      case 'ArrowUp':
-        e.preventDefault();
-        setHighlightedIndex(prev => 
-          prev > 0 ? prev - 1 : symbolList.length - 1
-        );
-        break;
-      case 'Enter':
-        e.preventDefault();
-        if (highlightedIndex >= 0 && symbolList[highlightedIndex]) {
-          handleSymbolSelect(symbolList[highlightedIndex]);
-        }
-        break;
-      case 'Escape':
-        setIsDropdownOpen(false);
-        setHighlightedIndex(-1);
-        break;
-    }
-  };
-
-  const symbolList = searchTerm ? symbols : popularSymbols;
-
-  return (
-    <div className="relative w-full" ref={dropdownRef}>
-      {/* Input Container */}
-      <div className="relative">
-        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-          <Search className="h-4 w-4 text-gray-400" />
-        </div>
-        <input
-          ref={searchInputRef}
-          type="text"
-          value={searchTerm || selectedSymbol}
-          onChange={handleInputChange}
-          onFocus={() => setIsDropdownOpen(true)}
-          onKeyDown={handleKeyDown}
-          placeholder={placeholder}
-          className="w-full pl-10 pr-10 py-3 bg-[#1A1A1A] border border-[#444] rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
-          autoComplete="off"
-        />
-        
-        {loading && (
-          <div className="absolute inset-y-0 right-8 flex items-center">
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
-          </div>
-        )}
-        
-        <button
-          type="button"
-          onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-          className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-white transition-colors"
-        >
-          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-          </svg>
-        </button>
-      </div>
-
-      {/* Dropdown */}
-      {isDropdownOpen && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-[#1A1A1A] border border-[#444] rounded-lg shadow-lg z-50 max-h-80 overflow-y-auto">
-          {!searchTerm && (
-            <div className="py-2">
-              <div className="px-4 py-2 text-xs font-medium text-gray-400 uppercase tracking-wide bg-[#222] border-b border-[#333]">
-                <Star className="inline w-3 h-3 mr-1" />
-                Popular Symbols
-              </div>
-              {popularSymbols.length === 0 ? (
-                <div className="px-4 py-8 text-center text-gray-400">No symbols available</div>
-              ) : (
-                popularSymbols.map((symbol, index) => (
-                  <SymbolOption
-                    key={symbol.symbol}
-                    symbol={symbol}
-                    isHighlighted={index === highlightedIndex}
-                    onClick={() => handleSymbolSelect(symbol)}
-                  />
-                ))
-              )}
-            </div>
-          )}
-
-          {searchTerm && (
-            <div className="py-2">
-              <div className="px-4 py-2 text-xs font-medium text-gray-400 uppercase tracking-wide bg-[#222] border-b border-[#333]">
-                <Search className="inline w-3 h-3 mr-1" />
-                Search Results {symbols.length > 0 && `(${symbols.length})`}
-              </div>
-              {symbols.length === 0 ? (
-                <div className="px-4 py-8 text-center text-gray-400">
-                  {loading ? 'Searching...' : 'No symbols found'}
-                </div>
-              ) : (
-                symbols.map((symbol, index) => (
-                  <SymbolOption
-                    key={symbol.symbol}
-                    symbol={symbol}
-                    isHighlighted={index === highlightedIndex}
-                    onClick={() => handleSymbolSelect(symbol)}
-                    showRelevance={true}
-                  />
-                ))
-              )}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-};
-
-// Individual symbol option component
-const SymbolOption = ({ symbol, isHighlighted, onClick, showRelevance = false }) => {
-  return (
-    <div
-      className={`px-4 py-3 cursor-pointer border-b border-[#333] last:border-b-0 transition-colors ${
-        isHighlighted ? 'bg-blue-600/20 border-blue-600/30' : 'hover:bg-[#2A2A2A]'
-      }`}
-      onClick={onClick}
-    >
-      <div className="flex justify-between items-start mb-1">
-        <div className="flex items-center gap-2">
-          <span className="font-medium text-white text-sm">
-            {symbol.display_name || symbol.name || symbol.symbol}
-          </span>
-          <span className="px-2 py-0.5 bg-[#333] text-gray-300 rounded text-xs font-mono">
-            {symbol.symbol}
-          </span>
-        </div>
-        <div className="flex items-center gap-1 text-xs text-gray-400">
-          {symbol.popular && <Star className="w-3 h-3 text-yellow-400" />}
-          <Globe className="w-3 h-3" />
-        </div>
-      </div>
-      
-      <div className="flex justify-between items-center text-xs text-gray-400">
-        <span className="flex-1 truncate">
-          {symbol.description || `${symbol.symbol} trading pair`}
-        </span>
-        <span className="ml-2 bg-[#444] px-2 py-0.5 rounded">
-          {symbol.available_accounts || symbol.accounts?.length || 0} account(s)
-        </span>
-      </div>
-      
-      {showRelevance && symbol.relevance_score && (
-        <div className="mt-2 h-1 bg-[#333] rounded-full overflow-hidden">
-          <div 
-            className="h-full bg-gradient-to-r from-green-500 to-yellow-500 rounded-full transition-all duration-300" 
-            style={{ width: `${symbol.relevance_score}%` }}
-          />
-        </div>
-      )}
-    </div>
-  );
-};
-
 // Market Order Panel Component
 const MarketOrderPanel = ({ data, setData, livePrice, onSubmit, submitting }) => {
+  const [showSymbolModal, setShowSymbolModal] = useState(false);
   const updateData = (field, value) => {
     setData(prev => ({ ...prev, [field]: value }));
   };
 
+  // Function to open symbol modal
+  const openSymbolSelector = () => {
+    setShowSymbolModal(true);
+  };
+
+  // Function to close symbol modal
+  const closeSymbolModal = () => {
+    setShowSymbolModal(false);
+  };
+
+  // Function to select a symbol
   const handleSymbolSelect = (symbol) => {
     updateData('symbol', symbol);
+    setShowSymbolModal(false);
   };
 
   return (
@@ -692,11 +513,21 @@ const MarketOrderPanel = ({ data, setData, livePrice, onSubmit, submitting }) =>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">Symbol</label>
-            <SymbolPicker
-              selectedSymbol={data.symbol}
-              onSymbolSelect={handleSymbolSelect}
-              placeholder="Search or select symbol..."
-            />
+            <div className="flex">
+              <input
+                type="text"
+                value={data.symbol}
+                onChange={(e) => updateData('symbol', e.target.value.toUpperCase())}
+                placeholder="e.g., BTCUSD"
+                className="w-full bg-[#1A1A1A] border border-[#444] rounded-l-lg px-3 py-2 text-white"
+              />
+              <button
+                onClick={openSymbolSelector}
+                className="bg-[#333] border border-[#555] border-l-0 rounded-r-lg px-3 text-blue-400 hover:text-blue-300"
+              >
+                <Search className="w-4 h-4" />
+              </button>
+            </div>
           </div>
           
           <div>
@@ -754,7 +585,7 @@ const MarketOrderPanel = ({ data, setData, livePrice, onSubmit, submitting }) =>
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">Stop Loss (Optional)</label>
+            <label className="block text-sm font-medium text-gray-300 mb-2">Stop Loss </label>
             <input
               type="number"
               step="0.00001"
@@ -766,7 +597,7 @@ const MarketOrderPanel = ({ data, setData, livePrice, onSubmit, submitting }) =>
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">Take Profit (Optional)</label>
+            <label className="block text-sm font-medium text-gray-300 mb-2">Take Profit </label>
             <input
               type="number"
               step="0.00001"
@@ -778,16 +609,6 @@ const MarketOrderPanel = ({ data, setData, livePrice, onSubmit, submitting }) =>
           </div>
         </div>
 
-        {/* <div className="mt-4">
-          <label className="block text-sm font-medium text-gray-300 mb-2">Comment (Optional)</label>
-          <input
-            type="text"
-            value={data.comment}
-            onChange={(e) => updateData('comment', e.target.value)}
-            placeholder="Trade comment..."
-            className="w-full bg-[#1A1A1A] border border-[#444] rounded-lg px-3 py-2 text-white"
-          />
-        </div> */}
 
         <button
           onClick={onSubmit}
@@ -801,17 +622,38 @@ const MarketOrderPanel = ({ data, setData, livePrice, onSubmit, submitting }) =>
           {submitting ? 'Placing Order...' : `Place ${data.trade_type.toUpperCase()} Order`}
         </button>
       </div>
+      
+      {/* Symbol Selection Modal */}
+      {showSymbolModal && (
+        <SymbolSelectorModal 
+          onClose={closeSymbolModal} 
+          onSelect={handleSymbolSelect}
+        />
+      )}
     </div>
   );
 };
 // Pending Order Panel Component
 const PendingOrderPanel = ({ data, setData, onSubmit, submitting }) => {
+  const [showSymbolModal, setShowSymbolModal] = useState(false);
   const updateData = (field, value) => {
     setData(prev => ({ ...prev, [field]: value }));
   };
 
+  // Function to open symbol modal
+  const openSymbolSelector = () => {
+    setShowSymbolModal(true);
+  };
+
+  // Function to close symbol modal
+  const closeSymbolModal = () => {
+    setShowSymbolModal(false);
+  };
+
+  // Function to select a symbol
   const handleSymbolSelect = (symbol) => {
     updateData('symbol', symbol);
+    setShowSymbolModal(false);
   };
 
   const orderTypes = [
@@ -832,11 +674,21 @@ const PendingOrderPanel = ({ data, setData, onSubmit, submitting }) => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">Symbol</label>
-            <SymbolPicker
-              selectedSymbol={data.symbol}
-              onSymbolSelect={handleSymbolSelect}
-              placeholder="Search or select symbol..."
-            />
+            <div className="flex">
+              <input
+                type="text"
+                value={data.symbol}
+                onChange={(e) => updateData('symbol', e.target.value.toUpperCase())}
+                placeholder="e.g., BTCUSD"
+                className="w-full bg-[#1A1A1A] border border-[#444] rounded-l-lg px-3 py-2 text-white"
+              />
+              <button
+                onClick={openSymbolSelector}
+                className="bg-[#333] border border-[#555] border-l-0 rounded-r-lg px-3 text-blue-400 hover:text-blue-300"
+              >
+                <Search className="w-4 h-4" />
+              </button>
+            </div>
           </div>
           
           <div>
@@ -883,7 +735,7 @@ const PendingOrderPanel = ({ data, setData, onSubmit, submitting }) => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">Stop Loss (Optional)</label>
+            <label className="block text-sm font-medium text-gray-300 mb-2">Stop Loss </label>
             <input
               type="number"
               step="0.00001"
@@ -895,7 +747,7 @@ const PendingOrderPanel = ({ data, setData, onSubmit, submitting }) => {
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">Take Profit (Optional)</label>
+            <label className="block text-sm font-medium text-gray-300 mb-2">Take Profit </label>
             <input
               type="number"
               step="0.00001"
@@ -906,27 +758,6 @@ const PendingOrderPanel = ({ data, setData, onSubmit, submitting }) => {
             />
           </div>
         </div>
-
-        {/* <div className="mt-4">
-          <label className="block text-sm font-medium text-gray-300 mb-2">Expiration (Optional)</label>
-          <input
-            type="datetime-local"
-            value={data.expiration}
-            onChange={(e) => updateData('expiration', e.target.value)}
-            className="w-full bg-[#1A1A1A] border border-[#444] rounded-lg px-3 py-2 text-white"
-          />
-        </div> */}
-
-        {/* <div className="mt-4">
-          <label className="block text-sm font-medium text-gray-300 mb-2">Comment (Optional)</label>
-          <input
-            type="text"
-            value={data.comment}
-            onChange={(e) => updateData('comment', e.target.value)}
-            placeholder="Order comment..."
-            className="w-full bg-[#1A1A1A] border border-[#444] rounded-lg px-3 py-2 text-white"
-          />
-        </div> */}
 
         <button
           onClick={onSubmit}
@@ -940,184 +771,26 @@ const PendingOrderPanel = ({ data, setData, onSubmit, submitting }) => {
           {submitting ? 'Placing Order...' : `Place ${data.order_type.replace('_', ' ').toUpperCase()}`}
         </button>
       </div>
+      
+      {/* Symbol Selection Modal */}
+      {showSymbolModal && (
+        <SymbolSelectorModal 
+          onClose={closeSymbolModal} 
+          onSelect={handleSymbolSelect}
+        />
+      )}
     </div>
   );
 };
 
-// Pair Trading Panel Component
-const PairTradingPanel = ({ data, setData, onSubmit, submitting }) => {
-  const updateData = (field, value) => {
-    setData(prev => ({ ...prev, [field]: value }));
-  };
-
-  const handleSymbol1Select = (symbol) => {
-    updateData('symbol1', symbol);
-  };
-
-  const handleSymbol2Select = (symbol) => {
-    updateData('symbol2', symbol);
-  };
-
-  return (
-    <div className="space-y-6">
-      <div className="bg-[#222] border border-[#333] rounded-lg p-4">
-        <h4 className="text-white font-medium mb-4 flex items-center gap-2">
-          <Scale className="w-4 h-4" />
-          Pair Trading
-        </h4>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* First Symbol */}
-          <div className="bg-[#1A1A1A] border border-[#444] rounded-lg p-4">
-            <h5 className="text-green-400 font-medium mb-3">Symbol 1</h5>
-            <div className="space-y-3">
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">Symbol</label>
-                <SymbolPicker
-                  selectedSymbol={data.symbol1}
-                  onSymbolSelect={handleSymbol1Select}
-                  placeholder="Search first symbol..."
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">Volume</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0.01"
-                  value={data.volume1}
-                  onChange={(e) => updateData('volume1', e.target.value)}
-                  className="w-full bg-[#222] border border-[#555] rounded-lg px-3 py-2 text-white"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">Trade Type</label>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => updateData('trade_type1', 'buy')}
-                    className={`flex-1 py-2 px-3 rounded-lg border text-sm transition-colors ${
-                      data.trade_type1 === 'buy'
-                        ? 'bg-green-600 border-green-600 text-white'
-                        : 'border-[#555] text-gray-300 hover:border-green-600'
-                    }`}
-                  >
-                    Buy
-                  </button>
-                  <button
-                    onClick={() => updateData('trade_type1', 'sell')}
-                    className={`flex-1 py-2 px-3 rounded-lg border text-sm transition-colors ${
-                      data.trade_type1 === 'sell'
-                        ? 'bg-red-600 border-red-600 text-white'
-                        : 'border-[#555] text-gray-300 hover:border-red-600'
-                    }`}
-                  >
-                    Sell
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Second Symbol */}
-          <div className="bg-[#1A1A1A] border border-[#444] rounded-lg p-4">
-            <h5 className="text-red-400 font-medium mb-3">Symbol 2</h5>
-            <div className="space-y-3">
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">Symbol</label>
-                <SymbolPicker
-                  selectedSymbol={data.symbol2}
-                  onSymbolSelect={handleSymbol2Select}
-                  placeholder="Search second symbol..."
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">Volume</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0.01"
-                  value={data.volume2}
-                  onChange={(e) => updateData('volume2', e.target.value)}
-                  className="w-full bg-[#222] border border-[#555] rounded-lg px-3 py-2 text-white"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">Trade Type</label>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => updateData('trade_type2', 'buy')}
-                    className={`flex-1 py-2 px-3 rounded-lg border text-sm transition-colors ${
-                      data.trade_type2 === 'buy'
-                        ? 'bg-green-600 border-green-600 text-white'
-                        : 'border-[#555] text-gray-300 hover:border-green-600'
-                    }`}
-                  >
-                    Buy
-                  </button>
-                  <button
-                    onClick={() => updateData('trade_type2', 'sell')}
-                    className={`flex-1 py-2 px-3 rounded-lg border text-sm transition-colors ${
-                      data.trade_type2 === 'sell'
-                        ? 'bg-red-600 border-red-600 text-white'
-                        : 'border-[#555] text-gray-300 hover:border-red-600'
-                    }`}
-                  >
-                    Sell
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">Correlation Threshold</label>
-            <input
-              type="number"
-              step="0.1"
-              min="0"
-              max="1"
-              value={data.correlation_threshold}
-              onChange={(e) => updateData('correlation_threshold', e.target.value)}
-              className="w-full bg-[#1A1A1A] border border-[#444] rounded-lg px-3 py-2 text-white"
-            />
-          </div>
-          
-          {/* <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">Comment (Optional)</label>
-            <input
-              type="text"
-              value={data.comment}
-              onChange={(e) => updateData('comment', e.target.value)}
-              placeholder="Pair trade comment..."
-              className="w-full bg-[#1A1A1A] border border-[#444] rounded-lg px-3 py-2 text-white"
-            />
-          </div> */}
-        </div>
-
-        <button
-          onClick={onSubmit}
-          disabled={submitting}
-          className={`w-full mt-6 py-3 px-4 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors ${
-            submitting ? 'opacity-70 cursor-not-allowed' : ''
-          }`}
-        >
-          {submitting ? 'Placing Pair Trade...' : 'Place Pair Trade'}
-        </button>
-      </div>
-    </div>
-  );
-};
+// PairTradingPanel is now imported from a separate file
 
 // Multi-Account Panel Component
 const MultiAccountPanel = ({ data, setData, accounts, onSubmit, submitting }) => {
+  const [showSymbolModal, setShowSymbolModal] = useState(false);
+  
   const updateData = (field, value) => {
     setData(prev => ({ ...prev, [field]: value }));
-  };
-
-  const handleSymbolSelect = (symbol) => {
-    updateData('symbol', symbol);
   };
 
   const toggleAccount = (accountId) => {
@@ -1126,6 +799,22 @@ const MultiAccountPanel = ({ data, setData, accounts, onSubmit, submitting }) =>
         ? data.selected_accounts.filter(id => id !== accountId)
         : [...data.selected_accounts, accountId]
     );
+  };
+  
+  // Function to open symbol modal
+  const openSymbolSelector = () => {
+    setShowSymbolModal(true);
+  };
+
+  // Function to close symbol modal
+  const closeSymbolModal = () => {
+    setShowSymbolModal(false);
+  };
+
+  // Function to select a symbol
+  const handleSymbolSelect = (symbol) => {
+    updateData('symbol', symbol);
+    setShowSymbolModal(false);
   };
 
   return (
@@ -1139,11 +828,21 @@ const MultiAccountPanel = ({ data, setData, accounts, onSubmit, submitting }) =>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">Symbol</label>
-            <SymbolPicker
-              selectedSymbol={data.symbol}
-              onSymbolSelect={handleSymbolSelect}
-              placeholder="Search or select symbol..."
-            />
+            <div className="flex">
+              <input
+                type="text"
+                value={data.symbol}
+                onChange={(e) => updateData('symbol', e.target.value.toUpperCase())}
+                placeholder="e.g., BTCUSD"
+                className="w-full bg-[#1A1A1A] border border-[#444] rounded-l-lg px-3 py-2 text-white"
+              />
+              <button
+                onClick={openSymbolSelector}
+                className="bg-[#333] border border-[#555] border-l-0 rounded-r-lg px-3 text-blue-400 hover:text-blue-300"
+              >
+                <Search className="w-4 h-4" />
+              </button>
+            </div>
           </div>
           
           <div>
@@ -1230,7 +929,7 @@ const MultiAccountPanel = ({ data, setData, accounts, onSubmit, submitting }) =>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">Stop Loss (Optional)</label>
+            <label className="block text-sm font-medium text-gray-300 mb-2">Stop Loss </label>
             <input
               type="number"
               step="0.00001"
@@ -1242,7 +941,7 @@ const MultiAccountPanel = ({ data, setData, accounts, onSubmit, submitting }) =>
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">Take Profit (Optional)</label>
+            <label className="block text-sm font-medium text-gray-300 mb-2">Take Profit </label>
             <input
               type="number"
               step="0.00001"
@@ -1254,16 +953,6 @@ const MultiAccountPanel = ({ data, setData, accounts, onSubmit, submitting }) =>
           </div>
         </div>
 
-        {/* <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-300 mb-2">Comment (Optional)</label>
-          <input
-            type="text"
-            value={data.comment}
-            onChange={(e) => updateData('comment', e.target.value)}
-            placeholder="Multi-account trade comment..."
-            className="w-full bg-[#1A1A1A] border border-[#444] rounded-lg px-3 py-2 text-white"
-          />
-        </div> */}
 
         <button
           onClick={onSubmit}
@@ -1274,6 +963,195 @@ const MultiAccountPanel = ({ data, setData, accounts, onSubmit, submitting }) =>
         >
           {submitting ? 'Placing Multi-Account Trade...' : `Place Trade on ${data.selected_accounts.length} Accounts`}
         </button>
+      </div>
+      
+      {/* Symbol Selection Modal */}
+      {showSymbolModal && (
+        <SymbolSelectorModal 
+          onClose={closeSymbolModal} 
+          onSelect={handleSymbolSelect}
+        />
+      )}
+    </div>
+  );
+};
+
+// Symbol Selector Modal
+const SymbolSelectorModal = ({ onClose, onSelect }) => {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [symbols, setSymbols] = useState([]);
+  const [popularSymbols, setPopularSymbols] = useState({});
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    loadPopularSymbols();
+  }, []);
+
+  // Load popular symbols
+  const loadPopularSymbols = async () => {
+    try {
+      setLoading(true);
+      const response = await getPopularSymbols();
+      if (response && response.popular_symbols) {
+        setPopularSymbols(response.popular_symbols);
+      } else {
+        // Fallback to mock data
+        setPopularSymbols({
+          major_pairs: [],
+          cross_pairs: [],
+          commodities: []
+        });
+      }
+    } catch (error) {
+      console.error('Error loading popular symbols:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle symbol search
+  const handleSymbolSearch = async (term) => {
+    setSearchTerm(term);
+    if (!term || term.length < 2) {
+      setSymbols([]);
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      // Try to get symbols from API
+      const response = await searchSymbols(term);
+      if (response && response.symbols) {
+        setSymbols(formatSymbolsForPicker(response));
+      } else {
+        // Fallback to mock search
+        setSymbols(mockSearchSymbols(term));
+      }
+    } catch (error) {
+      console.error('Error searching symbols:', error);
+      // Fallback to mock search
+      setSymbols(mockSearchSymbols(term));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Define categories
+  const SYMBOL_CATEGORIES = {
+    major_pairs: 'MAJOR FOREX PAIRS',
+    cross_pairs: 'CROSS FOREX PAIRS',
+    exotic_pairs: 'EXOTIC PAIRS',
+    commodities: 'COMMODITIES',
+    indices: 'INDICES',
+    crypto: 'CRYPTOCURRENCY'
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg w-full max-w-md max-h-[90vh] overflow-hidden flex flex-col">
+        <div className="p-4 border-b border-[#2A2A2A] flex justify-between items-center">
+          <h3 className="text-lg font-medium text-white">Select Symbol</h3>
+          <button 
+            className="text-gray-400 hover:text-white" 
+            onClick={onClose}
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        
+        <div className="p-4 border-b border-[#2A2A2A]">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => handleSymbolSearch(e.target.value)}
+              placeholder="Search symbols..."
+              className="w-full bg-[#222] border border-[#444] rounded-lg pl-9 pr-3 py-2 text-white"
+            />
+          </div>
+        </div>
+        
+        <div className="overflow-y-auto flex-1 p-2">
+          {loading && (
+            <div className="flex flex-col items-center justify-center h-32 text-gray-400">
+              <RefreshCw className="w-5 h-5 animate-spin mb-2" />
+              <p>Loading symbols...</p>
+            </div>
+          )}
+          
+          {!loading && searchTerm.length < 2 && (
+            <>
+              {Object.entries(popularSymbols).map(([category, symbolList]) => (
+                symbolList && symbolList.length > 0 && (
+                  <div key={category}>
+                    <div className="text-xs font-medium text-gray-500 px-2 py-1">
+                      {SYMBOL_CATEGORIES[category] || category.toUpperCase()}
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 mb-4">
+                      {symbolList.map(sym => (
+                        <button
+                          key={sym.symbol}
+                          onClick={() => onSelect(sym.symbol)}
+                          className={`bg-[#222] hover:bg-[#333] border border-[#444] rounded px-3 py-2 text-left transition-colors ${
+                            sym.available ? 'text-white' : 'text-gray-500'
+                          }`}
+                          disabled={!sym.available}
+                        >
+                          {sym.symbol}
+                          {sym.description && (
+                            <span className="text-xs text-gray-400 block">{sym.description}</span>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )
+              ))}
+              
+              {Object.keys(popularSymbols).length === 0 && !loading && (
+                <div className="flex flex-col items-center justify-center h-32 text-gray-400">
+                  <p>Type to search for symbols</p>
+                </div>
+              )}
+            </>
+          )}
+          
+          {!loading && searchTerm.length >= 2 && (
+            <>
+              {symbols.length > 0 ? (
+                <div className="grid grid-cols-2 gap-2">
+                  {symbols.map(symbol => (
+                    <button
+                      key={symbol.symbol}
+                      onClick={() => onSelect(symbol.symbol)}
+                      className="bg-[#222] hover:bg-[#333] border border-[#444] rounded px-3 py-2 text-white text-left transition-colors"
+                    >
+                      {symbol.symbol}
+                      {symbol.description && (
+                        <span className="text-xs text-gray-400 block">{symbol.description}</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-32 text-gray-400">
+                  <p>No symbols found</p>
+                  <p className="text-sm">Try a different search term</p>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+        
+        <div className="p-4 border-t border-[#2A2A2A]">
+          <button
+            onClick={onClose}
+            className="w-full py-2 px-4 bg-[#333] hover:bg-[#444] text-white rounded-lg transition-colors"
+          >
+            Cancel
+          </button>
+        </div>
       </div>
     </div>
   );

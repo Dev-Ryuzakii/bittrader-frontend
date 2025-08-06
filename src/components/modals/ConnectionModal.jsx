@@ -130,17 +130,17 @@ const ConnectionModal = ({ isOpen, onClose, onSubmit, platform }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-gray-900 rounded-lg p-6 w-full max-w-md border border-gray-700">
+    <div className="fixed inset-0  backdrop-blur-sm flex items-center justify-center z-50">
+      <div className="bg-[#1A1A1A] rounded-lg p-6 w-full max-w-md border border-[#fff] shadow-xl">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-bold text-white">Connect {platform} Account</h2>
-          <button onClick={handleClose} className="text-gray-400 hover:text-white">
+          <button onClick={handleClose} className="text-gray-400 hover:text-blue-400 transition-colors">
             <X size={24} />
           </button>
         </div>
 
         {error && (
-          <div className="mb-4 p-3 bg-red-900/20 border border-red-700 rounded-lg text-red-400 text-sm">
+          <div className="mb-4 p-3 bg-red-500/10 border border-red-600/60 rounded-lg text-red-400 text-sm">
             {error}
           </div>
         )}
@@ -156,7 +156,7 @@ const ConnectionModal = ({ isOpen, onClose, onSubmit, platform }) => {
                 required
                 value={formData.account_name}
                 onChange={(e) => setFormData({ ...formData, account_name: e.target.value })}
-                className="w-full px-3 py-2 bg-gray-800 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 border border-gray-700"
+                className="w-full px-3 py-2 bg-[#222222] text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/70 border border-gray-700/80"
                 placeholder="Enter a name for this account"
               />
             </div>
@@ -170,7 +170,7 @@ const ConnectionModal = ({ isOpen, onClose, onSubmit, platform }) => {
                 required
                 value={formData.broker_name}
                 onChange={(e) => setFormData({ ...formData, broker_name: e.target.value })}
-                className="w-full px-3 py-2 bg-gray-800 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 border border-gray-700"
+                className="w-full px-3 py-2 bg-[#222222] text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/70 border border-gray-700/80"
                 placeholder="Enter broker name"
               />
             </div>
@@ -184,7 +184,7 @@ const ConnectionModal = ({ isOpen, onClose, onSubmit, platform }) => {
                 required
                 value={formData.server}
                 onChange={(e) => setFormData({ ...formData, server: e.target.value })}
-                className="w-full px-3 py-2 bg-gray-800 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 border border-gray-700"
+                className="w-full px-3 py-2 bg-[#222222] text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/70 border border-gray-700/80"
                 placeholder="Enter server address"
               />
             </div>
@@ -198,7 +198,7 @@ const ConnectionModal = ({ isOpen, onClose, onSubmit, platform }) => {
                 required
                 value={formData.login}
                 onChange={(e) => setFormData({ ...formData, login: e.target.value })}
-                className="w-full px-3 py-2 bg-gray-800 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 border border-gray-700"
+                className="w-full px-3 py-2 bg-[#222222] text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/70 border border-gray-700/80"
                 placeholder="Enter login ID"
               />
             </div>
@@ -213,35 +213,25 @@ const ConnectionModal = ({ isOpen, onClose, onSubmit, platform }) => {
                   required
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="w-full px-3 py-2 bg-gray-800 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 pr-10 border border-gray-700"
+                  className="w-full px-3 py-2 bg-[#222222] text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/70 pr-10 border border-gray-700/80"
                   placeholder="Enter password"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-400 transition-colors"
                 >
                   {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                 </button>
               </div>
             </div>
 
-            <div className="mt-4 p-3 bg-blue-900/20 border border-blue-700 rounded-lg">
-              <div className="flex items-start space-x-2">
-                <CheckCircle className="h-5 w-5 text-blue-400 mt-0.5 flex-shrink-0" />
-                <div>
-                  <p className="text-blue-400 font-medium text-sm">Automatic Symbol Mapping</p>
-                  <p className="text-blue-300 text-xs mt-1">
-                    Symbols will be automatically mapped after connection. No manual setup required!
-                  </p>
-                </div>
-              </div>
-            </div>
+           
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors mt-6 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-gradient-to-r from-[#2F00FF] to-[#1C0099] text-white py-2 rounded-lg hover:bg-blue-500 focus:ring-2 focus:ring-blue-400/50 focus:outline-none transition-all mt-6 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (
                 <>
@@ -257,7 +247,7 @@ const ConnectionModal = ({ isOpen, onClose, onSubmit, platform }) => {
 
         {connectionStep === 'connecting' && (
           <div className="text-center py-8">
-            <Loader2 size={48} className="animate-spin mx-auto text-blue-400 mb-4" />
+            <Loader2 size={48} className="animate-spin mx-auto text-blue-500 mb-4" />
             <h3 className="text-lg font-semibold text-white mb-2">Connecting Account</h3>
             <p className="text-gray-400">Establishing connection to your trading account...</p>
           </div>
@@ -267,16 +257,16 @@ const ConnectionModal = ({ isOpen, onClose, onSubmit, platform }) => {
           <div className="text-center py-8">
             {mappingStatus.inProgress ? (
               <>
-                <Clock size={48} className="animate-pulse mx-auto text-yellow-400 mb-4" />
+                <Clock size={48} className="animate-pulse mx-auto text-yellow-500 mb-4" />
                 <h3 className="text-lg font-semibold text-white mb-2">Mapping Symbols</h3>
                 <p className="text-gray-400">Automatically mapping trading symbols...</p>
-                <div className="mt-4 bg-yellow-900/20 border border-yellow-700 rounded-lg p-3">
+                <div className="mt-4 bg-yellow-500/10 border border-yellow-600/60 rounded-lg p-3">
                   <p className="text-yellow-400 text-sm">This may take up to 30 seconds</p>
                 </div>
               </>
             ) : mappingStatus.completed ? (
               <>
-                <CheckCircle size={48} className="mx-auto text-green-400 mb-4" />
+                <CheckCircle size={48} className="mx-auto text-green-500 mb-4" />
                 <h3 className="text-lg font-semibold text-white mb-2">Symbols Mapped Successfully</h3>
                 <p className="text-gray-400">
                   {mappingStatus.symbolCount} symbols are now available for trading
@@ -284,7 +274,7 @@ const ConnectionModal = ({ isOpen, onClose, onSubmit, platform }) => {
               </>
             ) : mappingStatus.error ? (
               <>
-                <AlertCircle size={48} className="mx-auto text-yellow-400 mb-4" />
+                <AlertCircle size={48} className="mx-auto text-yellow-500 mb-4" />
                 <h3 className="text-lg font-semibold text-white mb-2">Symbol Mapping</h3>
                 <p className="text-yellow-400 text-sm">{mappingStatus.error}</p>
               </>
@@ -294,14 +284,14 @@ const ConnectionModal = ({ isOpen, onClose, onSubmit, platform }) => {
 
         {connectionStep === 'success' && (
           <div className="text-center py-8">
-            <CheckCircle size={64} className="mx-auto text-green-400 mb-4" />
+            <CheckCircle size={64} className="mx-auto text-green-500 mb-4" />
             <h3 className="text-xl font-semibold text-white mb-2">Account Connected!</h3>
             <p className="text-gray-400 mb-4">
               Your trading account has been successfully connected and symbols are ready for use.
             </p>
             <button
               onClick={handleClose}
-              className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-colors"
+              className="bg-green-600 hover:bg-green-500 text-white px-6 py-2 rounded-lg transition-all focus:ring-2 focus:ring-green-400/50 focus:outline-none"
             >
               Start Trading
             </button>

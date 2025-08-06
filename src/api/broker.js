@@ -266,13 +266,14 @@ export const placePairTrade = async (accountId, pairData) => {
     const response = await api.post(`/api/v1/broker-accounts/${accountId}/pair-trade`, pairData);
     return {
       success: true,
-      data: response
+      ...response.data,  // Include all API response data including correlation_analysis
+      correlation_type: pairData.correlation_type
     };
   } catch (error) {
     console.error('Error placing pair trade:', error);
     return {
       success: false,
-      error: error.message || 'Failed to place pair trade'
+      error: error.response?.data?.message || error.message || 'Failed to place pair trade'
     };
   }
 };
@@ -319,99 +320,17 @@ export const getSymbolPrice = async (accountId, symbol) => {
 
 export const getLivePrice = async (symbol) => {
   try {
-    // Try to get price from the first available account
-    const accountsResponse = await getAccounts();
-    if (accountsResponse.success && accountsResponse.data.length > 0) {
-      const firstAccount = accountsResponse.data[0];
-      const response = await api.get(`/api/v1/broker-accounts/${firstAccount.id}/price/${symbol}`);
-      return {
-        success: true,
-        data: response
-      };
-    } else {
-      // Fallback: try generic price endpoint if available
-      const response = await api.get(`/api/v1/market/price/${symbol}`);
-      return {
-        success: true,
-        data: response
-      };
-    }
+    const response = await api.get(`/api/v1/market/price/${symbol}`);
+    return {
+      success: true,
+      data: response
+    };
   } catch (error) {
     console.error('Error fetching live price:', error);
     return {
       success: false,
       error: error.message || 'Failed to fetch live price',
-      data: null
-    };
-  }
-};
-
-// =============================================================================
-// SYMBOL SELECTION & SEARCH (NEW)
-// =============================================================================
-
-export const getAvailableSymbols = async (searchTerm = '', limit = 50) => {
-  try {
-    const params = new URLSearchParams();
-    if (searchTerm) params.append('search', searchTerm);
-    if (limit) params.append('limit', limit.toString());
-    
-    const queryString = params.toString();
-    const url = queryString ? `/api/v1/broker-accounts/symbols/available?${queryString}` : '/api/v1/broker-accounts/symbols/available';
-    
-    const response = await api.get(url);
-    return {
-      success: true,
-      data: response
-    };
-  } catch (error) {
-    console.error('Error fetching available symbols:', error);
-    return {
-      success: false,
-      error: error.message || 'Failed to fetch available symbols',
-      data: { symbols: [] }
-    };
-  }
-};
-
-export const getPopularSymbols = async () => {
-  try {
-    const response = await api.get('/api/v1/broker-accounts/symbols/popular');
-    return {
-      success: true,
-      data: response
-    };
-  } catch (error) {
-    console.error('Error fetching popular symbols:', error);
-    return {
-      success: false,
-      error: error.message || 'Failed to fetch popular symbols',
-      data: { popular_symbols: { major_pairs: [], cross_pairs: [], exotic_pairs: [] } }
-    };
-  }
-};
-
-export const searchSymbols = async (searchTerm, limit = 15) => {
-  try {
-    const params = new URLSearchParams();
-    if (limit) params.append('limit', limit.toString());
-    
-    const queryString = params.toString();
-    const url = queryString ? 
-      `/api/v1/broker-accounts/symbols/search/${encodeURIComponent(searchTerm)}?${queryString}` : 
-      `/api/v1/broker-accounts/symbols/search/${encodeURIComponent(searchTerm)}`;
-    
-    const response = await api.get(url);
-    return {
-      success: true,
-      data: response
-    };
-  } catch (error) {
-    console.error('Error searching symbols:', error);
-    return {
-      success: false,
-      error: error.message || 'Failed to search symbols',
-      data: { symbols: [] }
+      data: { bid: 0, ask: 0 }
     };
   }
 };
@@ -498,6 +417,10 @@ export class TradingAPI {
   // Get Real-time Prices
   async getSymbolPrice(accountId, symbol) {
     return this.request(`/broker-accounts/${accountId}/price/${symbol}`);
+  }
+  
+  async getLivePrice(symbol) {
+    return this.request(`/market/price/${symbol}`);
   }
 
   // Position Management

@@ -122,7 +122,7 @@ const Sidebar = ({ isMobileMenuOpen, setIsMobileMenuOpen }) => {
                       to={item.path}
                       className={`flex items-center space-x-3 p-3 rounded-lg transition-all
                         ${isActive 
-                          ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md' 
+                          ? 'bg-gradient-to-r from-[#2F00FF] to-[#1C0099]text-white shadow-md' 
                           : 'hover:bg-[#1A1A1A] text-gray-400 hover:text-white'
                         }`}
                       onClick={() => setIsMobileMenuOpen(false)}
@@ -140,7 +140,7 @@ const Sidebar = ({ isMobileMenuOpen, setIsMobileMenuOpen }) => {
             <div className="bg-[#1A1A1A] rounded-lg p-4 mb-4">
               <h3 className="font-semibold mb-2">Join Our Community</h3>
               <p className="text-sm text-gray-400 mb-3">Connect with fellow traders and share insights</p>
-              <button className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors">
+              <button className="w-full bg-gradient-to-r from-[#2F00FF] to-[#1C0099] text-white py-2 rounded-lg hover:bg-blue-700 transition-colors">
                 Join Now
               </button>
             </div>
@@ -204,7 +204,7 @@ const Sidebar = ({ isMobileMenuOpen, setIsMobileMenuOpen }) => {
           <div className="bg-[#1A1A1A] rounded-lg p-4 mb-4">
             <h3 className="font-semibold mb-2">Join Our Community</h3>
             <p className="text-sm text-gray-400 mb-3">Connect with fellow traders and share insights</p>
-            <button className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors">
+            <button className="w-full bg-gradient-to-r from-[#2F00FF] to-[#1C0099] text-white py-2 rounded-lg hover:bg-blue-700 transition-colors">
               Join Now
             </button>
           </div>
