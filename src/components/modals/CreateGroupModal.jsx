@@ -62,10 +62,10 @@ const CreateGroupModal = ({ isOpen, onClose, onGroupCreated }) => {
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-gray-800 rounded-lg w-full max-w-md mx-4">
+    <div className="fixed inset-0  backdrop-blur-sm bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-[#222222] rounded-lg w-full max-w-md mx-4">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-700">
+        <div className="flex items-center justify-between p-6 border-b border-white">
           <h2 className="text-xl font-bold text-white">Create New Group</h2>
           <button
             onClick={handleClose}
@@ -95,7 +95,7 @@ const CreateGroupModal = ({ isOpen, onClose, onGroupCreated }) => {
               value={formData.name}
               onChange={handleChange}
               placeholder="Enter group name"
-              className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
+              className="w-full bg-[#222222] border border-white rounded-lg px-4 py-2 text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
               required
               maxLength={100}
             />
@@ -111,7 +111,7 @@ const CreateGroupModal = ({ isOpen, onClose, onGroupCreated }) => {
               onChange={handleChange}
               placeholder="Enter group description (optional)"
               rows={3}
-              className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 resize-none"
+              className="w-full bg-[#222222] border border-white rounded-lg px-4 py-2 text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 resize-none"
               maxLength={500}
             />
           </div>
@@ -126,7 +126,7 @@ const CreateGroupModal = ({ isOpen, onClose, onGroupCreated }) => {
               value={formData.avatar_url}
               onChange={handleChange}
               placeholder="https://example.com/image.jpg (optional)"
-              className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
+              className="w-full bg-[#222222] border border-white rounded-lg px-4 py-2 text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
             />
           </div>
 
@@ -137,7 +137,7 @@ const CreateGroupModal = ({ isOpen, onClose, onGroupCreated }) => {
               name="is_private"
               checked={formData.is_private}
               onChange={handleChange}
-              className="rounded border-gray-600 bg-gray-700 text-blue-600 focus:ring-blue-500 focus:ring-offset-gray-800"
+              className="rounded border-white bg-[#222222] text-blue-600 focus:ring-blue-500 focus:ring-offset-gray-800"
             />
             <label htmlFor="is_private" className="ml-3 text-sm text-gray-300">
               Private Group
@@ -149,7 +149,7 @@ const CreateGroupModal = ({ isOpen, onClose, onGroupCreated }) => {
 
           {/* Preview */}
           {(formData.name || formData.description || formData.avatar_url) && (
-            <div className="bg-gray-700 rounded-lg p-4">
+            <div className="bg-[#222222] rounded-lg p-4">
               <h4 className="text-sm font-medium text-gray-400 mb-2">Preview</h4>
               <div className="flex items-center space-x-3">
                 <img
@@ -189,7 +189,7 @@ const CreateGroupModal = ({ isOpen, onClose, onGroupCreated }) => {
             <button
               type="submit"
               disabled={loading || !formData.name.trim()}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed"
+              className="px-6 py-2 bg-gradient-to-r from-[#2F00FF] to-[#1C0099] text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed"
             >
               {loading ? 'Creating...' : 'Create Group'}
             </button>

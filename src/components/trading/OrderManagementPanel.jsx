@@ -138,7 +138,7 @@ const OrderManagementPanel = ({ selectedAccount }) => {
         <button 
           onClick={handleRefresh} 
           disabled={loading || refreshing}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#2F00FF] to-[#1C0099] hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
         >
           <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
           {refreshing ? 'Refreshing...' : 'Refresh'}
@@ -319,7 +319,7 @@ const PositionRow = ({ position, onClose, onModify }) => {
             </button>
             <button 
               onClick={() => setEditing(false)}
-              className="px-2 py-1 bg-gray-600 hover:bg-gray-700 text-white rounded text-xs transition-colors"
+              className="px-2 py-1 bg-gray-600 hover:bg-[#222222] text-white rounded text-xs transition-colors"
             >
               Cancel
             </button>

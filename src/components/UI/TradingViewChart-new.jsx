@@ -255,13 +255,13 @@ const TradingViewChart = ({ onPlaceTrade, symbol = 'BTC/USD' }) => {
       <div className="absolute top-4 left-4 z-10 flex items-center space-x-2">
         <div className="bg-[#222222] rounded-lg p-1 flex">
           <button 
-            className={`px-3 py-1 rounded text-sm ${chartType === 'candles' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'}`}
+            className={`px-3 py-1 rounded text-sm ${chartType === 'candles' ? 'bg-gradient-to-r from-[#2F00FF] to-[#1C0099] text-white' : 'text-gray-400 hover:text-white'}`}
             onClick={() => toggleChartType('candles')}
           >
             Candles
           </button>
           <button 
-            className={`px-3 py-1 rounded text-sm ${chartType === 'line' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'}`}
+            className={`px-3 py-1 rounded text-sm ${chartType === 'line' ? 'bg-gradient-to-r from-[#2F00FF] to-[#1C0099] text-white' : 'text-gray-400 hover:text-white'}`}
             onClick={() => toggleChartType('line')}
           >
             Line
@@ -277,7 +277,7 @@ const TradingViewChart = ({ onPlaceTrade, symbol = 'BTC/USD' }) => {
       <div className="absolute top-4 right-4 z-10">
         <button 
           onClick={onPlaceTrade}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors font-medium"
+          className="bg-gradient-to-r from-[#2F00FF] to-[#1C0099] hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors font-medium"
         >
           Place Trade
         </button>

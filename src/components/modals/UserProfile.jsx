@@ -65,7 +65,7 @@ const UserProfile = ({ isOpen, onClose, username, currentUser }) => {
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-gray-800 rounded-lg w-full max-w-2xl mx-4 max-h-[90vh] overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-700">
+        <div className="flex items-center justify-between p-6 border-b border-white">
           <h2 className="text-xl font-bold text-white">User Profile</h2>
           <button
             onClick={onClose}
@@ -84,7 +84,7 @@ const UserProfile = ({ isOpen, onClose, username, currentUser }) => {
         ) : profile ? (
           <div className="overflow-y-auto max-h-[calc(90vh-80px)]">
             {/* Profile Header */}
-            <div className="p-6 border-b border-gray-700">
+            <div className="p-6 border-b border-white">
               <div className="flex items-center space-x-4">
                 <img
                   src={profile.avatar_url || '/api/placeholder/80/80'}
@@ -115,8 +115,8 @@ const UserProfile = ({ isOpen, onClose, username, currentUser }) => {
                     onClick={handleFollow}
                     className={`px-4 py-2 rounded-lg font-medium ${
                       isFollowing
-                        ? 'bg-gray-600 text-white hover:bg-gray-700'
-                        : 'bg-blue-600 text-white hover:bg-blue-700'
+                        ? 'bg-gray-600 text-white hover:bg-[#222222]'
+                        : 'bg-gradient-to-r from-[#2F00FF] to-[#1C0099] text-white hover:bg-blue-700'
                     }`}
                   >
                     {isFollowing ? 'Unfollow' : 'Follow'}
@@ -126,7 +126,7 @@ const UserProfile = ({ isOpen, onClose, username, currentUser }) => {
             </div>
 
             {/* Tabs */}
-            <div className="border-b border-gray-700">
+            <div className="border-b border-white">
               <nav className="flex space-x-8 px-6">
                 <button
                   onClick={() => setActiveTab('profile')}
@@ -210,7 +210,7 @@ const UserProfile = ({ isOpen, onClose, username, currentUser }) => {
                         <p className="text-sm text-gray-400">@{follower.username}</p>
                       </div>
                       {follower.is_following && (
-                        <span className="text-xs bg-blue-600 text-white px-2 py-1 rounded">
+                        <span className="text-xs bg-gradient-to-r from-[#2F00FF] to-[#1C0099] text-white px-2 py-1 rounded">
                           Following
                         </span>
                       )}
@@ -237,7 +237,7 @@ const UserProfile = ({ isOpen, onClose, username, currentUser }) => {
                         </p>
                         <p className="text-sm text-gray-400">@{user.username}</p>
                       </div>
-                      <span className="text-xs bg-blue-600 text-white px-2 py-1 rounded">
+                      <span className="text-xs bg-gradient-to-r from-[#2F00FF] to-[#1C0099] text-white px-2 py-1 rounded">
                         Following
                       </span>
                     </div>

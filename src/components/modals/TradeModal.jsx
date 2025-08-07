@@ -423,7 +423,7 @@ const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelec
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-md transition-colors ${
                   activeTab === tab.id
-                    ? 'bg-blue-600 text-white'
+                    ? 'bg-gradient-to-r from-[#2F00FF] to-[#1C0099] text-white'
                     : 'text-gray-400 hover:text-white hover:bg-[#333]'
                 }`}
               >
@@ -957,7 +957,7 @@ const MultiAccountPanel = ({ data, setData, accounts, onSubmit, submitting }) =>
         <button
           onClick={onSubmit}
           disabled={submitting || data.selected_accounts.length === 0}
-          className={`w-full mt-6 py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors ${
+          className={`w-full mt-6 py-3 px-4 bg-gradient-to-r from-[#2F00FF] to-[#1C0099] hover:bg-blue-700 text-white rounded-lg font-medium transition-colors ${
             submitting || data.selected_accounts.length === 0 ? 'opacity-70 cursor-not-allowed' : ''
           }`}
         >

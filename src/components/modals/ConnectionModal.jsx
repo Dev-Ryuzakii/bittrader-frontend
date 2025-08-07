@@ -156,7 +156,7 @@ const ConnectionModal = ({ isOpen, onClose, onSubmit, platform }) => {
                 required
                 value={formData.account_name}
                 onChange={(e) => setFormData({ ...formData, account_name: e.target.value })}
-                className="w-full px-3 py-2 bg-[#222222] text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/70 border border-gray-700/80"
+                className="w-full px-3 py-2 bg-[#222222] text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/70 border border-white/80"
                 placeholder="Enter a name for this account"
               />
             </div>
@@ -170,7 +170,7 @@ const ConnectionModal = ({ isOpen, onClose, onSubmit, platform }) => {
                 required
                 value={formData.broker_name}
                 onChange={(e) => setFormData({ ...formData, broker_name: e.target.value })}
-                className="w-full px-3 py-2 bg-[#222222] text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/70 border border-gray-700/80"
+                className="w-full px-3 py-2 bg-[#222222] text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/70 border border-white/80"
                 placeholder="Enter broker name"
               />
             </div>
@@ -184,7 +184,7 @@ const ConnectionModal = ({ isOpen, onClose, onSubmit, platform }) => {
                 required
                 value={formData.server}
                 onChange={(e) => setFormData({ ...formData, server: e.target.value })}
-                className="w-full px-3 py-2 bg-[#222222] text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/70 border border-gray-700/80"
+                className="w-full px-3 py-2 bg-[#222222] text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/70 border border-white/80"
                 placeholder="Enter server address"
               />
             </div>
@@ -198,7 +198,7 @@ const ConnectionModal = ({ isOpen, onClose, onSubmit, platform }) => {
                 required
                 value={formData.login}
                 onChange={(e) => setFormData({ ...formData, login: e.target.value })}
-                className="w-full px-3 py-2 bg-[#222222] text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/70 border border-gray-700/80"
+                className="w-full px-3 py-2 bg-[#222222] text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/70 border border-white/80"
                 placeholder="Enter login ID"
               />
             </div>
@@ -213,7 +213,7 @@ const ConnectionModal = ({ isOpen, onClose, onSubmit, platform }) => {
                   required
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="w-full px-3 py-2 bg-[#222222] text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/70 pr-10 border border-gray-700/80"
+                  className="w-full px-3 py-2 bg-[#222222] text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/70 pr-10 border border-white/80"
                   placeholder="Enter password"
                 />
                 <button

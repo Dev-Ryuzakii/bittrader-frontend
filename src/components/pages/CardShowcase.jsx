@@ -134,7 +134,7 @@ const CardShowcase = () => {
             <span>3. Green</span>
           </div>
           <div className="flex items-center space-x-2">
-            <div className="w-4 h-4 bg-blue-600 rounded"></div>
+            <div className="w-4 h-4 bg-gradient-to-r from-[#2F00FF] to-[#1C0099] rounded"></div>
             <span>4. Blue</span>
           </div>
           <div className="flex items-center space-x-2">

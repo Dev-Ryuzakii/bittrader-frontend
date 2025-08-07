@@ -16,7 +16,7 @@ const ConfirmDialog = ({ isOpen, title, message, onConfirm, onCancel, confirmTex
 
   const variantStyles = {
     danger: 'bg-red-600 hover:bg-red-700',
-    primary: 'bg-blue-600 hover:bg-blue-700',
+    primary: 'bg-gradient-to-r from-[#2F00FF] to-[#1C0099] hover:bg-blue-700',
     warning: 'bg-yellow-600 hover:bg-yellow-700'
   };
 

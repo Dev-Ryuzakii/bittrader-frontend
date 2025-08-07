@@ -157,7 +157,7 @@ const Navbar = ({ isMobileMenuOpen, setIsMobileMenuOpen }) => {
             </button>
             <button className="p-2 text-gray-400 hover:text-white hover:bg-[#1A1A1A] rounded-lg transition-colors relative">
               <Bell size={20} />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-blue-600 rounded-full"></span>
+              <span className="absolute top-1 right-1 w-2 h-2 bg-gradient-to-r from-[#2F00FF] to-[#1C0099] rounded-full"></span>
             </button>
 
             {/* Profile Dropdown */}
@@ -333,7 +333,7 @@ const Navbar = ({ isMobileMenuOpen, setIsMobileMenuOpen }) => {
             <button className="flex items-center space-x-3 p-2 text-gray-400 hover:text-white hover:bg-[#1A1A1A] rounded-lg transition-colors relative">
               <div className="relative">
                 <Bell size={20} />
-                <span className="absolute -top-1 -right-1 w-2 h-2 bg-blue-600 rounded-full"></span>
+                <span className="absolute -top-1 -right-1 w-2 h-2 bg-gradient-to-r from-[#2F00FF] to-[#1C0099] rounded-full"></span>
               </div>
               <span>Notifications</span>
             </button>
@@ -350,7 +350,7 @@ const Navbar = ({ isMobileMenuOpen, setIsMobileMenuOpen }) => {
               className="flex items-center space-x-3 p-2 text-red-400 hover:text-red-300 hover:bg-[#1A1A1A] rounded-lg transition-colors mt-2 border-t border-[#222] pt-4"
             >
               <LogOut size={20} />
-              <span>Sign Out</span>
+              <span>Log Out</span>
             </button>
           </div>
         </div>

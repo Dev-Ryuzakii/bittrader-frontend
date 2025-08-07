@@ -38,7 +38,7 @@ const AccountSelector = ({
       {/* Selected Account Display */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between p-3 bg-gray-800 border border-gray-700 rounded-lg hover:border-gray-600 transition-colors"
+        className="w-full flex items-center justify-between p-3 bg-gray-800 border border-white rounded-lg hover:border-white transition-colors"
       >
         {selectedAccount ? (
           <div className="flex items-center space-x-3 min-w-0 flex-1">
@@ -70,7 +70,7 @@ const AccountSelector = ({
 
       {/* Dropdown Menu */}
       {isOpen && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-xl z-50 max-h-80 overflow-y-auto">
+        <div className="absolute top-full left-0 right-0 mt-1 bg-gray-800 border border-white rounded-lg shadow-xl z-50 max-h-80 overflow-y-auto">
           {accounts.length === 0 ? (
             <div className="p-4 text-center text-gray-400">
               <p className="text-sm">No accounts available</p>
@@ -82,8 +82,8 @@ const AccountSelector = ({
                 <button
                   key={account.id}
                   onClick={() => handleAccountSelect(account)}
-                  className={`w-full px-3 py-3 text-left hover:bg-gray-700 transition-colors ${
-                    selectedAccount?.id === account.id ? 'bg-gray-700' : ''
+                  className={`w-full px-3 py-3 text-left hover:bg-[#222222] transition-colors ${
+                    selectedAccount?.id === account.id ? 'bg-[#222222]' : ''
                   }`}
                 >
                   <div className="flex items-center space-x-3">
@@ -157,7 +157,7 @@ export const AccountCard = ({
       className={`p-4 border rounded-lg transition-all cursor-pointer ${
         isSelected 
           ? 'border-blue-500 bg-blue-900/20' 
-          : 'border-gray-700 bg-gray-800 hover:border-gray-600'
+          : 'border-white bg-gray-800 hover:border-white'
       }`}
       onClick={() => onSelect && onSelect(account)}
     >
@@ -169,7 +169,7 @@ export const AccountCard = ({
               <h3 className="text-sm font-semibold text-white truncate">
                 {account.account_name || account.name || 'Unknown Account'}
               </h3>
-              <span className="text-xs px-2 py-1 bg-gray-700 text-gray-300 rounded">
+              <span className="text-xs px-2 py-1 bg-[#222222] text-gray-300 rounded">
                 {account.broker?.toUpperCase()}
               </span>
             </div>

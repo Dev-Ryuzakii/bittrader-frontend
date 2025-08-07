@@ -51,10 +51,10 @@ const StartChatModal = ({ isOpen, onClose, onChatStarted }) => {
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-gray-800 rounded-lg w-full max-w-md mx-4 max-h-[600px] flex flex-col">
+    <div className="fixed inset-0 backdrop-blur-sm bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-[#1A1A1A] rounded-lg w-full max-w-md mx-4 max-h-[600px] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-700">
+        <div className="flex items-center justify-between p-6 border-b border-white">
           <h2 className="text-xl font-bold text-white">Start New Chat</h2>
           <button
             onClick={handleClose}
@@ -67,14 +67,14 @@ const StartChatModal = ({ isOpen, onClose, onChatStarted }) => {
         </div>
 
         {/* Search */}
-        <div className="p-6 border-b border-gray-700">
+        <div className="p-6 border-b border-white">
           <div className="relative">
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search users by username or name..."
-              className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 pl-10 text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
+              className="w-full bg-[#222222] border border-white rounded-lg px-4 py-2 pl-10 text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
               autoFocus
             />
             <svg 
@@ -113,7 +113,7 @@ const StartChatModal = ({ isOpen, onClose, onChatStarted }) => {
                 <div
                   key={user.user_id}
                   onClick={() => startChat(user)}
-                  className="p-4 hover:bg-gray-700 cursor-pointer transition-colors"
+                  className="p-4 hover:bg-[#222222] cursor-pointer transition-colors"
                 >
                   <div className="flex items-center space-x-3">
                     <img
@@ -136,7 +136,7 @@ const StartChatModal = ({ isOpen, onClose, onChatStarted }) => {
                     </div>
                     <div className="flex items-center space-x-2 text-xs text-gray-400">
                       {user.is_following && (
-                        <span className="bg-blue-600 text-white px-2 py-1 rounded">
+                        <span className="bg-gradient-to-r from-[#2F00FF] to-[#1C0099] text-white px-2 py-1 rounded">
                           Following
                         </span>
                       )}
@@ -152,7 +152,7 @@ const StartChatModal = ({ isOpen, onClose, onChatStarted }) => {
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-gray-700">
+        <div className="p-4 border-t border-white">
           <p className="text-xs text-gray-500 text-center">
             Select a user to start a direct conversation
           </p>

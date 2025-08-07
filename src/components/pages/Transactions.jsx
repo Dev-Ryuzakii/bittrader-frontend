@@ -111,7 +111,7 @@ const Transactions = () => {
         <div className="flex items-center space-x-3 mt-4 md:mt-0">
           <button
             onClick={handleRefresh}
-            className="flex items-center space-x-2 bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors"
+            className="flex items-center space-x-2 bg-gray-600 hover:bg-[#222222] text-white px-4 py-2 rounded-lg transition-colors"
             disabled={isLoading}
           >
             <RefreshCw size={16} className={isLoading ? 'animate-spin' : ''} />
@@ -119,7 +119,7 @@ const Transactions = () => {
           </button>
           <button
             onClick={downloadTransactions}
-            className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+            className="flex items-center space-x-2 bg-gradient-to-r from-[#2F00FF] to-[#1C0099] hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
           >
             <Download size={16} />
             <span>Export All</span>
@@ -249,7 +249,7 @@ const Transactions = () => {
                       onClick={() => setCurrentPage(pageNum)}
                       className={`px-3 py-1 rounded text-sm ${
                         currentPage === pageNum 
-                          ? 'bg-blue-600 text-white' 
+                          ? 'bg-gradient-to-r from-[#2F00FF] to-[#1C0099] text-white' 
                           : 'bg-[#131313] border border-[#2A2A2A] text-white hover:bg-[#2A2A2A]'
                       }`}
                     >

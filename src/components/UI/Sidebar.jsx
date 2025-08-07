@@ -148,7 +148,7 @@ const Sidebar = ({ isMobileMenuOpen, setIsMobileMenuOpen }) => {
                         <button
               onClick={handleLogout}
               disabled={isLoggingOut}
-              className={`flex items-center space-x-3 p-3 rounded-lg hover:bg-[#1A1A1A] transition-colors text-gray-400 hover:text-white w-full text-left ${isLoggingOut ? 'opacity-50 cursor-not-allowed' : ''}`}
+              className={`flex items-center space-x-3 p-2 text-red-400 hover:text-red-300 hover:bg-[#1A1A1A] rounded-lg transition-colors mt-2 border-t border-[#222] pt-4`}
             >
               <LogOut size={20} />
               <span>{isLoggingOut ? 'Logging out...' : 'Log Out'}</span>
@@ -213,7 +213,7 @@ const Sidebar = ({ isMobileMenuOpen, setIsMobileMenuOpen }) => {
         <button
           onClick={handleLogout}
           disabled={isLoggingOut}
-          className={`flex items-center ${isOpen ? 'space-x-3' : 'justify-center'} p-2 rounded-lg hover:bg-[#1A1A1A] transition-colors text-gray-400 hover:text-white w-full text-left ${isLoggingOut ? 'opacity-50 cursor-not-allowed' : ''}`}
+          className={`flex items-center ${isOpen ? 'space-x-3' : 'justify-center'} p-2 rounded-lg hover:bg-[#1A1A1A] transition-colors text-red-400 hover:text-red-300 w-full text-left ${isLoggingOut ? 'opacity-50 cursor-not-allowed' : ''}`}
         >
           <LogOut size={20} />
           {isOpen && <span>{isLoggingOut ? 'Logging out...' : 'Log Out'}</span>}

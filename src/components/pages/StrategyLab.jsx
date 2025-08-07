@@ -172,7 +172,7 @@ const StrategyLab = () => {
               onClick={() => setActiveTab(tab.id)}
               className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
                 activeTab === tab.id
-                  ? 'bg-blue-600 text-white'
+                  ? 'bg-gradient-to-r from-[#2F00FF] to-[#1C0099] text-white'
                   : 'text-gray-400 hover:text-white hover:bg-[#2A2A2A]'
               }`}
             >
@@ -227,7 +227,7 @@ const StrategyCard = ({ strategy, isFeatured = false }) => {
           <div className="flex items-center space-x-2 mb-2">
             <h3 className="text-lg font-semibold text-white">{strategy.name}</h3>
             {isFeatured && (
-              <span className="bg-blue-600/20 text-blue-400 px-2 py-1 rounded-full text-xs font-medium">
+              <span className="bg-gradient-to-r from-[#2F00FF] to-[#1C0099]/20 text-blue-400 px-2 py-1 rounded-full text-xs font-medium">
                 Featured
               </span>
             )}
@@ -266,7 +266,7 @@ const StrategyCard = ({ strategy, isFeatured = false }) => {
         <button
           onClick={handleDownload}
           disabled={downloading}
-          className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-600/50 text-white px-4 py-2 rounded-lg transition-colors text-sm font-medium flex items-center justify-center space-x-2"
+          className="flex-1 bg-gradient-to-r from-[#2F00FF] to-[#1C0099] hover:bg-blue-700 disabled:bg-gradient-to-r from-[#2F00FF] to-[#1C0099]/50 text-white px-4 py-2 rounded-lg transition-colors text-sm font-medium flex items-center justify-center space-x-2"
         >
           <Download className="w-4 h-4" />
           <span>{downloading ? 'Downloading...' : 'Download'}</span>
@@ -419,7 +419,7 @@ const DefaultStrategies = () => {
             <div className="flex justify-between items-start mb-4">
               <div>
                 <h3 className="text-lg font-semibold text-white mb-2">{strategy.name}</h3>
-                <span className="bg-blue-600/20 text-blue-400 px-2 py-1 rounded-full text-xs font-medium flex items-center w-fit">
+                <span className="bg-gradient-to-r from-[#2F00FF] to-[#1C0099]/20 text-blue-400 px-2 py-1 rounded-full text-xs font-medium flex items-center w-fit">
                   <Zap className="w-3 h-3 mr-1" />
                   Default Strategy
                 </span>
@@ -444,7 +444,7 @@ const DefaultStrategies = () => {
             </div>
             
             <div className="flex space-x-2">
-              <button className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors text-sm font-medium flex items-center justify-center space-x-2">
+              <button className="flex-1 bg-gradient-to-r from-[#2F00FF] to-[#1C0099] hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors text-sm font-medium flex items-center justify-center space-x-2">
                 <Download className="w-4 h-4" />
                 <span>Download</span>
               </button>
@@ -500,7 +500,7 @@ const CustomStrategyRequest = () => {
         </p>
         <button
           onClick={() => setSubmitted(false)}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-colors"
+          className="bg-gradient-to-r from-[#2F00FF] to-[#1C0099] hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-colors"
         >
           Submit Another Request
         </button>
@@ -630,7 +630,7 @@ const CustomStrategyRequest = () => {
             />
           </div>
 
-          <div className="bg-blue-600/10 border border-blue-600/20 rounded-lg p-4">
+          <div className="bg-gradient-to-r from-[#2F00FF] to-[#1C0099]/10 border border-blue-600/20 rounded-lg p-4">
             <p className="text-blue-400 text-sm">
               Our team will review your request and provide a detailed quote including development timeline and cost. 
               Custom strategy development typically ranges from $500-$5000 depending on complexity.
@@ -640,7 +640,7 @@ const CustomStrategyRequest = () => {
           <button
             type="submit"
             disabled={submitting}
-            className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-600/50 text-white px-6 py-3 rounded-lg transition-colors font-medium"
+            className="w-full bg-gradient-to-r from-[#2F00FF] to-[#1C0099] hover:bg-blue-700 disabled:bg-gradient-to-r from-[#2F00FF] to-[#1C0099]/50 text-white px-6 py-3 rounded-lg transition-colors font-medium"
           >
             {submitting ? 'Submitting...' : 'Submit Request'}
           </button>
@@ -656,7 +656,7 @@ const MyStrategies = () => {
     <div className="text-center py-12">
       <h2 className="text-2xl font-semibold text-white mb-4">My Strategies</h2>
       <p className="text-gray-400 mb-6">View and manage your downloaded and deployed strategies.</p>
-      <button className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-colors">
+      <button className="bg-gradient-to-r from-[#2F00FF] to-[#1C0099] hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-colors">
         Coming Soon
       </button>
     </div>

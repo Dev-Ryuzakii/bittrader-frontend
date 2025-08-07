@@ -127,7 +127,7 @@ const SymbolMappingModal = ({ isOpen, onClose, accountId, selectedSymbol = '', o
             </div>
             <button
               onClick={() => setShowAddForm(!showAddForm)}
-              className="ml-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center transition-colors"
+              className="ml-4 px-4 py-2 bg-gradient-to-r from-[#2F00FF] to-[#1C0099] hover:bg-blue-700 text-white rounded-lg flex items-center transition-colors"
             >
               <Plus className="h-4 w-4 mr-2" />
               Add Mapping

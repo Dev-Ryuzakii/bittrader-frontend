@@ -214,13 +214,13 @@ const AccountDetailsModal = ({ isOpen, onClose, account }) => {
             <div className="flex space-x-3">
               <button
                 onClick={onClose}
-                className="flex-1 bg-gray-600 hover:bg-gray-700 text-white py-2 rounded-lg transition-colors"
+                className="flex-1 bg-gray-600 hover:bg-[#222222] text-white py-2 rounded-lg transition-colors"
               >
                 Close
               </button>
               <button
                 onClick={fetchAccountDetails}
-                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg transition-colors"
+                className="flex-1 bg-gradient-to-r from-[#2F00FF] to-[#1C0099] hover:bg-blue-700 text-white py-2 rounded-lg transition-colors"
               >
                 Refresh Data
               </button>

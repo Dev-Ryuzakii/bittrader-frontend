@@ -5,7 +5,7 @@ const Support = () => {
     <div className="p-6">
       <h1 className="text-3xl font-bold mb-6">Support</h1>
       <div className="grid gap-6 md:grid-cols-2">
-        <div className="bg-white p-6 rounded-lg shadow-md">
+        <div className="border-white p-6 rounded-lg shadow-md">
           <h2 className="text-xl font-semibold mb-4">Contact Support</h2>
           <form className="space-y-4">
             <div>
@@ -25,14 +25,14 @@ const Support = () => {
             </div>
             <button
               type="submit"
-              className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors"
+              className="w-full bg-gradient-to-r from-[#2F00FF] to-[#1C0099] text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors"
             >
               Submit Ticket
             </button>
           </form>
         </div>
         <div className="space-y-6">
-          <div className="bg-white p-6 rounded-lg shadow-md">
+          <div className="border-white p-6 rounded-lg shadow-md">
             <h2 className="text-xl font-semibold mb-4">FAQs</h2>
             <div className="space-y-3">
               <button className="w-full text-left p-3 bg-gray-50 rounded-md hover:bg-gray-100">
@@ -46,7 +46,7 @@ const Support = () => {
               </button>
             </div>
           </div>
-          <div className="bg-white p-6 rounded-lg shadow-md">
+          <div className="border-white p-6 rounded-lg shadow-md">
             <h2 className="text-xl font-semibold mb-4">Contact Information</h2>
             <div className="space-y-2">
               <p className="text-gray-600">Email: support@tradexas.com</p>

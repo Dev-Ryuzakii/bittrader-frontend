@@ -81,7 +81,7 @@ const TradingPanel = ({
   };
 
   return (
-    <div className={`trading-panel bg-gray-900 border border-gray-700 rounded-lg p-6 ${className}`}>
+    <div className={`trading-panel bg-gray-900 border border-white rounded-lg p-6 ${className}`}>
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-xl font-bold text-white">Trading Panel</h2>
         <div className="flex items-center space-x-2">
@@ -149,7 +149,7 @@ const TradingPanel = ({
             <select
               value={orderType}
               onChange={(e) => setOrderType(e.target.value)}
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500"
+              className="w-full bg-gray-800 border border-white rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500"
             >
               <option value="market">Market Order</option>
               <option value="limit">Limit Order</option>
@@ -167,7 +167,7 @@ const TradingPanel = ({
                 className={`flex-1 px-3 py-2 rounded-lg font-medium transition-colors ${
                   side === 'buy'
                     ? 'bg-green-600 text-white'
-                    : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                    : 'bg-gray-800 text-gray-300 hover:bg-[#222222]'
                 }`}
               >
                 <TrendingUp className="h-4 w-4 inline mr-1" />
@@ -178,7 +178,7 @@ const TradingPanel = ({
                 className={`flex-1 px-3 py-2 rounded-lg font-medium transition-colors ${
                   side === 'sell'
                     ? 'bg-red-600 text-white'
-                    : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                    : 'bg-gray-800 text-gray-300 hover:bg-[#222222]'
                 }`}
               >
                 <TrendingDown className="h-4 w-4 inline mr-1" />
@@ -200,7 +200,7 @@ const TradingPanel = ({
               onChange={(e) => setVolume(e.target.value)}
               step="0.01"
               min="0.01"
-              className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500"
+              className="flex-1 bg-gray-800 border border-white rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500"
               placeholder="0.01"
             />
             <div className="flex space-x-1">
@@ -210,8 +210,8 @@ const TradingPanel = ({
                   onClick={() => setVolume(vol)}
                   className={`px-2 py-2 text-xs rounded transition-colors ${
                     volume === vol
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                      ? 'bg-gradient-to-r from-[#2F00FF] to-[#1C0099] text-white'
+                      : 'bg-gray-800 text-gray-300 hover:bg-[#222222]'
                   }`}
                 >
                   {vol}
@@ -234,7 +234,7 @@ const TradingPanel = ({
               onChange={(e) => setPrice(e.target.value)}
               step="0.00001"
               min="0"
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500"
+              className="w-full bg-gray-800 border border-white rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500"
               placeholder="Enter price..."
             />
           </div>
@@ -253,7 +253,7 @@ const TradingPanel = ({
               onChange={(e) => setStopLoss(e.target.value)}
               step="0.00001"
               min="0"
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500"
+              className="w-full bg-gray-800 border border-white rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500"
               placeholder="Optional"
             />
           </div>
@@ -269,7 +269,7 @@ const TradingPanel = ({
               onChange={(e) => setTakeProfit(e.target.value)}
               step="0.00001"
               min="0"
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500"
+              className="w-full bg-gray-800 border border-white rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500"
               placeholder="Optional"
             />
           </div>
@@ -285,7 +285,7 @@ const TradingPanel = ({
             ? side === 'buy'
               ? 'bg-green-600 hover:bg-green-700 text-white'
               : 'bg-red-600 hover:bg-red-700 text-white'
-            : 'bg-gray-700 text-gray-400 cursor-not-allowed'
+            : 'bg-[#222222] text-gray-400 cursor-not-allowed'
         }`}
       >
         {loading ? (
@@ -300,7 +300,7 @@ const TradingPanel = ({
 
       {/* Order Summary */}
       {isFormValid() && (
-        <div className="mt-4 p-3 bg-gray-800 rounded-lg border border-gray-700">
+        <div className="mt-4 p-3 bg-gray-800 rounded-lg border border-white">
           <h4 className="text-sm font-medium text-white mb-2">Order Summary</h4>
           <div className="space-y-1 text-xs text-gray-400">
             <div className="flex justify-between">

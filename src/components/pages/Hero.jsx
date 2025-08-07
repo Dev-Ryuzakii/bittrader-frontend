@@ -202,7 +202,7 @@ const Hero = () => {
               <a href="#contact" className="text-gray-300 hover:text-white transition-colors">Contact</a>
               <button 
                 onClick={() => window.location.href = '/signin'}
-                className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg transition-colors"
+                className="bg-gradient-to-r from-[#2F00FF] to-[#1C0099] hover:bg-blue-700 px-4 py-2 rounded-lg transition-colors"
               >
                 Sign In
               </button>
@@ -235,7 +235,7 @@ const Hero = () => {
               <div className="pt-2 space-y-2">
                 <button 
                   onClick={() => window.location.href = '/signin'}
-                  className="w-full bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg"
+                  className="w-full bg-gradient-to-r from-[#2F00FF] to-[#1C0099] hover:bg-blue-700 px-4 py-2 rounded-lg"
                 >
                   Sign In
                 </button>
@@ -257,7 +257,7 @@ const Hero = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div className="space-y-8">
               <div className="space-y-4">
-                <div className="inline-flex items-center space-x-2 bg-blue-600/10 border border-blue-600/20 rounded-full px-4 py-2">
+                <div className="inline-flex items-center space-x-2 bg-gradient-to-r from-[#2F00FF] to-[#1C0099]/10 border border-blue-600/20 rounded-full px-4 py-2">
                   <Award className="w-4 h-4 text-blue-400" />
                   <span className="text-sm text-blue-400">#1 Trading Platform 2024</span>
                 </div>
@@ -282,7 +282,7 @@ const Hero = () => {
                   <span>Start Trading Now</span>
                   <ArrowRight className="w-5 h-5" />
                 </button>
-                <button className="border border-gray-600 hover:border-gray-500 px-8 py-4 rounded-lg font-semibold transition-colors flex items-center justify-center space-x-2">
+                <button className="border border-white hover:border-gray-500 px-8 py-4 rounded-lg font-semibold transition-colors flex items-center justify-center space-x-2">
                   <Play className="w-5 h-5" />
                   <span>Watch Demo</span>
                 </button>
@@ -309,7 +309,7 @@ const Hero = () => {
             </div>
 
             <div className="relative">
-              <div className="bg-gradient-to-r from-blue-600/20 to-purple-600/20 rounded-2xl p-8 backdrop-blur-sm border border-gray-700">
+              <div className="bg-gradient-to-r from-blue-600/20 to-purple-600/20 rounded-2xl p-8 backdrop-blur-sm border border-white">
                 <div className="space-y-6">
                   <div className="flex items-center justify-between">
                     <h3 className="text-lg font-semibold">Live Trading Dashboard</h3>
@@ -324,7 +324,7 @@ const Hero = () => {
                       <div className="text-2xl font-bold text-green-400">+$12,540</div>
                       <div className="text-sm text-gray-400">Today's P&L</div>
                     </div>
-                    <div className="bg-blue-600/20 rounded-lg p-4">
+                    <div className="bg-gradient-to-r from-[#2F00FF] to-[#1C0099]/20 rounded-lg p-4">
                       <div className="text-2xl font-bold text-blue-400">87.3%</div>
                       <div className="text-sm text-gray-400">Win Rate</div>
                     </div>
@@ -336,7 +336,7 @@ const Hero = () => {
                       { pair: 'GBP/USD', change: '+1.23%', profit: '+$890' },
                       { pair: 'BTC/USD', change: '+2.15%', profit: '+$2,150' }
                     ].map((trade, i) => (
-                      <div key={i} className="flex items-center justify-between py-2 border-b border-gray-700">
+                      <div key={i} className="flex items-center justify-between py-2 border-b border-white">
                         <div>
                           <div className="font-medium">{trade.pair}</div>
                           <div className="text-sm text-green-400">{trade.change}</div>
@@ -404,7 +404,7 @@ const Hero = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {features.map((feature, index) => (
-              <div key={index} className="bg-gray-900/50 rounded-2xl p-8 border border-gray-700 hover:border-gray-600 transition-colors group hover:bg-gray-900/70">
+              <div key={index} className="bg-gray-900/50 rounded-2xl p-8 border border-white hover:border-white transition-colors group hover:bg-gray-900/70">
                 <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                   {feature.icon}
                 </div>
@@ -431,7 +431,7 @@ const Hero = () => {
           </p>
 
           <div className="relative">
-            <div className="bg-gray-900/50 rounded-2xl p-8 border border-gray-700">
+            <div className="bg-gray-900/50 rounded-2xl p-8 border border-white">
               <div className="flex justify-center mb-6">
                 {[...Array(testimonials[activeTestimonial].rating)].map((_, i) => (
                   <Star key={i} className="w-5 h-5 fill-yellow-400 text-yellow-400" />
@@ -486,7 +486,7 @@ const Hero = () => {
               <div key={index} className={`relative rounded-2xl p-8 border transition-all hover:scale-105 ${
                 plan.popular 
                   ? 'bg-gradient-to-b from-blue-600/10 to-purple-600/10 border-blue-500' 
-                  : 'bg-gray-900/50 border-gray-700 hover:border-gray-600'
+                  : 'bg-gray-900/50 border-white hover:border-white'
               }`}>
                 {plan.popular && (
                   <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
@@ -517,7 +517,7 @@ const Hero = () => {
                 <button className={`w-full py-3 rounded-lg font-semibold transition-colors ${
                   plan.popular
                     ? 'bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white'
-                    : 'bg-gray-800 hover:bg-gray-700 text-white'
+                    : 'bg-gray-800 hover:bg-[#222222] text-white'
                 }`}
                 onClick={() => window.location.href = '/signup'}
                 >
@@ -549,7 +549,7 @@ const Hero = () => {
             >
               Start Free Trial
             </button>
-            <button className="border border-gray-600 hover:border-gray-500 px-8 py-4 rounded-lg font-semibold transition-colors">
+            <button className="border border-white hover:border-gray-500 px-8 py-4 rounded-lg font-semibold transition-colors">
               Schedule Demo
             </button>
           </div>
@@ -571,13 +571,13 @@ const Hero = () => {
                 The most advanced trading platform for professionals. Trade smarter with AI-powered insights and professional-grade tools.
               </p>
               <div className="flex space-x-4">
-                <button className="w-10 h-10 bg-gray-800 hover:bg-gray-700 rounded-lg flex items-center justify-center transition-colors">
+                <button className="w-10 h-10 bg-gray-800 hover:bg-[#222222] rounded-lg flex items-center justify-center transition-colors">
                   <span className="sr-only">Twitter</span>
                   <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M8.29 20.251c7.547 0 11.675-6.253 11.675-11.675 0-.178 0-.355-.012-.53A8.348 8.348 0 0022 5.92a8.19 8.19 0 01-2.357.646 4.118 4.118 0 001.804-2.27 8.224 8.224 0 01-2.605.996 4.107 4.107 0 00-6.993 3.743 11.65 11.65 0 01-8.457-4.287 4.106 4.106 0 001.27 5.477A4.072 4.072 0 012.8 9.713v.052a4.105 4.105 0 003.292 4.022 4.095 4.095 0 01-1.853.07 4.108 4.108 0 003.834 2.85A8.233 8.233 0 012 18.407a11.616 11.616 0 006.29 1.84"/>
                   </svg>
                 </button>
-                <button className="w-10 h-10 bg-gray-800 hover:bg-gray-700 rounded-lg flex items-center justify-center transition-colors">
+                <button className="w-10 h-10 bg-gray-800 hover:bg-[#222222] rounded-lg flex items-center justify-center transition-colors">
                   <span className="sr-only">LinkedIn</span>
                   <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>

@@ -345,7 +345,7 @@ const Community = () => {
                     </p>
                   </div>
                   {group.unread_count > 0 && (
-                    <div className="ml-2 bg-blue-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                    <div className="ml-2 bg-gradient-to-r from-[#2F00FF] to-[#1C0099] text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
                       {group.unread_count}
                     </div>
                   )}
@@ -393,7 +393,7 @@ const Community = () => {
                 <p className="text-gray-400 text-sm mb-3">No groups yet</p>
                 <button
                   onClick={() => setShowCreateGroup(true)}
-                  className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded-lg transition-colors"
+                  className="bg-gradient-to-r from-[#2F00FF] to-[#1C0099] hover:bg-blue-700 text-white text-sm px-4 py-2 rounded-lg transition-colors"
                 >
                   Create Group
                 </button>
@@ -574,7 +574,7 @@ const Community = () => {
               <div className="flex space-x-3">
                 <button
                   onClick={() => setShowStartChat(true)}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+                  className="bg-gradient-to-r from-[#2F00FF] to-[#1C0099] hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
                 >
                   Start Chat
                 </button>

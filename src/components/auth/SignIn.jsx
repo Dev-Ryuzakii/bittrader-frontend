@@ -77,7 +77,7 @@ const SignIn = () => {
         backgroundImage: `url(${BG})`,
       }}
     >
-      <div className="relative z-10 w-full max-w-md bg-white/10 backdrop-blur-lg rounded-xl shadow-2xl p-8">
+      <div className="relative z-10 w-full max-w-md border-white/10 backdrop-blur-lg rounded-xl shadow-2xl p-8">
         {/* Logo */}
         <div className="flex justify-center mb-6">
           <h1 className="text-2xl text-white font-bold tracking-wide">Tradexas</h1>
@@ -161,16 +161,16 @@ const SignIn = () => {
         {/* Social login */}
         <p className="text-center text-gray-500 mb-2">- OR -</p>
         <div className="flex justify-between gap-2">
-          <button className="flex-1 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600">
+          <button className="flex-1 py-2 bg-[#222222] text-white rounded-lg hover:bg-gray-600">
             Google
           </button>
-          <button className="flex-1 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600">
+          <button className="flex-1 py-2 bg-[#222222] text-white rounded-lg hover:bg-gray-600">
             Discord
           </button>
-          <button className="flex-1 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600">
+          <button className="flex-1 py-2 bg-[#222222] text-white rounded-lg hover:bg-gray-600">
             Apple
           </button>
-          <button className="flex-1 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600">
+          <button className="flex-1 py-2 bg-[#222222] text-white rounded-lg hover:bg-gray-600">
             Telegram
           </button>
         </div>

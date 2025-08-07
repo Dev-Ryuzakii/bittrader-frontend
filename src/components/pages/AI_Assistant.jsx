@@ -185,7 +185,7 @@ function AI_Assistant({
                   <div className="flex-shrink-0">
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
                       message.sender === 'user' 
-                        ? 'bg-blue-600' 
+                        ? 'bg-gradient-to-r from-[#2F00FF] to-[#1C0099]' 
                         : 'bg-green-600'
                     }`}>
                       {message.sender === 'user' ? (
@@ -312,7 +312,7 @@ function AI_Assistant({
                 className={`p-3 m-2 rounded-lg transition-colors ${
                   loading || !prompt.trim()
                     ? 'bg-[#333] text-gray-500 cursor-not-allowed'
-                    : 'bg-blue-600 text-white hover:bg-blue-700'
+                    : 'bg-gradient-to-r from-[#2F00FF] to-[#1C0099] text-white hover:bg-blue-700'
                 }`}
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

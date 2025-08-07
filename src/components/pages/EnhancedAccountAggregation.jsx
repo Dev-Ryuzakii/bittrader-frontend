@@ -49,7 +49,7 @@ const EnhancedAccountAggregation = () => {
 
   // Define color variants for account cards
   const colorVariants = [
-    { bg: 'bg-blue-600/20', text: 'text-blue-400', border: 'border-blue-600/30' },
+    { bg: 'bg-gradient-to-r from-[#2F00FF] to-[#1C0099]/20', text: 'text-blue-400', border: 'border-blue-600/30' },
     { bg: 'bg-green-600/20', text: 'text-green-400', border: 'border-green-600/30' },
     { bg: 'bg-purple-600/20', text: 'text-purple-400', border: 'border-purple-600/30' },
     { bg: 'bg-orange-600/20', text: 'text-orange-400', border: 'border-orange-600/30' },
@@ -414,7 +414,7 @@ const EnhancedAccountAggregation = () => {
                     <button
                       onClick={fetchSymbolMappings}
                       disabled={loadingMappings}
-                      className="flex items-center justify-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                      className="flex items-center justify-center space-x-2 bg-gradient-to-r from-[#2F00FF] to-[#1C0099] text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
                     >
                       <Shuffle size={20} />
                       <span>{loadingMappings ? 'Loading...' : 'Symbol Mappings'}</span>
@@ -428,7 +428,7 @@ const EnhancedAccountAggregation = () => {
                     </button>
                     <button
                       onClick={handleRefreshAllSymbols}
-                      className="flex items-center justify-center space-x-2 bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors"
+                      className="flex items-center justify-center space-x-2 bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-[#222222] transition-colors"
                     >
                       <Settings size={20} />
                       <span>Refresh Symbols</span>
@@ -461,7 +461,7 @@ const EnhancedAccountAggregation = () => {
                         onClick={() => setActiveView(view.id)}
                         className={`flex-1 flex items-center justify-center space-x-2 px-4 py-3 rounded-lg transition-colors ${
                           activeView === view.id
-                            ? 'bg-blue-600 text-white'
+                            ? 'bg-gradient-to-r from-[#2F00FF] to-[#1C0099] text-white'
                             : 'text-gray-400 hover:text-white hover:bg-[#2A2A2A]'
                         }`}
                       >
@@ -574,7 +574,7 @@ const EnhancedAccountAggregation = () => {
                                     checked={account.is_active}
                                     onChange={() => handleToggleConnection(account)}
                                   />
-                                  <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                  <div className="w-11 h-6 bg-[#222222] peer-focus:outline-none rounded-full peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:border-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gradient-to-r from-[#2F00FF] to-[#1C0099]"></div>
                                 </label>
                               </td>
                               <td className="p-4">
@@ -684,7 +684,7 @@ const EnhancedAccountAggregation = () => {
                                   checked={account.is_active}
                                   onChange={() => handleToggleConnection(account)}
                                 />
-                                <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                <div className="w-11 h-6 bg-[#222222] peer-focus:outline-none rounded-full peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:border-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gradient-to-r from-[#2F00FF] to-[#1C0099]"></div>
                               </label>
                             </div>
                             

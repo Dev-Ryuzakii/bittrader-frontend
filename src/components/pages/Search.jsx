@@ -130,7 +130,7 @@ const Search = () => {
                 placeholder="Search for symbols, strategies, insights..."
                 value={newQuery}
                 onChange={(e) => setNewQuery(e.target.value)}
-                className="w-full pl-10 pr-10 py-2 bg-[#1A1A1A] text-white rounded-lg border border-gray-700 focus:outline-none focus:ring-2 focus:ring-[#2F00FF]/70 focus:border-transparent"
+                className="w-full pl-10 pr-10 py-2 bg-[#1A1A1A] text-white rounded-lg border border-white focus:outline-none focus:ring-2 focus:ring-[#2F00FF]/70 focus:border-transparent"
               />
               {newQuery && (
                 <button 
@@ -176,7 +176,7 @@ const Search = () => {
                   item.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                   item.description.toLowerCase().includes(searchQuery.toLowerCase())
                 ).length > 0 && (
-                  <span className="ml-2 bg-gray-700 text-xs px-2 py-0.5 rounded-full">
+                  <span className="ml-2 bg-[#222222] text-xs px-2 py-0.5 rounded-full">
                     {mockResults[category.id]?.filter(item => 
                       item.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                       item.description.toLowerCase().includes(searchQuery.toLowerCase())

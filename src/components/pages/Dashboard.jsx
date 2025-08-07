@@ -25,7 +25,7 @@ const Dashboard = () => {
 
   // Define color variants for account cards (same as in AccountAggregation)
   const colorVariants = [
-    { bg: 'bg-blue-600/20', text: 'text-blue-400', border: 'border-blue-600/30' },
+    { bg: 'bg-gradient-to-r from-[#2F00FF] to-[#1C0099]/20', text: 'text-blue-400', border: 'border-blue-600/30' },
     { bg: 'bg-green-600/20', text: 'text-green-400', border: 'border-green-600/30' },
     { bg: 'bg-purple-600/20', text: 'text-purple-400', border: 'border-purple-600/30' },
     { bg: 'bg-orange-600/20', text: 'text-orange-400', border: 'border-orange-600/30' },
@@ -133,7 +133,7 @@ const Dashboard = () => {
           {/* <p className="text-gray-400">Welcome back, Sam Joe. Here's your trading overview.</p> */}
         </div>
         {/* <div className="flex items-center space-x-3 mt-4 md:mt-0">
-          <button className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors">
+          <button className="flex items-center space-x-2 bg-gradient-to-r from-[#2F00FF] to-[#1C0099] hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors">
             <Plus size={16} />
             <span>Connect Account</span>
           </button>
@@ -184,7 +184,7 @@ const Dashboard = () => {
             <div className="text-gray-400 mb-4">No trading accounts connected</div>
             <button 
               onClick={() => window.location.href = '/account-aggregation'}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors inline-flex items-center space-x-2"
+              className="bg-gradient-to-r from-[#2F00FF] to-[#1C0099] hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors inline-flex items-center space-x-2"
             >
               <Plus size={16} />
               <span>Connect Your First Account</span>
@@ -208,7 +208,7 @@ const Dashboard = () => {
               onClick={() => setActiveSection('market')}
               className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
                 activeSection === 'market'
-                  ? 'bg-blue-600/90 text-white'
+                  ? 'bg-gradient-to-r from-[#2F00FF] to-[#1C0099]/90 text-white'
                   : 'text-gray-400 hover:text-white hover:bg-[#2A2A2A]'
               }`}
             >
@@ -219,7 +219,7 @@ const Dashboard = () => {
               onClick={() => setActiveSection('signals')}
               className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
                 activeSection === 'signals'
-                  ? 'bg-blue-600/90 text-white'
+                  ? 'bg-gradient-to-r from-[#2F00FF] to-[#1C0099]/90 text-white'
                   : 'text-gray-400 hover:text-white hover:bg-[#2A2A2A]'
               }`}
             >
@@ -267,7 +267,7 @@ const Dashboard = () => {
                 <span>Place Trade</span>
               </button>
               {selectedAccount && (
-                <div className="bg-blue-600/20 text-blue-400 px-3 py-1 rounded-full text-sm text-center sm:text-left truncate max-w-[200px] border border-blue-600/30">
+                <div className="bg-gradient-to-r from-[#2F00FF] to-[#1C0099]/20 text-blue-400 px-3 py-1 rounded-full text-sm text-center sm:text-left truncate max-w-[200px] border border-blue-600/30">
                   <span className="hidden sm:inline">Trading on: </span>
                   {selectedAccount.account_name || selectedAccount.broker_name || selectedAccount.accountName}
                 </div>
@@ -361,8 +361,8 @@ const Dashboard = () => {
           {/* Left side - Logo and company info */}
           <div className="flex items-center space-x-6">
             <div className="flex items-center space-x-2">
-              <div className="w-6 h-6 bg-blue-600/80 rounded flex items-center justify-center">
-                <div className="w-2 h-2 bg-white rounded-sm"></div>
+              <div className="w-6 h-6 bg-gradient-to-r from-[#2F00FF] to-[#1C0099]/80 rounded flex items-center justify-center">
+                <div className="w-2 h-2 border-white rounded-sm"></div>
               </div>
               <span className="text-lg font-bold text-white">Bitetrader</span>
             </div>
@@ -385,7 +385,7 @@ const Dashboard = () => {
                 placeholder="Enter your email" 
                 className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg px-3 py-2 text-white text-sm w-48 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600/50"
               />
-              <button className="bg-blue-600/90 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm transition-colors">
+              <button className="bg-gradient-to-r from-[#2F00FF] to-[#1C0099]/90 hover:bg-gradient-to-r from-[#2F00FF] to-[#1C0099] text-white px-4 py-2 rounded-lg text-sm transition-colors">
                 Subscribe
               </button>
             </div>

@@ -56,7 +56,7 @@ const EditAccountModal = ({ isOpen, onClose, onSubmit, account }) => {
   if (!isOpen || !account) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className="fixed inset-0  bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-[#1A1A1A] rounded-lg p-6 w-full max-w-md">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-bold text-white">Edit Account</h2>
@@ -119,7 +119,7 @@ const EditAccountModal = ({ isOpen, onClose, onSubmit, account }) => {
               id="is_active"
               checked={formData.is_active}
               onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-              className="w-4 h-4 text-blue-600 bg-[#2A2A2A] border-gray-600 rounded focus:ring-blue-500"
+              className="w-4 h-4 text-blue-600 bg-[#2A2A2A] border-white rounded focus:ring-blue-500"
             />
             <label htmlFor="is_active" className="ml-2 text-sm text-gray-200">
               Keep account active
@@ -130,14 +130,14 @@ const EditAccountModal = ({ isOpen, onClose, onSubmit, account }) => {
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 bg-gray-600 hover:bg-gray-700 text-white py-2 rounded-lg transition-colors"
+              className="flex-1 bg-gray-600 hover:bg-[#222222] text-white py-2 rounded-lg transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 bg-gradient-to-r from-[#2F00FF] to-[#1C0099] text-white py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (
                 <>

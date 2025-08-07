@@ -223,15 +223,15 @@ const Community = () => {
   return (
     <div className="h-full bg-[#131313] text-white flex">
       {/* Left Column - Messages Sidebar */}
-      <div className="w-80 bg-[#131313] border-r border-gray-700 flex flex-col">
+      <div className="w-80 bg-[#131313] border-r border-white flex flex-col">
         {/* Header */}
-        <div className="p-4 border-b border-gray-700">
+        <div className="p-4 border-b border-white">
           <div className="flex items-center justify-between mb-4">
             <h1 className="text-xl font-bold">Messages</h1>
             <div className="flex items-center space-x-2">
               <button
                 onClick={() => setShowStartChat(true)}
-                className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg"
+                className="p-2 text-gray-400 hover:text-white hover:bg-[#222222] rounded-lg"
                 title="Start new chat"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -240,7 +240,7 @@ const Community = () => {
               </button>
               <button
                 onClick={() => setShowCreateGroup(true)}
-                className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg"
+                className="p-2 text-gray-400 hover:text-white hover:bg-[#222222] rounded-lg"
                 title="Create group"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -266,7 +266,7 @@ const Community = () => {
         </div>
 
         {/* Groups Header */}
-        <div className="border-b border-gray-700 p-4">
+        <div className="border-b border-white p-4">
           <h3 className="text-lg font-semibold text-white">Groups</h3>
         </div>
 
@@ -277,8 +277,8 @@ const Community = () => {
               <div
                 key={group.id}
                 onClick={() => handleGroupSelect(group)}
-                className={`flex items-center p-3 hover:bg-gray-700 cursor-pointer ${
-                  selectedGroup?.id === group.id ? 'bg-gray-700' : ''
+                className={`flex items-center p-3 hover:bg-[#222222] cursor-pointer ${
+                  selectedGroup?.id === group.id ? 'bg-[#222222]' : ''
                 }`}
               >
                 <div className="flex-shrink-0">
@@ -316,7 +316,7 @@ const Community = () => {
                 <p className="text-gray-400 text-sm mb-3">No groups yet</p>
                 <button
                   onClick={() => setShowCreateGroup(true)}
-                  className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded-lg"
+                  className="bg-gradient-to-r from-[#2F00FF] to-[#1C0099] hover:bg-blue-700 text-white text-sm px-4 py-2 rounded-lg"
                 >
                   Create Group
                 </button>
@@ -331,7 +331,7 @@ const Community = () => {
         {selectedGroup ? (
           <>
             {/* Chat Header */}
-            <div className="bg-gray-800 border-b border-gray-700 p-4 flex items-center justify-between">
+            <div className="bg-gray-800 border-b border-white p-4 flex items-center justify-between">
               <div className="flex items-center">
                 <div className="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center mr-3">
                   <span className="text-white font-bold text-lg">#</span>
@@ -365,7 +365,7 @@ const Community = () => {
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
               {messages.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-center">
-                  <div className="w-16 h-16 bg-gray-700 rounded-full flex items-center justify-center mb-4">
+                  <div className="w-16 h-16 bg-[#222222] rounded-full flex items-center justify-center mb-4">
                     <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                     </svg>
@@ -386,11 +386,11 @@ const Community = () => {
                     <div key={message.id}>
                       {showDate && (
                         <div className="flex items-center my-6">
-                          <div className="flex-1 h-px bg-gray-700"></div>
+                          <div className="flex-1 h-px bg-[#222222]"></div>
                           <span className="px-3 text-xs text-gray-400 bg-gray-900">
                             {formatDate(message.created_at)}
                           </span>
-                          <div className="flex-1 h-px bg-gray-700"></div>
+                          <div className="flex-1 h-px bg-[#222222]"></div>
                         </div>
                       )}
                       
@@ -424,8 +424,8 @@ const Community = () => {
             </div>
 
             {/* Message Input */}
-            <div className="p-4 bg-gray-800 border-t border-gray-700">
-              <div className="flex items-center space-x-3 bg-gray-700 rounded-lg p-3">
+            <div className="p-4 bg-gray-800 border-t border-white">
+              <div className="flex items-center space-x-3 bg-[#222222] rounded-lg p-3">
                 <button className="text-gray-400 hover:text-white">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -471,7 +471,7 @@ const Community = () => {
         ) : (
           <div className="flex-1 flex items-center justify-center">
             <div className="text-center">
-              <div className="w-16 h-16 bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
+              <div className="w-16 h-16 bg-[#222222] rounded-full flex items-center justify-center mx-auto mb-4">
                 <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                 </svg>
@@ -481,13 +481,13 @@ const Community = () => {
               <div className="flex space-x-3">
                 <button
                   onClick={() => setShowStartChat(true)}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
+                  className="bg-gradient-to-r from-[#2F00FF] to-[#1C0099] hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
                 >
                   Start Chat
                 </button>
                 <button
                   onClick={() => setShowCreateGroup(true)}
-                  className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg"
+                  className="bg-gray-600 hover:bg-[#222222] text-white px-4 py-2 rounded-lg"
                 >
                   Create Group
                 </button>
@@ -501,7 +501,7 @@ const Community = () => {
       <div className="w-80 bg-[#131313] flex flex-col">
         {selectedGroup ? (
           <>
-            <div className="p-4 border-b border-gray-700">
+            <div className="p-4 border-b border-white">
               <h3 className="text-lg font-semibold text-white">Members</h3>
               <p className="text-sm text-gray-400">{selectedGroup.member_count} members</p>
             </div>
@@ -509,7 +509,7 @@ const Community = () => {
             <div className="flex-1 overflow-y-auto">
               <div className="p-4 space-y-3">
                 {members.map((member) => (
-                  <div key={member.id} className="flex items-center space-x-3 hover:bg-gray-700 p-2 rounded cursor-pointer">
+                  <div key={member.id} className="flex items-center space-x-3 hover:bg-[#222222] p-2 rounded cursor-pointer">
                     <div className="relative">
                       <img
                         src={member.avatar_url || '/api/placeholder/32/32'}
@@ -536,13 +536,13 @@ const Community = () => {
           </>
         ) : (
           <>
-            <div className="p-4 border-b border-gray-700">
+            <div className="p-4 border-b border-white">
               <h3 className="text-lg font-semibold text-white">Community</h3>
             </div>
             
             <div className="flex-1 flex items-center justify-center">
               <div className="text-center">
-                <div className="w-12 h-12 bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
+                <div className="w-12 h-12 bg-[#222222] rounded-full flex items-center justify-center mx-auto mb-4">
                   <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 515.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 919.288 0M15 7a3 3 0 11-6 0 3 3 0 616 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                   </svg>

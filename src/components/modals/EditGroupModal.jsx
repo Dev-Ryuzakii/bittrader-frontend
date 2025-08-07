@@ -72,10 +72,10 @@ const EditGroupModal = ({ isOpen, onClose, group, onGroupUpdated, onGroupDeleted
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-gray-800 rounded-lg w-full max-w-md mx-4">
+    <div className="fixed inset-0  bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-[#1A1A1A] rounded-lg w-full max-w-md mx-4">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-700">
+        <div className="flex items-center justify-between p-6 border-b border-white">
           <h2 className="text-xl font-bold text-white">Edit Group</h2>
           <button
             onClick={onClose}
@@ -101,7 +101,7 @@ const EditGroupModal = ({ isOpen, onClose, group, onGroupUpdated, onGroupDeleted
                 name="name"
                 value={formData.name}
                 onChange={handleChange}
-                className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
+                className="w-full bg-[#222222] border border-white rounded-lg px-3 py-2 text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
                 placeholder="Enter group name"
                 required
                 maxLength={50}
@@ -119,7 +119,7 @@ const EditGroupModal = ({ isOpen, onClose, group, onGroupUpdated, onGroupDeleted
                 value={formData.description}
                 onChange={handleChange}
                 rows={3}
-                className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 resize-none"
+                className="w-full bg-[#222222] border border-white rounded-lg px-3 py-2 text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 resize-none"
                 placeholder="Enter group description (optional)"
                 maxLength={200}
               />
@@ -139,7 +139,7 @@ const EditGroupModal = ({ isOpen, onClose, group, onGroupUpdated, onGroupDeleted
                 name="avatar_url"
                 value={formData.avatar_url}
                 onChange={handleChange}
-                className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
+                className="w-full bg-[#222222] border border-white rounded-lg px-3 py-2 text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
                 placeholder="https://example.com/avatar.jpg"
               />
             </div>
@@ -165,7 +165,7 @@ const EditGroupModal = ({ isOpen, onClose, group, onGroupUpdated, onGroupDeleted
             <button
               type="submit"
               disabled={loading || !formData.name.trim()}
-              className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-6 py-2 rounded-lg font-medium"
+              className="bg-gradient-to-r from-[#2F00FF] to-[#1C0099] hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-6 py-2 rounded-lg font-medium"
             >
               {loading ? 'Updating...' : 'Update Group'}
             </button>
@@ -173,7 +173,7 @@ const EditGroupModal = ({ isOpen, onClose, group, onGroupUpdated, onGroupDeleted
         </form>
 
         {/* Delete Section */}
-        <div className="p-6 border-t border-gray-700">
+        <div className="p-6 border-t border-white">
           <h3 className="text-lg font-semibold text-red-400 mb-3">Danger Zone</h3>
           
           {!deleteConfirm ? (
@@ -203,7 +203,7 @@ const EditGroupModal = ({ isOpen, onClose, group, onGroupUpdated, onGroupDeleted
                 </button>
                 <button
                   onClick={() => setDeleteConfirm(false)}
-                  className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg font-medium"
+                  className="bg-gray-600 hover:bg-[#222222] text-white px-4 py-2 rounded-lg font-medium"
                 >
                   Cancel
                 </button>

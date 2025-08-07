@@ -15,7 +15,7 @@ const FallbackChart = ({ onPlaceTrade, symbol = 'BTC/USD' }) => {
       <div className="absolute top-4 right-4 z-10">
         <button 
           onClick={onPlaceTrade}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors font-medium"
+          className="bg-gradient-to-r from-[#2F00FF] to-[#1C0099] hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors font-medium"
         >
           Place Trade
         </button>
