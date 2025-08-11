@@ -62,7 +62,7 @@ const Settings = () => {
       return (
         <div className="flex flex-col items-center justify-center py-10">
           <Loader className="w-8 h-8 text-blue-500 animate-spin mb-4" />
-          <p className="text-gray-400">Loading your settings...</p>
+          <p className="text-white">Loading your settings...</p>
         </div>
       );
     }
@@ -71,7 +71,7 @@ const Settings = () => {
       return (
         <div className="flex flex-col items-center justify-center py-10">
           <AlertTriangle className="w-8 h-8 text-yellow-500 mb-4" />
-          <p className="text-gray-400 mb-2">{error}</p>
+          <p className="text-white mb-2">{error}</p>
           <button 
             className="px-4 py-2 bg-blue-600 rounded-lg text-white flex items-center"
             onClick={() => window.location.reload()}
@@ -97,7 +97,7 @@ const Settings = () => {
   };
   
   return (
-    <div className="p-4 md:p-6 min-h-screen bg-gradient-to-b from-gray-900 to-gray-800">
+    <div className="p-4 md:p-6 min-h-screen bg-[#0A0A0A] ">
       <div className="max-w-7xl mx-auto">
         <h1 className="text-2xl md:text-3xl font-bold mb-6 text-white flex items-center">
           <Sliders className="mr-2 h-6 w-6" /> Settings
@@ -106,8 +106,8 @@ const Settings = () => {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Sidebar */}
           <div className="lg:col-span-1">
-            <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-700 shadow-xl overflow-hidden">
-              <div className="p-4 border-b border-gray-700">
+            <div className="bg-[#222222] backdrop-blur-sm rounded-xl border border-white shadow-xl overflow-hidden">
+              <div className="p-4 border-b border-white">
                 <div className="flex items-center space-x-3">
                   <div className="relative">
                     <div className="h-12 w-12 rounded-full bg-gradient-to-r from-purple-600 to-blue-500 flex items-center justify-center text-white font-bold text-lg">
@@ -127,7 +127,7 @@ const Settings = () => {
                           : profileData.email || 'User'
                       ) : 'Loading...'}
                     </h3>
-                    <p className="text-gray-400 text-sm">
+                    <p className="text-white text-sm">
                       {profileData?.subscription?.tier || 'Standard Account'}
                     </p>
                   </div>
@@ -137,16 +137,16 @@ const Settings = () => {
               <nav className="p-2">
                 <button 
                   onClick={() => setActiveTab('account')}
-                  className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-colors ${activeTab === 'account' ? 'bg-gray-700/70 text-white' : 'text-gray-400 hover:bg-gray-700/40 hover:text-white'}`}
+                  className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-colors ${activeTab === 'account' ? 'bg-gray-700/70 text-white' : 'text-white hover:bg-gray-700/40 hover:text-white'}`}
                 >
                   <User size={18} />
                   <span>Account</span>
                   {activeTab === 'account' && <ChevronRight className="ml-auto" size={16} />}
                 </button>
                 
-                <button 
+                {/* <button 
                   onClick={() => setActiveTab('notifications')}
-                  className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-colors ${activeTab === 'notifications' ? 'bg-gray-700/70 text-white' : 'text-gray-400 hover:bg-gray-700/40 hover:text-white'}`}
+                  className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-colors ${activeTab === 'notifications' ? 'bg-gray-700/70 text-white' : 'text-white hover:bg-gray-700/40 hover:text-white'}`}
                 >
                   <Bell size={18} />
                   <span>Notifications</span>
@@ -155,7 +155,7 @@ const Settings = () => {
                 
                 <button 
                   onClick={() => setActiveTab('trading')}
-                  className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-colors ${activeTab === 'trading' ? 'bg-gray-700/70 text-white' : 'text-gray-400 hover:bg-gray-700/40 hover:text-white'}`}
+                  className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-colors ${activeTab === 'trading' ? 'bg-gray-700/70 text-white' : 'text-white hover:bg-gray-700/40 hover:text-white'}`}
                 >
                   <LineChart size={18} />
                   <span>Trading Preferences</span>
@@ -164,14 +164,14 @@ const Settings = () => {
                 
                 <button 
                   onClick={() => setActiveTab('security')}
-                  className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-colors ${activeTab === 'security' ? 'bg-gray-700/70 text-white' : 'text-gray-400 hover:bg-gray-700/40 hover:text-white'}`}
+                  className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-colors ${activeTab === 'security' ? 'bg-gray-700/70 text-white' : 'text-white hover:bg-gray-700/40 hover:text-white'}`}
                 >
                   <Shield size={18} />
                   <span>Security</span>
                   {activeTab === 'security' && <ChevronRight className="ml-auto" size={16} />}
                 </button>
-                
-                <div className="border-t border-gray-700 my-2 pt-2">
+                 */}
+                <div className="border-t border-white my-2 pt-2">
                   <button 
                     onClick={handleLogout}
                     className="w-full flex items-center space-x-3 p-3 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors"
@@ -186,7 +186,7 @@ const Settings = () => {
           
           {/* Main Content */}
           <div className="lg:col-span-3">
-            <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-700 shadow-xl p-5">
+            <div className="bg-[#222222] backdrop-blur-sm rounded-xl border border-white shadow-xl p-5">
               {renderTabContent()}
             </div>
           </div>
@@ -238,14 +238,14 @@ const AccountSettings = ({ profileData }) => {
   
   return (
     <div>
-      <h2 className="text-xl font-semibold mb-6 text-white border-b border-gray-700 pb-3">Account Settings</h2>
+      <h2 className="text-xl font-semibold mb-6 text-white border-b border-white pb-3">Account Settings</h2>
       
       <div className="space-y-6">
         <div className="bg-gray-700/30 rounded-lg p-4">
           <div className="flex flex-col md:flex-row justify-between md:items-center mb-4">
             <div>
               <h3 className="text-white font-medium text-lg">Profile Information</h3>
-              <p className="text-gray-400 text-sm">Update your account details</p>
+              <p className="text-white text-sm">Update your account details</p>
             </div>
             {!isEditing ? (
               <button 
@@ -275,85 +275,85 @@ const AccountSettings = ({ profileData }) => {
           {!isEditing ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
               <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">First Name</label>
-                <div className="bg-gray-800 text-white p-3 rounded-lg">{profileData?.firstName || 'Not set'}</div>
+                <label className="block text-sm font-medium text-white mb-1">First Name</label>
+                <div className="bg-gray-800text-white p-3 rounded-lg">{profileData?.firstName || 'Not set'}</div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">Last Name</label>
-                <div className="bg-gray-800 text-white p-3 rounded-lg">{profileData?.lastName || 'Not set'}</div>
+                <label className="block text-sm font-medium text-white mb-1">Last Name</label>
+                <div className="bg-gray-800text-white p-3 rounded-lg">{profileData?.lastName || 'Not set'}</div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">Email Address</label>
-                <div className="bg-gray-800 text-white p-3 rounded-lg">{profileData?.email || 'Not set'}</div>
+                <label className="block text-sm font-medium text-white mb-1">Email Address</label>
+                <div className="bg-gray-800text-white p-3 rounded-lg">{profileData?.email || 'Not set'}</div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">Phone Number</label>
-                <div className="bg-gray-800 text-white p-3 rounded-lg">{profileData?.phone || 'Not set'}</div>
+                <label className="block text-sm font-medium text-white mb-1">Phone Number</label>
+                <div className="bg-gray-800text-white p-3 rounded-lg">{profileData?.phone || 'Not set'}</div>
               </div>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
               <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">First Name</label>
+                <label className="block text-sm font-medium text-white mb-1">First Name</label>
                 <input
                   type="text"
                   name="firstName"
                   value={formData.firstName}
                   onChange={handleInputChange}
-                  className="bg-gray-800 text-white p-3 rounded-lg w-full border border-gray-700 focus:border-blue-500 focus:outline-none"
+                  className="bg-gray-800text-white p-3 rounded-lg w-full border border-white focus:border-blue-500 focus:outline-none"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">Last Name</label>
+                <label className="block text-sm font-medium text-white mb-1">Last Name</label>
                 <input
                   type="text"
                   name="lastName"
                   value={formData.lastName}
                   onChange={handleInputChange}
-                  className="bg-gray-800 text-white p-3 rounded-lg w-full border border-gray-700 focus:border-blue-500 focus:outline-none"
+                  className="bg-gray-800text-white p-3 rounded-lg w-full border border-white focus:border-blue-500 focus:outline-none"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">Email Address</label>
+                <label className="block text-sm font-medium text-white mb-1">Email Address</label>
                 <input
                   type="email"
                   name="email"
                   value={formData.email}
                   onChange={handleInputChange}
-                  className="bg-gray-800 text-white p-3 rounded-lg w-full border border-gray-700 focus:border-blue-500 focus:outline-none"
+                  className="bg-gray-800text-white p-3 rounded-lg w-full border border-white focus:border-blue-500 focus:outline-none"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">Phone Number</label>
+                <label className="block text-sm font-medium text-white mb-1">Phone Number</label>
                 <input
                   type="tel"
                   name="phone"
                   value={formData.phone}
                   onChange={handleInputChange}
-                  className="bg-gray-800 text-white p-3 rounded-lg w-full border border-gray-700 focus:border-blue-500 focus:outline-none"
+                  className="bg-gray-800text-white p-3 rounded-lg w-full border border-white focus:border-blue-500 focus:outline-none"
                 />
               </div>
             </form>
           )}
         </div>
         
-        <div className="bg-gray-700/30 rounded-lg p-4">
+        {/* <div className="bg-gray-700/30 rounded-lg p-4">
           <div className="flex flex-col md:flex-row justify-between md:items-center mb-4">
             <div>
               <h3 className="text-white font-medium text-lg">Account Tier</h3>
-              <p className="text-gray-400 text-sm">Your current subscription details</p>
+              <p className="text-white text-sm">Your current subscription details</p>
             </div>
             <button className="mt-2 md:mt-0 px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 rounded-lg text-white transition-colors text-sm">
               Upgrade Plan
             </button>
           </div>
           
-          <div className="bg-gray-800/80 rounded-lg p-4 border border-purple-500/30">
+          <div className="bg-[#0A0A0A]/80 rounded-lg p-4 border border-purple-500/30">
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-purple-400 font-medium">{profileData?.subscription?.tier || 'Free'}</div>
                 <div className="text-white text-xl font-bold">{profileData?.subscription?.price || '$0'} / month</div>
-                <div className="text-gray-400 text-sm mt-1">
+                <div className="text-white text-sm mt-1">
                   {profileData?.subscription?.renewDate 
                     ? `Renews on ${new Date(profileData.subscription.renewDate).toLocaleDateString('en-US', {
                         year: 'numeric',
@@ -388,13 +388,13 @@ const AccountSettings = ({ profileData }) => {
               )}
             </div>
           </div>
-        </div>
+        </div> */}
         
         <div className="bg-gray-700/30 rounded-lg p-4">
           <div className="flex flex-col md:flex-row justify-between md:items-center mb-4">
             <div>
               <h3 className="text-white font-medium text-lg">Connected Accounts</h3>
-              <p className="text-gray-400 text-sm">Manage your linked broker accounts</p>
+              <p className="text-white text-sm">Manage your linked broker accounts</p>
             </div>
             <button className="mt-2 md:mt-0 px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg text-white transition-colors text-sm">
               Connect New
@@ -404,26 +404,26 @@ const AccountSettings = ({ profileData }) => {
           <div className="space-y-3">
             {profileData?.connectedAccounts?.length > 0 ? (
               profileData.connectedAccounts.map((account, index) => (
-                <div key={index} className="bg-gray-800 rounded-lg p-3 flex items-center justify-between">
+                <div key={index} className="bg-gray-800rounded-lg p-3 flex items-center justify-between">
                   <div className="flex items-center">
                     <div className={`bg-${account.color || 'blue'}-500/20 p-2 rounded-lg mr-3`}>
                       <Globe className={`text-${account.color || 'blue'}-400`} size={20} />
                     </div>
                     <div>
                       <div className="text-white font-medium">{account.name}</div>
-                      <div className="text-gray-400 text-sm">
+                      <div className="text-white text-sm">
                         Connected on {new Date(account.connectedDate).toLocaleDateString()}
                       </div>
                     </div>
                   </div>
-                  <button className="text-gray-400 hover:text-white">
+                  <button className="text-white hover:text-white">
                     <ChevronRight size={20} />
                   </button>
                 </div>
               ))
             ) : (
-              <div className="bg-gray-800 rounded-lg p-4 text-center">
-                <p className="text-gray-400">No accounts connected yet.</p>
+              <div className="bg-gray-800rounded-lg p-4 text-center">
+                <p className="text-white">No accounts connected yet.</p>
                 <p className="text-sm text-gray-500 mt-1">Connect your trading accounts to get started.</p>
               </div>
             )}
@@ -437,7 +437,7 @@ const AccountSettings = ({ profileData }) => {
 const NotificationSettings = ({ notifications, handleNotificationChange }) => {
   return (
     <div>
-      <h2 className="text-xl font-semibold mb-6 text-white border-b border-gray-700 pb-3">Notification Settings</h2>
+      <h2 className="text-xl font-semibold mb-6 text-white border-b border-white pb-3">Notification Settings</h2>
       
       <div className="space-y-6">
         <div className="bg-gray-700/30 rounded-lg p-4">
@@ -447,7 +447,7 @@ const NotificationSettings = ({ notifications, handleNotificationChange }) => {
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-white">Email Notifications</div>
-                <div className="text-gray-400 text-sm">Receive updates via email</div>
+                <div className="text-white text-sm">Receive updates via email</div>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input 
@@ -463,7 +463,7 @@ const NotificationSettings = ({ notifications, handleNotificationChange }) => {
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-white">Push Notifications</div>
-                <div className="text-gray-400 text-sm">Receive push notifications on your device</div>
+                <div className="text-white text-sm">Receive push notifications on your device</div>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input 
@@ -485,7 +485,7 @@ const NotificationSettings = ({ notifications, handleNotificationChange }) => {
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-white">Trade Notifications</div>
-                <div className="text-gray-400 text-sm">Get notified about your trade executions</div>
+                <div className="text-white text-sm">Get notified about your trade executions</div>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input 
@@ -501,7 +501,7 @@ const NotificationSettings = ({ notifications, handleNotificationChange }) => {
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-white">Market News</div>
-                <div className="text-gray-400 text-sm">Updates about market news and events</div>
+                <div className="text-white text-sm">Updates about market news and events</div>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input 
@@ -517,7 +517,7 @@ const NotificationSettings = ({ notifications, handleNotificationChange }) => {
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-white">Price Alerts</div>
-                <div className="text-gray-400 text-sm">Custom price alerts for your watchlist</div>
+                <div className="text-white text-sm">Custom price alerts for your watchlist</div>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input 
@@ -537,8 +537,8 @@ const NotificationSettings = ({ notifications, handleNotificationChange }) => {
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-400 mb-1">Quiet Hours Start</label>
-              <select className="bg-gray-800 text-white rounded-lg border border-gray-700 px-3 py-2 w-full">
+              <label className="block text-sm font-medium text-white mb-1">Quiet Hours Start</label>
+              <select className="bg-gray-800text-white rounded-lg border border-white px-3 py-2 w-full">
                 <option>10:00 PM</option>
                 <option>11:00 PM</option>
                 <option>12:00 AM</option>
@@ -546,8 +546,8 @@ const NotificationSettings = ({ notifications, handleNotificationChange }) => {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-400 mb-1">Quiet Hours End</label>
-              <select className="bg-gray-800 text-white rounded-lg border border-gray-700 px-3 py-2 w-full">
+              <label className="block text-sm font-medium text-white mb-1">Quiet Hours End</label>
+              <select className="bg-gray-800text-white rounded-lg border border-white px-3 py-2 w-full">
                 <option>6:00 AM</option>
                 <option>7:00 AM</option>
                 <option>8:00 AM</option>
@@ -639,7 +639,7 @@ const TradingSettings = () => {
   
   return (
     <div>
-      <h2 className="text-xl font-semibold mb-6 text-white border-b border-gray-700 pb-3">Trading Preferences</h2>
+      <h2 className="text-xl font-semibold mb-6 text-white border-b border-white pb-3">Trading Preferences</h2>
       
       <div className="space-y-6">
         <div className="bg-gray-700/30 rounded-lg p-4">
@@ -647,12 +647,12 @@ const TradingSettings = () => {
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-400 mb-1">Default Order Type</label>
+              <label className="block text-sm font-medium text-white mb-1">Default Order Type</label>
               <select 
                 name="defaultOrderType"
                 value={tradingPreferences.defaultOrderType}
                 onChange={handleSelectChange}
-                className="bg-gray-800 text-white rounded-lg border border-gray-700 px-3 py-2 w-full"
+                className="bg-gray-800text-white rounded-lg border border-white px-3 py-2 w-full"
               >
                 <option>Market</option>
                 <option>Limit</option>
@@ -661,12 +661,12 @@ const TradingSettings = () => {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-400 mb-1">Time In Force</label>
+              <label className="block text-sm font-medium text-white mb-1">Time In Force</label>
               <select 
                 name="timeInForce"
                 value={tradingPreferences.timeInForce}
                 onChange={handleSelectChange}
-                className="bg-gray-800 text-white rounded-lg border border-gray-700 px-3 py-2 w-full"
+                className="bg-gray-800text-white rounded-lg border border-white px-3 py-2 w-full"
               >
                 <option>Good Till Cancelled</option>
                 <option>Day Only</option>
@@ -679,7 +679,7 @@ const TradingSettings = () => {
           <div className="mt-4 flex items-center justify-between">
             <div>
               <div className="text-white">Confirm Orders Before Execution</div>
-              <div className="text-gray-400 text-sm">Show a confirmation dialog before executing trades</div>
+              <div className="text-white text-sm">Show a confirmation dialog before executing trades</div>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
               <input 
@@ -698,7 +698,7 @@ const TradingSettings = () => {
           
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-400 mb-1">
+              <label className="block text-sm font-medium text-white mb-1">
                 Maximum Position Size (% of Account): {tradingPreferences.maxPositionSize}%
               </label>
               <input 
@@ -710,7 +710,7 @@ const TradingSettings = () => {
                 onChange={handleRangeChange}
                 className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-600"
               />
-              <div className="flex justify-between text-gray-400 text-sm mt-1">
+              <div className="flex justify-between text-white text-sm mt-1">
                 <span>1%</span>
                 <span>50%</span>
                 <span>100%</span>
@@ -720,7 +720,7 @@ const TradingSettings = () => {
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-white">Auto Stop Loss</div>
-                <div className="text-gray-400 text-sm">Automatically set stop loss for trades</div>
+                <div className="text-white text-sm">Automatically set stop loss for trades</div>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input 
@@ -736,7 +736,7 @@ const TradingSettings = () => {
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-white">Auto Take Profit</div>
-                <div className="text-gray-400 text-sm">Automatically set take profit for trades</div>
+                <div className="text-white text-sm">Automatically set take profit for trades</div>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input 
@@ -758,7 +758,7 @@ const TradingSettings = () => {
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-white">One-Click Trading</div>
-                <div className="text-gray-400 text-sm">Execute trades with a single click</div>
+                <div className="text-white text-sm">Execute trades with a single click</div>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input 
@@ -774,7 +774,7 @@ const TradingSettings = () => {
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-white">Advanced Charting Tools</div>
-                <div className="text-gray-400 text-sm">Use advanced indicators and drawing tools</div>
+                <div className="text-white text-sm">Use advanced indicators and drawing tools</div>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input 
@@ -790,7 +790,7 @@ const TradingSettings = () => {
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-white">Strategy Automation</div>
-                <div className="text-gray-400 text-sm">Enable automated trading strategies</div>
+                <div className="text-white text-sm">Enable automated trading strategies</div>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input 
@@ -934,14 +934,14 @@ const SecuritySettings = () => {
   
   return (
     <div>
-      <h2 className="text-xl font-semibold mb-6 text-white border-b border-gray-700 pb-3">Security Settings</h2>
+      <h2 className="text-xl font-semibold mb-6 text-white border-b border-white pb-3">Security Settings</h2>
       
       <div className="space-y-6">
         <div className="bg-gray-700/30 rounded-lg p-4">
           <div className="flex flex-col md:flex-row justify-between md:items-center mb-4">
             <div>
               <h3 className="text-white font-medium text-lg">Password Settings</h3>
-              <p className="text-gray-400 text-sm">Manage your account password</p>
+              <p className="text-white text-sm">Manage your account password</p>
             </div>
             <button 
               onClick={() => setShowChangePassword(!showChangePassword)}
@@ -966,36 +966,36 @@ const SecuritySettings = () => {
               )}
               
               <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">Current Password</label>
+                <label className="block text-sm font-medium text-white mb-1">Current Password</label>
                 <input
                   type="password"
                   name="currentPassword"
                   value={passwordForm.currentPassword}
                   onChange={handlePasswordChange}
                   required
-                  className="bg-gray-800 text-white p-3 rounded-lg w-full border border-gray-700 focus:border-blue-500 focus:outline-none"
+                  className="bg-gray-800text-white p-3 rounded-lg w-full border border-white focus:border-blue-500 focus:outline-none"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">New Password</label>
+                <label className="block text-sm font-medium text-white mb-1">New Password</label>
                 <input
                   type="password"
                   name="newPassword"
                   value={passwordForm.newPassword}
                   onChange={handlePasswordChange}
                   required
-                  className="bg-gray-800 text-white p-3 rounded-lg w-full border border-gray-700 focus:border-blue-500 focus:outline-none"
+                  className="bg-gray-800text-white p-3 rounded-lg w-full border border-white focus:border-blue-500 focus:outline-none"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">Confirm New Password</label>
+                <label className="block text-sm font-medium text-white mb-1">Confirm New Password</label>
                 <input
                   type="password"
                   name="confirmPassword"
                   value={passwordForm.confirmPassword}
                   onChange={handlePasswordChange}
                   required
-                  className="bg-gray-800 text-white p-3 rounded-lg w-full border border-gray-700 focus:border-blue-500 focus:outline-none"
+                  className="bg-gray-800text-white p-3 rounded-lg w-full border border-white focus:border-blue-500 focus:outline-none"
                 />
               </div>
               <button
@@ -1023,7 +1023,7 @@ const SecuritySettings = () => {
           <div className="flex items-center justify-between mb-4">
             <div>
               <div className="text-white">Enable 2FA</div>
-              <div className="text-gray-400 text-sm">Add an extra layer of security</div>
+              <div className="text-white text-sm">Add an extra layer of security</div>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
               <input 
@@ -1037,14 +1037,14 @@ const SecuritySettings = () => {
           </div>
           
           {securityData.twoFactorEnabled && (
-            <div className="p-4 rounded-lg bg-gray-800">
+            <div className="p-4 rounded-lg bg-[#0A0A0A]">
               <div className="flex items-center mb-3">
                 <div className="h-10 w-10 bg-green-500/20 rounded-full flex items-center justify-center mr-3">
                   <Shield className="text-green-400" size={20} />
                 </div>
                 <div>
                   <div className="text-white font-medium">Authenticator App</div>
-                  <div className="text-gray-400 text-sm">Currently active</div>
+                  <div className="text-white text-sm">Currently active</div>
                 </div>
               </div>
               
@@ -1060,11 +1060,11 @@ const SecuritySettings = () => {
           
           <div className="space-y-3 max-h-64 overflow-y-auto">
             {securityData.loginHistory.map((login, index) => (
-              <div key={index} className="bg-gray-800 rounded-lg p-3">
+              <div key={index} className="bg-gray-800rounded-lg p-3">
                 <div className="flex justify-between items-start">
                   <div>
                     <div className="text-white">{login.isActive ? 'Current Session' : 'Recent Login'}</div>
-                    <div className="text-gray-400 text-sm">
+                    <div className="text-white text-sm">
                       {login.device} • {new Date(login.date).toLocaleDateString('en-US', {
                         month: 'short',
                         day: 'numeric',

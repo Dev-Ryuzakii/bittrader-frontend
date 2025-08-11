@@ -1,9 +1,22 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { groupChatAPI, profileAPI, ChatWebSocket } from '../../api/community.js'
 import UserProfile from '../modals/UserProfile.jsx'
 import CreateGroupModal from '../modals/CreateGroupModal.jsx'
 import EditGroupModal from '../modals/EditGroupModal.jsx'
 import StartChatModal from '../modals/StartChatModal.jsx'
+
+// Utility function for debouncing
+const debounce = (func, wait) => {
+  let timeout
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout)
+      func(...args)
+    }
+    clearTimeout(timeout)
+    timeout = setTimeout(later, wait)
+  }
+}
 
 const Community = () => {
   const [groups, setGroups] = useState([])
@@ -16,6 +29,12 @@ const Community = () => {
   const [members, setMembers] = useState([])
   const [showMembers, setShowMembers] = useState(false)
   const [ws, setWs] = useState(null)
+  const [isConnected, setIsConnected] = useState(false)
+  const [searchResults, setSearchResults] = useState([])
+  const [searchType, setSearchType] = useState('users') // 'users' or 'groups'
+  const [isSearching, setIsSearching] = useState(false)
+  const [isTyping, setIsTyping] = useState(false)
+  const [typingUsers, setTypingUsers] = useState([])
   
   // Modal states
   const [showUserProfile, setShowUserProfile] = useState(false)
@@ -25,9 +44,11 @@ const Community = () => {
   const [editingGroup, setEditingGroup] = useState(null)
   const [showStartChat, setShowStartChat] = useState(false)
   const [groupMenuOpen, setGroupMenuOpen] = useState(null)
+  const [showSearch, setShowSearch] = useState(false)
   
   const messagesEndRef = useRef(null)
   const messageInputRef = useRef(null)
+  const typingTimeoutRef = useRef(null)
 
   // Initialize WebSocket and load data
   useEffect(() => {
@@ -43,14 +64,22 @@ const Community = () => {
           const websocket = new ChatWebSocket(token)
           await websocket.connect()
           setWs(websocket)
+          setIsConnected(true)
 
           // Set up WebSocket event listeners
           websocket.on('group_message', handleNewGroupMessage)
+          websocket.on('user_typing', handleTypingUpdate)
           websocket.on('connection_established', (data) => {
             console.log('WebSocket connection established:', data)
+            setIsConnected(true)
           })
           websocket.on('error', (error) => {
             console.error('WebSocket error:', error)
+            setIsConnected(false)
+          })
+          websocket.on('disconnect', () => {
+            console.log('WebSocket disconnected')
+            setIsConnected(false)
           })
         }
 
@@ -70,8 +99,52 @@ const Community = () => {
       if (ws) {
         ws.disconnect()
       }
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current)
+      }
     }
   }, [])
+
+  // Debounced search function
+  const debouncedSearch = useCallback(
+    debounce(async (query, type) => {
+      if (query.length < 2) {
+        setSearchResults([])
+        return
+      }
+
+      setIsSearching(true)
+      try {
+        const endpoint = type === 'users' 
+          ? `/api/v1/community/search/users?query=${encodeURIComponent(query)}`
+          : `/api/v1/community/search/groups?query=${encodeURIComponent(query)}`
+          
+        const response = await fetch(endpoint, {
+          headers: {
+            'Authorization': localStorage.getItem('access_token')
+          }
+        })
+        
+        if (response.ok) {
+          const results = await response.json()
+          setSearchResults(results)
+        }
+      } catch (error) {
+        console.error('Search error:', error)
+        setSearchResults([])
+      } finally {
+        setIsSearching(false)
+      }
+    }, 300),
+    []
+  )
+
+  // Search effect
+  useEffect(() => {
+    if (showSearch) {
+      debouncedSearch(searchQuery, searchType)
+    }
+  }, [searchQuery, searchType, debouncedSearch, showSearch])
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -92,6 +165,38 @@ const Community = () => {
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }
+
+  const handleTypingUpdate = (data) => {
+    if (selectedGroup && data.group_id === selectedGroup.id) {
+      setTypingUsers(prev => {
+        if (data.is_typing) {
+          return prev.includes(data.username) ? prev : [...prev, data.username]
+        } else {
+          return prev.filter(user => user !== data.username)
+        }
+      })
+    }
+  }
+
+  const handleTyping = () => {
+    if (!isTyping && selectedGroup && ws) {
+      setIsTyping(true)
+      ws.sendTypingIndicator(selectedGroup.id, true)
+    }
+
+    // Clear previous timeout
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current)
+    }
+
+    // Set timeout to stop typing
+    typingTimeoutRef.current = setTimeout(() => {
+      if (isTyping && selectedGroup && ws) {
+        setIsTyping(false)
+        ws.sendTypingIndicator(selectedGroup.id, false)
+      }
+    }, 3000)
   }
 
   const loadGroups = async () => {
@@ -134,6 +239,15 @@ const Community = () => {
   const sendMessage = async () => {
     if (!newMessage.trim() || !selectedGroup) return
 
+    // Stop typing indicator
+    if (isTyping && ws) {
+      setIsTyping(false)
+      ws.sendTypingIndicator(selectedGroup.id, false)
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current)
+      }
+    }
+
     try {
       const messageData = {
         message: newMessage.trim(),
@@ -154,6 +268,18 @@ const Community = () => {
       setNewMessage('')
     } catch (error) {
       console.error('Failed to send message:', error)
+    }
+  }
+
+  const handleMessageInputChange = (e) => {
+    setNewMessage(e.target.value)
+    handleTyping()
+  }
+
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      sendMessage()
     }
   }
 
@@ -213,6 +339,72 @@ const Community = () => {
   const handleChatStarted = () => {
     // Placeholder for when direct messages are implemented
     console.log('Direct message feature not implemented yet')
+  }
+
+  const followUser = async (userId) => {
+    try {
+      const response = await fetch('/api/v1/community/follow', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': localStorage.getItem('access_token')
+        },
+        body: JSON.stringify({ following_id: userId })
+      })
+      
+      if (response.ok) {
+        // Update the search results to reflect the follow
+        setSearchResults(prev => prev.map(user => 
+          user.user_id === userId ? { ...user, is_following: true } : user
+        ))
+      }
+    } catch (error) {
+      console.error('Error following user:', error)
+    }
+  }
+
+  const joinGroup = async (groupId) => {
+    try {
+      const response = await fetch(`/api/v1/community/groups/${groupId}/join`, {
+        method: 'POST',
+        headers: {
+          'Authorization': localStorage.getItem('access_token')
+        }
+      })
+      
+      if (response.ok) {
+        // Update the search results to reflect the join
+        setSearchResults(prev => prev.map(group => 
+          group.id === groupId ? { ...group, is_member: true } : group
+        ))
+        
+        // Reload groups to include the new one
+        await loadGroups()
+      }
+    } catch (error) {
+      console.error('Error joining group:', error)
+    }
+  }
+
+  const deleteMessage = async (messageId) => {
+    if (!window.confirm('Are you sure you want to delete this message?')) {
+      return
+    }
+    
+    try {
+      const response = await fetch(`/api/v1/community/groups/${selectedGroup.id}/messages/${messageId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': localStorage.getItem('access_token')
+        }
+      })
+      
+      if (response.ok) {
+        setMessages(prev => prev.filter(msg => msg.id !== messageId))
+      }
+    } catch (error) {
+      console.error('Error deleting message:', error)
+    }
   }
 
   const formatTime = (timestamp) => {
@@ -487,7 +679,7 @@ const Community = () => {
                         </div>
                       )}
                       
-                      <div className="flex items-start space-x-3 hover:bg-[#111111] hover:bg-opacity-50 px-3 py-2 rounded transition-colors">
+                      <div className="flex items-start space-x-3 hover:bg-[#111111] hover:bg-opacity-50 px-3 py-2 rounded transition-colors group">
                         <img
                           src={message.avatar_url || '/api/placeholder/40/40'}
                           alt={message.display_name || message.username}
@@ -505,6 +697,17 @@ const Community = () => {
                               {formatTime(message.created_at)}
                               {message.is_edited && ' (edited)'}
                             </span>
+                            
+                            {/* Delete button for own messages or if admin */}
+                            {(message.user_id === currentUser?.user_id || selectedGroup?.is_admin) && (
+                              <button
+                                onClick={() => deleteMessage(message.id)}
+                                className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300 transition-all text-xs ml-2"
+                                title="Delete message"
+                              >
+                                🗑️
+                              </button>
+                            )}
                           </div>
                           <p className="text-gray-100 break-words">{message.message}</p>
                         </div>
@@ -513,6 +716,24 @@ const Community = () => {
                   )
                 })
               )}
+              
+              {/* Typing indicator */}
+              {typingUsers.length > 0 && (
+                <div className="flex items-center space-x-2 px-3 py-2 text-gray-400 text-sm">
+                  <div className="flex space-x-1">
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                  </div>
+                  <span>
+                    {typingUsers.length === 1 
+                      ? `${typingUsers[0]} is typing...`
+                      : `${typingUsers.join(', ')} are typing...`
+                    }
+                  </span>
+                </div>
+              )}
+              
               <div ref={messagesEndRef} />
             </div>
 
@@ -529,8 +750,8 @@ const Community = () => {
                   ref={messageInputRef}
                   type="text"
                   value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+                  onChange={handleMessageInputChange}
+                  onKeyPress={handleKeyPress}
                   placeholder={`Message #${selectedGroup.name}`}
                   className="flex-1 bg-transparent text-white placeholder-gray-400 focus:outline-none"
                 />
