@@ -70,7 +70,7 @@ export const toggleAccountStatus = async (accountId) => {
 
 export const getAccountDetails = async (accountId) => {
   try {
-    const response = await api.get(`/api/v1/broker-accounts/${accountId}/details`);
+    const response = await api.get(`/api/v1/broker/${accountId}/details`);
     return {
       success: true,
       data: response
@@ -86,7 +86,7 @@ export const getAccountDetails = async (accountId) => {
 
 export const getAccounts = async () => {
   try {
-    const response = await api.get('/api/v1/broker-accounts/');
+    const response = await api.get('/api/v1/broker/');
     return {
       success: true,
       data: response || []
@@ -103,7 +103,7 @@ export const getAccounts = async () => {
 
 export const getAccountBalance = async (accountId) => {
   try {
-    const response = await api.get(`/api/v1/broker-accounts/${accountId}/balance`);
+    const response = await api.get(`/api/v1/broker/${accountId}/balance`);
     return {
       success: true,
       data: response
@@ -123,16 +123,44 @@ export const getAccountBalance = async (accountId) => {
 
 export const placeTrade = async (accountId, tradeData) => {
   try {
-    const response = await api.post(`/api/v1/broker-accounts/${accountId}/trade`, tradeData);
+    console.log('Placing trade with payload:', tradeData);
+    const response = await api.post(`/api/v1/broker/${accountId}/trade`, tradeData);
     return {
       success: true,
-      data: response
+      data: response.data
     };
   } catch (error) {
     console.error('Error placing trade:', error);
+    console.error('Error response:', error.response?.data);
+    console.error('Error status:', error.response?.status);
+    
+    let errorMessage = 'Failed to place trade';
+    
+    if (error.response?.status === 422) {
+      // Handle validation errors specifically
+      if (error.response?.data?.detail) {
+        if (Array.isArray(error.response.data.detail)) {
+          // Pydantic validation errors
+          const validationErrors = error.response.data.detail.map(err => {
+            const field = err.loc?.slice(1).join('.') || 'unknown field';
+            return `${field}: ${err.msg}`;
+          }).join(', ');
+          errorMessage = `Validation error: ${validationErrors}`;
+        } else {
+          errorMessage = `Validation error: ${error.response.data.detail}`;
+        }
+      }
+    } else if (error.response?.data?.detail) {
+      errorMessage = error.response.data.detail;
+    } else if (error.response?.data?.message) {
+      errorMessage = error.response.data.message;
+    } else if (error.message) {
+      errorMessage = error.message;
+    }
+    
     return {
       success: false,
-      error: error.message || 'Failed to place trade'
+      error: errorMessage
     };
   }
 };
@@ -143,7 +171,7 @@ export const placeTrade = async (accountId, tradeData) => {
 
 export const placePendingOrder = async (accountId, orderData) => {
   try {
-    const response = await api.post(`/api/v1/broker-accounts/${accountId}/pending-order`, orderData);
+    const response = await api.post(`/api/v1/broker/${accountId}/pending-order`, orderData);
     return {
       success: true,
       data: response
@@ -159,7 +187,7 @@ export const placePendingOrder = async (accountId, orderData) => {
 
 export const modifyOrder = async (accountId, orderId, modifications) => {
   try {
-    const response = await api.patch(`/api/v1/broker-accounts/${accountId}/orders/${orderId}`, modifications);
+    const response = await api.patch(`/api/v1/broker/${accountId}/orders/${orderId}`, modifications);
     return {
       success: true,
       data: response
@@ -175,7 +203,7 @@ export const modifyOrder = async (accountId, orderId, modifications) => {
 
 export const cancelOrder = async (accountId, orderId) => {
   try {
-    const response = await api.delete(`/api/v1/broker-accounts/${accountId}/orders/${orderId}`);
+    const response = await api.delete(`/api/v1/broker/${accountId}/orders/${orderId}`);
     return {
       success: true,
       data: response
@@ -191,7 +219,7 @@ export const cancelOrder = async (accountId, orderId) => {
 
 export const getOrders = async (accountId) => {
   try {
-    const response = await api.get(`/api/v1/broker-accounts/${accountId}/orders`);
+    const response = await api.get(`/api/v1/broker/${accountId}/orders`);
     return {
       success: true,
       data: response
@@ -211,7 +239,7 @@ export const getOrders = async (accountId) => {
 
 export const getPositions = async (accountId) => {
   try {
-    const response = await api.get(`/api/v1/broker-accounts/${accountId}/positions`);
+    const response = await api.get(`/api/v1/broker/${accountId}/positions`);
     return {
       success: true,
       data: response
@@ -227,7 +255,7 @@ export const getPositions = async (accountId) => {
 
 export const closePosition = async (accountId, positionId) => {
   try {
-    const response = await api.post(`/api/v1/broker-accounts/${accountId}/positions/${positionId}/close`);
+    const response = await api.post(`/api/v1/broker/${accountId}/positions/${positionId}/close`);
     return {
       success: true,
       data: response
@@ -243,7 +271,7 @@ export const closePosition = async (accountId, positionId) => {
 
 export const modifyPosition = async (accountId, positionId, modifications) => {
   try {
-    const response = await api.patch(`/api/v1/broker-accounts/${accountId}/positions/${positionId}`, modifications);
+    const response = await api.patch(`/api/v1/broker/${accountId}/positions/${positionId}`, modifications);
     return {
       success: true,
       data: response
@@ -263,7 +291,7 @@ export const modifyPosition = async (accountId, positionId, modifications) => {
 
 export const placePairTrade = async (accountId, pairData) => {
   try {
-    const response = await api.post(`/api/v1/broker-accounts/${accountId}/pair-trade`, pairData);
+    const response = await api.post(`/api/v1/broker/${accountId}/pair-trade`, pairData);
     return {
       success: true,
       ...response.data,  // Include all API response data including correlation_analysis
@@ -284,7 +312,7 @@ export const placePairTrade = async (accountId, pairData) => {
 
 export const placeMultiAccountTrade = async (tradeData) => {
   try {
-    const response = await api.post('/api/v1/broker-accounts/multi-account-trade', tradeData);
+    const response = await api.post('/api/v1/broker/multi-account-trade', tradeData);
     return {
       success: true,
       data: response
@@ -304,7 +332,7 @@ export const placeMultiAccountTrade = async (tradeData) => {
 
 export const getSymbolPrice = async (accountId, symbol) => {
   try {
-    const response = await api.get(`/api/v1/broker-accounts/${accountId}/price/${symbol}`);
+    const response = await api.get(`/api/v1/broker/${accountId}/price/${symbol}`);
     return {
       success: true,
       data: response
@@ -368,7 +396,7 @@ export class TradingAPI {
 
   // Market Orders
   async placeMarketOrder(accountId, orderData) {
-    return this.request(`/broker-accounts/${accountId}/trade`, {
+    return this.request(`/api/v1/broker/${accountId}/trade`, {
       method: 'POST',
       body: JSON.stringify(orderData),
     });
@@ -376,7 +404,7 @@ export class TradingAPI {
 
   // Pending Orders
   async placePendingOrder(accountId, orderData) {
-    return this.request(`/broker-accounts/${accountId}/pending-order`, {
+    return this.request(`/api/v1/broker/${accountId}/pending-order`, {
       method: 'POST',
       body: JSON.stringify(orderData),
     });
@@ -384,7 +412,7 @@ export class TradingAPI {
 
   // Modify Orders
   async modifyOrder(accountId, orderId, modifications) {
-    return this.request(`/broker-accounts/${accountId}/orders/${orderId}`, {
+    return this.request(`/api/v1/broker/${accountId}/orders/${orderId}`, {
       method: 'PATCH',
       body: JSON.stringify(modifications),
     });
@@ -392,7 +420,7 @@ export class TradingAPI {
 
   // Modify Positions
   async modifyPosition(accountId, positionId, modifications) {
-    return this.request(`/broker-accounts/${accountId}/positions/${positionId}`, {
+    return this.request(`/api/v1/broker/${accountId}/positions/${positionId}`, {
       method: 'PATCH',
       body: JSON.stringify(modifications),
     });
@@ -400,7 +428,7 @@ export class TradingAPI {
 
   // Pair Trading
   async placePairTrade(accountId, pairData) {
-    return this.request(`/broker-accounts/${accountId}/pair-trade`, {
+    return this.request(`/api/v1/broker/${accountId}/pair-trade`, {
       method: 'POST',
       body: JSON.stringify(pairData),
     });
@@ -408,7 +436,7 @@ export class TradingAPI {
 
   // Multi-Account Trading
   async placeMultiAccountTrade(tradeData) {
-    return this.request('/broker-accounts/multi-account-trade', {
+    return this.request('/api/v1/broker/multi-account-trade', {
       method: 'POST',
       body: JSON.stringify(tradeData),
     });
@@ -416,7 +444,7 @@ export class TradingAPI {
 
   // Get Real-time Prices
   async getSymbolPrice(accountId, symbol) {
-    return this.request(`/broker-accounts/${accountId}/price/${symbol}`);
+    return this.request(`/api/v1/broker/${accountId}/price/${symbol}`);
   }
   
   async getLivePrice(symbol) {
@@ -425,33 +453,33 @@ export class TradingAPI {
 
   // Position Management
   async getPositions(accountId) {
-    return this.request(`/broker-accounts/${accountId}/positions`);
+    return this.request(`/api/v1/broker/${accountId}/positions`);
   }
 
   async closePosition(accountId, positionId) {
-    return this.request(`/broker-accounts/${accountId}/positions/${positionId}/close`, {
+    return this.request(`/api/v1/broker/${accountId}/positions/${positionId}/close`, {
       method: 'POST',
     });
   }
 
   // Order Management
   async getOrders(accountId) {
-    return this.request(`/broker-accounts/${accountId}/orders`);
+    return this.request(`/api/v1/broker/${accountId}/orders`);
   }
 
   async cancelOrder(accountId, orderId) {
-    return this.request(`/broker-accounts/${accountId}/orders/${orderId}`, {
+    return this.request(`/api/v1/broker/${accountId}/orders/${orderId}`, {
       method: 'DELETE',
     });
   }
 
   // Account Management
   async getAccounts() {
-    return this.request('/broker-accounts/');
+    return this.request('/api/v1/broker/');
   }
 
   async getAccountDetails(accountId) {
-    return this.request(`/broker-accounts/${accountId}/details`);
+    return this.request(`/api/v1/broker/${accountId}/details`);
   }
 }
 

@@ -139,16 +139,43 @@ const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelec
         throw new Error('Volume must be greater than 0');
       }
 
-      const payload = {
-        symbol: marketData.symbol,
-        trade_type: marketData.trade_type,
-        volume,
-        stop_loss: stopLoss,
-        take_profit: takeProfit,
-        comment: marketData.comment,
+      // Ensure minimum volume constraints (common in Forex)
+      if (volume < 0.01) {
+        throw new Error('Volume must be at least 0.01 lots');
+      }
+
+      // Create clean payload with proper data types
+      const cleanPayload = {
+        symbol: marketData.symbol?.toString().trim().toUpperCase(),
+        trade_type: marketData.trade_type?.toString().toLowerCase(),
+        volume: Math.round(volume * 100) / 100, // Round to 2 decimal places
       };
 
-      const response = await placeTrade(selectedAccount.id, payload);
+      // Validate required fields
+      if (!cleanPayload.symbol || typeof cleanPayload.symbol !== 'string') {
+        throw new Error('Valid symbol is required');
+      }
+      if (!cleanPayload.trade_type || !['buy', 'sell'].includes(cleanPayload.trade_type)) {
+        throw new Error('Valid trade type (buy/sell) is required');
+      }
+      if (!cleanPayload.volume || isNaN(cleanPayload.volume) || cleanPayload.volume <= 0) {
+        throw new Error('Valid volume greater than 0 is required');
+      }
+
+      // Only include optional fields if they have valid values
+      if (stopLoss && stopLoss > 0) {
+        cleanPayload.stop_loss = Math.round(stopLoss * 100000) / 100000; // Round to 5 decimal places
+      }
+      if (takeProfit && takeProfit > 0) {
+        cleanPayload.take_profit = Math.round(takeProfit * 100000) / 100000; // Round to 5 decimal places
+      }
+      if (marketData.comment && marketData.comment.trim()) {
+        cleanPayload.comment = marketData.comment.trim();
+      }
+
+      console.log('Sending trade payload:', cleanPayload);
+
+      const response = await placeTrade(selectedAccount.id, cleanPayload);
       
       if (response.success) {
         toast.success(`Market order placed: ${response.data.ticket || 'Success'}`);
@@ -258,18 +285,36 @@ const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelec
       const payload = {
         symbol1: pairData.symbol1,
         symbol2: pairData.symbol2,
-        volume1,
-        volume2,
-        trade_type1,
-        trade_type2,
+        volume1: parseFloat(volume1),
+        volume2: parseFloat(volume2),
         correlation_type: pairData.correlation_type,
-        stop_loss1: stopLoss1,
-        stop_loss2: stopLoss2,
-        take_profit1: takeProfit1,
-        take_profit2: takeProfit2,
-        correlation_threshold: threshold,
-        comment: pairData.comment,
+        correlation_threshold: parseFloat(threshold),
       };
+
+      // Only include trade types if they exist
+      if (trade_type1) {
+        payload.trade_type1 = trade_type1;
+      }
+      if (trade_type2) {
+        payload.trade_type2 = trade_type2;
+      }
+
+      // Only include optional fields if they have valid values
+      if (stopLoss1 && stopLoss1 > 0) {
+        payload.stop_loss1 = parseFloat(stopLoss1);
+      }
+      if (stopLoss2 && stopLoss2 > 0) {
+        payload.stop_loss2 = parseFloat(stopLoss2);
+      }
+      if (takeProfit1 && takeProfit1 > 0) {
+        payload.take_profit1 = parseFloat(takeProfit1);
+      }
+      if (takeProfit2 && takeProfit2 > 0) {
+        payload.take_profit2 = parseFloat(takeProfit2);
+      }
+      if (pairData.comment && pairData.comment.trim()) {
+        payload.comment = pairData.comment.trim();
+      }
 
       const response = await placePairTrade(selectedAccount.id, payload);
       
@@ -326,10 +371,18 @@ const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelec
         total_volume: totalVolume,
         account_ids: multiAccountData.selected_accounts,
         distribution_method: multiAccountData.distribution_method,
-        stop_loss: stopLoss,
-        take_profit: takeProfit,
-        comment: multiAccountData.comment,
       };
+
+      // Only include optional fields if they have valid values
+      if (stopLoss && stopLoss > 0) {
+        payload.stop_loss = stopLoss;
+      }
+      if (takeProfit && takeProfit > 0) {
+        payload.take_profit = takeProfit;
+      }
+      if (multiAccountData.comment && multiAccountData.comment.trim()) {
+        payload.comment = multiAccountData.comment.trim();
+      }
 
       const response = await placeMultiAccountTrade(payload);
       
