@@ -13,9 +13,29 @@ export const connectAccount = async (accountData) => {
     };
   } catch (error) {
     console.error('Error connecting account:', error);
+    
+    // Enhanced error handling for MetaAPI specific errors
+    let errorMessage = 'Failed to connect account';
+    
+    if (error.response?.status === 402) {
+      errorMessage = 'MetaAPI account requires payment. Please use default reliability or check your MetaAPI account.';
+    } else if (error.response?.status === 409) {
+      errorMessage = 'This trading account is already connected. Please check your existing connections.';
+    } else if (error.response?.status === 401) {
+      errorMessage = 'Invalid login credentials or server for this broker account. Please check and try again.';
+    } else if (error.response?.status === 404) {
+      errorMessage = 'The broker server you specified could not be found. Please verify the server name.';
+    } else if (error.response?.status === 504) {
+      errorMessage = 'Connection to broker timed out. Please try again later.';
+    } else if (error.response?.data?.detail) {
+      errorMessage = error.response.data.detail;
+    } else if (error.message) {
+      errorMessage = error.message;
+    }
+    
     return {
       success: false,
-      error: error.message || 'Failed to connect account'
+      error: errorMessage
     };
   }
 };
@@ -38,7 +58,7 @@ export const deleteAccount = async (accountId) => {
 
 export const updateAccount = async (accountId, updateData) => {
   try {
-    const response = await api.patch(`/api/v1/broker/${accountId}`, updateData);
+    const response = await api.put(`/api/v1/broker/${accountId}`, updateData);
     return {
       success: true,
       data: response
@@ -70,7 +90,7 @@ export const toggleAccountStatus = async (accountId) => {
 
 export const getAccountDetails = async (accountId) => {
   try {
-    const response = await api.get(`/api/v1/broker/${accountId}/details`);
+    const response = await api.get(`/api/v1/broker/${accountId}`);
     return {
       success: true,
       data: response
@@ -86,7 +106,7 @@ export const getAccountDetails = async (accountId) => {
 
 export const getAccounts = async () => {
   try {
-    const response = await api.get('/api/v1/broker/');
+    const response = await api.get('/api/v1/broker');
     return {
       success: true,
       data: response || []
@@ -302,7 +322,7 @@ export const getPositions = async (accountId) => {
 
 export const closePosition = async (accountId, positionId) => {
   try {
-    const response = await api.post(`/api/v1/broker/${accountId}/positions/${positionId}/close`);
+    const response = await api.delete(`/api/v1/broker/${accountId}/positions/${positionId}`);
     return {
       success: true,
       data: response
@@ -339,7 +359,7 @@ export const modifyPosition = async (accountId, positionId, modifications) => {
 export const placePairTrade = async (accountId, pairData) => {
   try {
     console.log('Placing pair trade with payload:', pairData);
-    const response = await api.post(`/api/v1/broker-accounts/${accountId}/pair-trade`, pairData);
+    const response = await api.post(`/api/v1/broker/${accountId}/pair-trade`, pairData);
     
     // The response structure matches the new PairTradeResponse from FastAPI
     const result = {
@@ -405,7 +425,7 @@ export const placePairTrade = async (accountId, pairData) => {
 // Get current spread price between two symbols
 export const getSpreadPrice = async (accountId, symbol1, symbol2) => {
   try {
-    const response = await api.get(`/api/v1/broker-accounts/${accountId}/spread-price/${symbol1}/${symbol2}`);
+    const response = await api.get(`/api/v1/broker/${accountId}/spread-price/${symbol1}/${symbol2}`);
     return {
       success: true,
       data: response
@@ -440,7 +460,7 @@ export const getSpreadPrice = async (accountId, symbol1, symbol2) => {
 export const placeMultiAccountTrade = async (tradeData) => {
   try {
     console.log('Placing multi-account trade with payload:', tradeData);
-    const response = await api.post('/api/v1/broker-accounts/multi-account-trade', tradeData);
+    const response = await api.post('/api/v1/broker/multi-account-trade', tradeData);
     
     // The response structure matches MultiAccountTradeResponse from FastAPI
     const result = {
@@ -653,149 +673,237 @@ export const getLivePrice = async (symbol) => {
 };
 
 // =============================================================================
-// ADVANCED TRADING API CLASS
+// SYMBOL MANAGEMENT API
 // =============================================================================
 
-export class TradingAPI {
-  constructor(baseURL = '/api/v1') {
-    this.baseURL = baseURL;
-    this.token = localStorage.getItem('access_token') || localStorage.getItem('token');
-  }
-
-  async request(endpoint, options = {}) {
-    const url = `${this.baseURL}${endpoint}`;
-    const config = {
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': this.token,
-        ...options.headers,
-      },
-      ...options,
-    };
-
-    const response = await fetch(url, config);
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.detail || data.message || 'API request failed');
-    }
-
-    return data;
-  }
-
-  // Market Orders
-  async placeMarketOrder(accountId, orderData) {
-    return this.request(`/api/v1/broker/${accountId}/trade`, {
-      method: 'POST',
-      body: JSON.stringify(orderData),
-    });
-  }
-
-  // Pending Orders
-  async placePendingOrder(accountId, orderData) {
-    return this.request(`/api/v1/broker/${accountId}/pending-order`, {
-      method: 'POST',
-      body: JSON.stringify(orderData),
-    });
-  }
-
-  // Modify Orders
-  async modifyOrder(accountId, orderId, modifications) {
-    return this.request(`/api/v1/broker/${accountId}/orders/${orderId}`, {
-      method: 'PATCH',
-      body: JSON.stringify(modifications),
-    });
-  }
-
-  // Modify Positions
-  async modifyPosition(accountId, positionId, modifications) {
-    return this.request(`/api/v1/broker/${accountId}/positions/${positionId}`, {
-      method: 'PATCH',
-      body: JSON.stringify(modifications),
-    });
-  }
-
-  // Pair Trading
-  async placePairTrade(accountId, pairData) {
-    const response = await this.request(`/api/v1/broker-accounts/${accountId}/pair-trade`, {
-      method: 'POST',
-      body: JSON.stringify(pairData),
-    });
-    
+export const getAccountSymbols = async (accountId) => {
+  try {
+    const response = await api.get(`/api/v1/broker/${accountId}/symbols`);
     return {
-      success: response.success || false,
-      message: response.message,
-      spread_symbol: response.spread_symbol,
-      current_spread: response.current_spread,
-      symbol1_result: response.symbol1_result,
-      symbol2_result: response.symbol2_result,
-      spread_analysis: response.spread_analysis,
-      ...response
+      success: true,
+      data: response
     };
-  }
-
-  // Multi-Account Trading
-  async placeMultiAccountTrade(tradeData) {
-    const response = await this.request('/api/v1/broker-accounts/multi-account-trade', {
-      method: 'POST',
-      body: JSON.stringify(tradeData),
-    });
-    
+  } catch (error) {
+    console.error('Error fetching account symbols:', error);
     return {
-      success: response.success || false,
-      message: response.message,
-      successful_accounts: response.successful_accounts || 0,
-      failed_accounts: response.failed_accounts || 0,
-      results: response.results || [],
-      ...response
+      success: false,
+      error: error.message || 'Failed to fetch account symbols'
     };
   }
+};
 
-  // Get Spread Price
-  async getSpreadPrice(accountId, symbol1, symbol2) {
-    return this.request(`/api/v1/broker-accounts/${accountId}/spread-price/${symbol1}/${symbol2}`);
+export const getAvailableSymbols = async (search = '', limit = 50) => {
+  try {
+    const params = new URLSearchParams();
+    if (search) params.append('search', search);
+    params.append('limit', limit.toString());
+    
+    const response = await api.get(`/api/v1/broker/symbols/available?${params}`);
+    return {
+      success: true,
+      data: response
+    };
+  } catch (error) {
+    console.error('Error fetching available symbols:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to fetch available symbols'
+    };
   }
+};
 
-  // Get Real-time Prices
-  async getSymbolPrice(accountId, symbol) {
-    return this.request(`/api/v1/broker/${accountId}/price/${symbol}`);
+export const refreshAccountSymbols = async (accountId) => {
+  try {
+    const response = await api.post(`/api/v1/broker/${accountId}/symbols/refresh`);
+    return {
+      success: true,
+      data: response
+    };
+  } catch (error) {
+    console.error('Error refreshing account symbols:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to refresh account symbols'
+    };
   }
-  
-  async getLivePrice(symbol) {
-    return this.request(`/api/v1/market/price/${symbol}`);
-  }
+};
 
-  // Position Management
-  async getPositions(accountId) {
-    return this.request(`/api/v1/broker/${accountId}/positions`);
+export const getSymbolMappingStatus = async (accountId) => {
+  try {
+    const response = await api.get(`/api/v1/broker/${accountId}/symbols/status`);
+    return {
+      success: true,
+      data: response
+    };
+  } catch (error) {
+    console.error('Error fetching symbol mapping status:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to fetch symbol mapping status'
+    };
   }
+};
 
-  async closePosition(accountId, positionId) {
-    return this.request(`/api/v1/broker/${accountId}/positions/${positionId}/close`, {
-      method: 'POST',
-    });
+export const getPopularSymbols = async () => {
+  try {
+    const response = await api.get('/api/v1/broker/symbols/popular');
+    return {
+      success: true,
+      data: response
+    };
+  } catch (error) {
+    console.error('Error fetching popular symbols:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to fetch popular symbols'
+    };
   }
+};
 
-  // Order Management
-  async getOrders(accountId) {
-    return this.request(`/api/v1/broker/${accountId}/orders`);
+export const searchSymbols = async (searchTerm, limit = 20) => {
+  try {
+    const response = await api.get(`/api/v1/broker/symbols/search/${encodeURIComponent(searchTerm)}?limit=${limit}`);
+    return {
+      success: true,
+      data: response
+    };
+  } catch (error) {
+    console.error('Error searching symbols:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to search symbols'
+    };
   }
+};
 
-  async cancelOrder(accountId, orderId) {
-    return this.request(`/api/v1/broker/${accountId}/orders/${orderId}`, {
-      method: 'DELETE',
-    });
+// =============================================================================
+// TRADING HISTORY AND ANALYTICS
+// =============================================================================
+
+export const getTradingHistory = async (accountId, options = {}) => {
+  try {
+    const params = new URLSearchParams();
+    if (options.startDate) params.append('start_date', options.startDate);
+    if (options.endDate) params.append('end_date', options.endDate);
+    if (options.limit) params.append('limit', options.limit.toString());
+    if (options.offset) params.append('offset', options.offset.toString());
+    
+    const response = await api.get(`/api/v1/broker/${accountId}/history?${params}`);
+    return {
+      success: true,
+      data: response
+    };
+  } catch (error) {
+    console.error('Error fetching trading history:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to fetch trading history'
+    };
   }
+};
 
-  // Account Management
-  async getAccounts() {
-    return this.request('/api/v1/broker/');
+export const getTrades = async (accountId, limit = 50, offset = 0) => {
+  try {
+    const response = await api.get(`/api/v1/broker/${accountId}/trades?limit=${limit}&offset=${offset}`);
+    return {
+      success: true,
+      data: response
+    };
+  } catch (error) {
+    console.error('Error fetching trades:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to fetch trades'
+    };
   }
+};
 
-  async getAccountDetails(accountId) {
-    return this.request(`/api/v1/broker/${accountId}/details`);
+// =============================================================================
+// PAIR TRADING ANALYSIS
+// =============================================================================
+
+export const getPairAnalysis = async (accountId, symbol1, symbol2) => {
+  try {
+    const response = await api.get(`/api/v1/broker/${accountId}/pair-analysis?symbol1=${symbol1}&symbol2=${symbol2}`);
+    return {
+      success: true,
+      data: response
+    };
+  } catch (error) {
+    console.error('Error fetching pair analysis:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to fetch pair analysis'
+    };
   }
-}
+};
 
-// Export a singleton instance
-export const tradingAPI = new TradingAPI();
+// =============================================================================
+// REAL-TIME PRICE STREAMING
+// =============================================================================
+
+export const streamSymbolPrices = async (accountId, symbols) => {
+  try {
+    const response = await api.post(`/api/v1/broker/${accountId}/prices/stream`, { symbols });
+    return {
+      success: true,
+      data: response
+    };
+  } catch (error) {
+    console.error('Error creating price stream:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to create price stream'
+    };
+  }
+};
+
+export const getPriceUpdates = async (accountId, connectionId) => {
+  try {
+    const response = await api.get(`/api/v1/broker/${accountId}/prices/updates/${connectionId}`);
+    return {
+      success: true,
+      data: response
+    };
+  } catch (error) {
+    console.error('Error getting price updates:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to get price updates'
+    };
+  }
+};
+
+// Real-time price functions
+export const getRealTimePrice = async (accountId, symbol) => {
+  try {
+    const response = await api.get(`/api/v1/broker/${accountId}/price/${symbol}`);
+    return {
+      success: true,
+      data: response
+    };
+  } catch (error) {
+    console.error('Error getting real-time price:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to get real-time price'
+    };
+  }
+};
+
+export const getRealTimePrices = async (accountId, symbols) => {
+  try {
+    const symbolsParam = Array.isArray(symbols) ? symbols.join(',') : symbols;
+    const response = await api.get(`/api/v1/broker/${accountId}/prices?symbols=${symbolsParam}`);
+    return {
+      success: true,
+      data: response
+    };
+  } catch (error) {
+    console.error('Error getting real-time prices:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to get real-time prices'
+    };
+  }
+};

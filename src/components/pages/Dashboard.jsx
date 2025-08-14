@@ -5,11 +5,16 @@ import MarketOverview from '../UI/MarketOverview';
 import TradingViewWidget from '../UI/TradingViewWidget';
 import TradeModal from '../modals/TradeModal';
 import TransactionsTable from '../UI/TransactionsTable';
+import TradingHistoryPanel from '../UI/TradingHistoryPanel';
+import AccountSymbolStats from '../UI/AccountSymbolStats';
+import RealTimePriceDisplay from '../UI/RealTimePriceDisplay';
+import EnhancedAccountInfo from '../UI/EnhancedAccountInfo';
+import ComponentErrorBoundary from '../UI/ComponentErrorBoundary';
 import TradeManagement from '../trading/TradeManagement';
 import Loader from '../UI/Loader';
 import { TrendingUp, Users, Activity, Target, Plus, BarChart3, Zap, Signal } from 'lucide-react';
 import { getTransactions } from '../../api/transactions';
-import { getAccounts, placeTrade } from '../../api/broker';
+import { getAccounts, placeTrade, getTradingHistory, getAvailableSymbols, getPopularSymbols } from '../../api/broker';
 import { useAuth } from '../../contexts/AuthContext';
 
 const Dashboard = () => {
@@ -308,15 +313,66 @@ const Dashboard = () => {
             </div>
           </div>
           
-          {/* Trading Chart */}
-          <div className="grid grid-cols-1 gap-6">
-            <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg overflow-hidden">
-              <div className="h-[800px] w-full">
-                <TradingViewWidget 
-                  symbol={selectedSymbol} 
-                  theme="dark"
-                />
+          {/* Trading Chart and Sidebar */}
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            {/* Main Chart Area */}
+            <div className="lg:col-span-3">
+              <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg overflow-hidden">
+                <div className="h-[800px] w-full">
+                  <TradingViewWidget 
+                    symbol={selectedSymbol} 
+                    theme="dark"
+                  />
+                </div>
               </div>
+            </div>
+
+            {/* Sidebar with Stats and Real-time Prices */}
+            <div className="lg:col-span-1 space-y-4">
+              {/* Enhanced Account Information */}
+              <ComponentErrorBoundary fallbackMessage="Unable to load account information">
+                <EnhancedAccountInfo 
+                  account={selectedAccount}
+                  onRefresh={() => {
+                    // Optionally refresh any other data when symbols are refreshed
+                    console.log('Account symbols refreshed');
+                  }}
+                />
+              </ComponentErrorBoundary>
+
+              {/* Account Symbol Stats */}
+              {selectedAccount && (
+                <ComponentErrorBoundary fallbackMessage="Unable to load symbol statistics">
+                  <AccountSymbolStats account={selectedAccount} />
+                </ComponentErrorBoundary>
+              )}
+
+              {/* Real-time Prices for Popular Symbols */}
+              {selectedAccount && (
+                <ComponentErrorBoundary fallbackMessage="Unable to load real-time prices">
+                  <RealTimePriceDisplay
+                    accountId={selectedAccount.id}
+                    symbols={['EURUSD', 'GBPUSD', 'USDJPY', 'BTCUSD']}
+                    updateInterval={10000}
+                    compact={false}
+                  />
+                </ComponentErrorBoundary>
+              )}
+
+              {/* Quick Symbol Info */}
+              {selectedAccount && (
+                <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-4">
+                  <h4 className="text-sm font-medium text-white mb-3">Current Symbol</h4>
+                  <ComponentErrorBoundary fallbackMessage="Unable to load current symbol price">
+                    <RealTimePriceDisplay
+                      accountId={selectedAccount.id}
+                      symbol={selectedSymbol}
+                      updateInterval={5000}
+                      compact={true}
+                    />
+                  </ComponentErrorBoundary>
+                </div>
+              )}
             </div>
           </div>
 
@@ -390,6 +446,24 @@ const Dashboard = () => {
           />
         </div>
       </div>
+
+      {/* Trading History Panel */}
+      {selectedAccount && (
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold text-white">Trading History</h2>
+            <div className="text-sm text-gray-400">
+              Account: {selectedAccount.login} ({selectedAccount.server})
+            </div>
+          </div>
+          <ComponentErrorBoundary fallbackMessage="Unable to load trading history">
+            <TradingHistoryPanel 
+              accountId={selectedAccount.id}
+              defaultLimit={10}
+            />
+          </ComponentErrorBoundary>
+        </div>
+      )}
 
      
 
