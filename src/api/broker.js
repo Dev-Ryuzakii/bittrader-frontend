@@ -125,10 +125,20 @@ export const placeTrade = async (accountId, tradeData) => {
   try {
     console.log('Placing trade with payload:', tradeData);
     const response = await api.post(`/api/v1/broker/${accountId}/trade`, tradeData);
-    return {
-      success: true,
-      data: response.data
+    
+    // The response structure matches TradeResponse from FastAPI
+    const result = {
+      success: response.data?.success || false,
+      message: response.data?.message || 'Trade executed',
+      order_id: response.data?.order_id || null,
+      position_id: response.data?.position_id || null,
+      details: response.data?.details || null,
+      error: response.data?.error || null,
+      ...response.data  // Include any additional fields
     };
+    
+    console.log('Trade response:', result);
+    return result;
   } catch (error) {
     console.error('Error placing trade:', error);
     console.error('Error response:', error.response?.data);
@@ -160,7 +170,8 @@ export const placeTrade = async (accountId, tradeData) => {
     
     return {
       success: false,
-      error: errorMessage
+      error: errorMessage,
+      message: errorMessage
     };
   }
 };
@@ -171,16 +182,52 @@ export const placeTrade = async (accountId, tradeData) => {
 
 export const placePendingOrder = async (accountId, orderData) => {
   try {
+    console.log('Placing pending order with payload:', orderData);
     const response = await api.post(`/api/v1/broker/${accountId}/pending-order`, orderData);
-    return {
-      success: true,
-      data: response
+    
+    // The response structure matches PendingOrderResponse from FastAPI
+    const result = {
+      success: response.data?.success || false,
+      message: response.data?.message || 'Pending order placed',
+      order_id: response.data?.order_id || null,
+      details: response.data?.details || null,
+      error: response.data?.error || null,
+      ...response.data  // Include any additional fields
     };
+    
+    console.log('Pending order response:', result);
+    return result;
   } catch (error) {
     console.error('Error placing pending order:', error);
+    
+    let errorMessage = 'Failed to place pending order';
+    
+    if (error.response?.status === 422) {
+      // Handle validation errors specifically
+      if (error.response?.data?.detail) {
+        if (Array.isArray(error.response.data.detail)) {
+          // Pydantic validation errors
+          const validationErrors = error.response.data.detail.map(err => {
+            const field = err.loc?.slice(1).join('.') || 'unknown field';
+            return `${field}: ${err.msg}`;
+          }).join(', ');
+          errorMessage = `Validation error: ${validationErrors}`;
+        } else {
+          errorMessage = `Validation error: ${error.response.data.detail}`;
+        }
+      }
+    } else if (error.response?.data?.detail) {
+      errorMessage = error.response.data.detail;
+    } else if (error.response?.data?.message) {
+      errorMessage = error.response.data.message;
+    } else if (error.message) {
+      errorMessage = error.message;
+    }
+    
     return {
       success: false,
-      error: error.message || 'Failed to place pending order'
+      error: errorMessage,
+      message: errorMessage
     };
   }
 };
@@ -286,22 +333,102 @@ export const modifyPosition = async (accountId, positionId, modifications) => {
 };
 
 // =============================================================================
-// PAIR TRADING (NEW)
+// PAIR TRADING (UPDATED)
 // =============================================================================
 
 export const placePairTrade = async (accountId, pairData) => {
   try {
-    const response = await api.post(`/api/v1/broker/${accountId}/pair-trade`, pairData);
-    return {
-      success: true,
-      ...response.data,  // Include all API response data including correlation_analysis
-      correlation_type: pairData.correlation_type
+    console.log('Placing pair trade with payload:', pairData);
+    const response = await api.post(`/api/v1/broker-accounts/${accountId}/pair-trade`, pairData);
+    
+    // The response structure matches the new PairTradeResponse from FastAPI
+    const result = {
+      success: response.data?.success || false,
+      message: response.data?.message || 'Pair trade executed',
+      spread_symbol: response.data?.spread_symbol || null,
+      current_spread: response.data?.current_spread || null,
+      symbol1_result: response.data?.symbol1_result || null,
+      symbol2_result: response.data?.symbol2_result || null,
+      spread_analysis: response.data?.spread_analysis || null,
+      entry_spread: response.data?.entry_spread || null, // For pending orders
+      ...response.data  // Include any additional fields
     };
+    
+    console.log('Pair trade response:', result);
+    return result;
   } catch (error) {
     console.error('Error placing pair trade:', error);
+    console.error('Error response:', error.response?.data);
+    
+    let errorMessage = 'Failed to place pair trade';
+    
+    if (error.response?.status === 422) {
+      // Handle validation errors specifically
+      if (error.response?.data?.detail) {
+        if (Array.isArray(error.response.data.detail)) {
+          // Pydantic validation errors
+          const validationErrors = error.response.data.detail.map(err => {
+            const field = err.loc?.slice(1).join('.') || 'unknown field';
+            return `${field}: ${err.msg}`;
+          }).join(', ');
+          errorMessage = `Validation error: ${validationErrors}`;
+        } else {
+          errorMessage = `Validation error: ${error.response.data.detail}`;
+        }
+      }
+    } else if (error.response?.data?.detail) {
+      errorMessage = error.response.data.detail;
+    } else if (error.response?.data?.message) {
+      errorMessage = error.response.data.message;
+    } else if (error.message) {
+      errorMessage = error.message;
+    }
+    
     return {
       success: false,
-      error: error.response?.data?.message || error.message || 'Failed to place pair trade'
+      error: errorMessage,
+      message: errorMessage,
+      symbol1_result: {
+        success: false,
+        message: errorMessage,
+        error: errorMessage
+      },
+      symbol2_result: {
+        success: false,
+        message: errorMessage,
+        error: errorMessage
+      }
+    };
+  }
+};
+
+// Get current spread price between two symbols
+export const getSpreadPrice = async (accountId, symbol1, symbol2) => {
+  try {
+    const response = await api.get(`/api/v1/broker-accounts/${accountId}/spread-price/${symbol1}/${symbol2}`);
+    return {
+      success: true,
+      data: response
+    };
+  } catch (error) {
+    console.error('Error fetching spread price:', error);
+    
+    let errorMessage = 'Failed to fetch spread price';
+    
+    if (error.response?.status === 404) {
+      errorMessage = `Spread ${symbol1}-${symbol2} not found`;
+    } else if (error.response?.status === 429) {
+      errorMessage = 'Rate limit exceeded. Please try again later.';
+    } else if (error.response?.data?.detail) {
+      errorMessage = error.response.data.detail;
+    } else if (error.message) {
+      errorMessage = error.message;
+    }
+    
+    return {
+      success: false,
+      error: errorMessage,
+      data: { bid: 0, ask: 0, spread: 0 }
     };
   }
 };
@@ -312,18 +439,166 @@ export const placePairTrade = async (accountId, pairData) => {
 
 export const placeMultiAccountTrade = async (tradeData) => {
   try {
-    const response = await api.post('/api/v1/broker/multi-account-trade', tradeData);
-    return {
-      success: true,
-      data: response
+    console.log('Placing multi-account trade with payload:', tradeData);
+    const response = await api.post('/api/v1/broker-accounts/multi-account-trade', tradeData);
+    
+    // The response structure matches MultiAccountTradeResponse from FastAPI
+    const result = {
+      success: response.data?.success || false,
+      message: response.data?.message || 'Multi-account trade executed',
+      successful_accounts: response.data?.successful_accounts || 0,
+      failed_accounts: response.data?.failed_accounts || 0,
+      results: response.data?.results || [],
+      data: response.data  // Keep for backward compatibility
     };
+    
+    console.log('Multi-account trade response:', result);
+    return result;
   } catch (error) {
     console.error('Error placing multi-account trade:', error);
+    console.error('Error response:', error.response?.data);
+    
+    let errorMessage = 'Failed to place multi-account trade';
+    
+    if (error.response?.status === 422) {
+      // Handle validation errors specifically
+      if (error.response?.data?.detail) {
+        if (Array.isArray(error.response.data.detail)) {
+          // Pydantic validation errors
+          const validationErrors = error.response.data.detail.map(err => {
+            const field = err.loc?.slice(1).join('.') || 'unknown field';
+            return `${field}: ${err.msg}`;
+          }).join(', ');
+          errorMessage = `Validation error: ${validationErrors}`;
+        } else {
+          errorMessage = `Validation error: ${error.response.data.detail}`;
+        }
+      }
+    } else if (error.response?.data?.detail) {
+      errorMessage = error.response.data.detail;
+    } else if (error.response?.data?.message) {
+      errorMessage = error.response.data.message;
+    } else if (error.message) {
+      errorMessage = error.message;
+    }
+    
     return {
       success: false,
-      error: error.message || 'Failed to place multi-account trade'
+      error: errorMessage,
+      message: errorMessage,
+      successful_accounts: 0,
+      failed_accounts: 0,
+      results: []
     };
   }
+};
+
+// =============================================================================
+// UNIFIED ORDER EXECUTION (NEW)
+// =============================================================================
+
+// Order types configuration for dropdown
+export const ORDER_TYPES = {
+  // Market Orders (immediate execution)
+  MARKET_BUY: {
+    label: "Market Buy",
+    type: "MARKET",
+    direction: "BUY",
+    apiFunction: "placeTrade",
+    description: "Buy immediately at current market price",
+    requiresPrice: false
+  },
+  MARKET_SELL: {
+    label: "Market Sell", 
+    type: "MARKET",
+    direction: "SELL",
+    apiFunction: "placeTrade",
+    description: "Sell immediately at current market price",
+    requiresPrice: false
+  },
+  
+  // Pending Orders (conditional execution)
+  BUY_LIMIT: {
+    label: "Buy Limit",
+    type: "PENDING",
+    direction: "BUY_LIMIT", 
+    apiFunction: "placePendingOrder",
+    description: "Buy when price drops to specified level",
+    requiresPrice: true
+  },
+  SELL_LIMIT: {
+    label: "Sell Limit",
+    type: "PENDING", 
+    direction: "SELL_LIMIT",
+    apiFunction: "placePendingOrder",
+    description: "Sell when price rises to specified level",
+    requiresPrice: true
+  },
+  BUY_STOP: {
+    label: "Buy Stop",
+    type: "PENDING",
+    direction: "BUY_STOP",
+    apiFunction: "placePendingOrder", 
+    description: "Buy when price breaks above specified level",
+    requiresPrice: true
+  },
+  SELL_STOP: {
+    label: "Sell Stop",
+    type: "PENDING",
+    direction: "SELL_STOP",
+    apiFunction: "placePendingOrder",
+    description: "Sell when price breaks below specified level",
+    requiresPrice: true
+  }
+};
+
+// Unified order execution function
+export const executeOrder = async (accountId, orderType, orderData) => {
+  try {
+    const orderConfig = ORDER_TYPES[orderType];
+    
+    if (!orderConfig) {
+      throw new Error(`Invalid order type: ${orderType}`);
+    }
+
+    // Prepare order payload based on type
+    const payload = {
+      symbol: orderData.symbol,
+      volume: orderData.volume,
+      stop_loss: orderData.stop_loss,
+      take_profit: orderData.take_profit,
+      comment: orderData.comment
+    };
+
+    if (orderConfig.type === "MARKET") {
+      // Market order
+      payload.trade_type = orderConfig.direction;
+      return await placeTrade(accountId, payload);
+    } else {
+      // Pending order
+      payload.order_type = orderConfig.direction;
+      payload.price = orderData.price; // Required for pending orders
+      payload.expiration = orderData.expiration;
+      return await placePendingOrder(accountId, payload);
+    }
+  } catch (error) {
+    console.error('Error executing order:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to execute order'
+    };
+  }
+};
+
+// Helper function to get order types for dropdown
+export const getOrderTypesForDropdown = () => {
+  return Object.entries(ORDER_TYPES).map(([key, config]) => ({
+    value: key,
+    label: config.label,
+    description: config.description,
+    requiresPrice: config.requiresPrice,
+    category: config.type
+  }));
 };
 
 // =============================================================================
@@ -355,9 +630,23 @@ export const getLivePrice = async (symbol) => {
     };
   } catch (error) {
     console.error('Error fetching live price:', error);
+    
+    // Enhanced error handling for market data
+    let errorMessage = 'Failed to fetch live price';
+    
+    if (error.response?.status === 404) {
+      errorMessage = `Symbol ${symbol} not found`;
+    } else if (error.response?.status === 429) {
+      errorMessage = 'Rate limit exceeded. Please try again later.';
+    } else if (error.response?.data?.detail) {
+      errorMessage = error.response.data.detail;
+    } else if (error.message) {
+      errorMessage = error.message;
+    }
+    
     return {
       success: false,
-      error: error.message || 'Failed to fetch live price',
+      error: errorMessage,
       data: { bid: 0, ask: 0 }
     };
   }
@@ -428,18 +717,43 @@ export class TradingAPI {
 
   // Pair Trading
   async placePairTrade(accountId, pairData) {
-    return this.request(`/api/v1/broker/${accountId}/pair-trade`, {
+    const response = await this.request(`/api/v1/broker-accounts/${accountId}/pair-trade`, {
       method: 'POST',
       body: JSON.stringify(pairData),
     });
+    
+    return {
+      success: response.success || false,
+      message: response.message,
+      spread_symbol: response.spread_symbol,
+      current_spread: response.current_spread,
+      symbol1_result: response.symbol1_result,
+      symbol2_result: response.symbol2_result,
+      spread_analysis: response.spread_analysis,
+      ...response
+    };
   }
 
   // Multi-Account Trading
   async placeMultiAccountTrade(tradeData) {
-    return this.request('/api/v1/broker/multi-account-trade', {
+    const response = await this.request('/api/v1/broker-accounts/multi-account-trade', {
       method: 'POST',
       body: JSON.stringify(tradeData),
     });
+    
+    return {
+      success: response.success || false,
+      message: response.message,
+      successful_accounts: response.successful_accounts || 0,
+      failed_accounts: response.failed_accounts || 0,
+      results: response.results || [],
+      ...response
+    };
+  }
+
+  // Get Spread Price
+  async getSpreadPrice(accountId, symbol1, symbol2) {
+    return this.request(`/api/v1/broker-accounts/${accountId}/spread-price/${symbol1}/${symbol2}`);
   }
 
   // Get Real-time Prices
@@ -448,7 +762,7 @@ export class TradingAPI {
   }
   
   async getLivePrice(symbol) {
-    return this.request(`/market/price/${symbol}`);
+    return this.request(`/api/v1/market/price/${symbol}`);
   }
 
   // Position Management

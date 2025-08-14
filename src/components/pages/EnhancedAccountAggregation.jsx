@@ -7,7 +7,6 @@ import AccountDetailsModal from '../modals/AccountDetailsModal';
 import SymbolMappingModal from '../modals/SymbolMappingModal';
 import CrossBrokerAnalysis from '../UI/CrossBrokerAnalysis';
 import SymbolPicker from '../UI/SymbolPicker';
-import TradingPanel from '../UI/TradingPanel';
 import AccountSelector from '../UI/AccountSelector';
 import SymbolMappingIndicator from '../UI/SymbolMappingIndicator';
 import Loader from '../UI/Loader';
@@ -488,15 +487,11 @@ const EnhancedAccountAggregation = () => {
               </div>
             )}
 
-            {/* Trading Panel View */}
+            {/* Advanced Trading Panel */}
             {activeView === 'trading' && accounts.filter(acc => acc.is_active).length > 0 && (
               <div className="mb-6">
-                <TradingPanel
-                  selectedSymbol={selectedSymbol}
-                  onSymbolChange={setSelectedSymbol}
-                  accounts={accounts.filter(acc => acc.is_active)}
-                  selectedAccount={selectedAccount}
-                  onAccountSelect={setSelectedAccount}
+                <AdvancedTradingPanel
+                  userAccounts={accounts.filter(acc => acc.is_active)}
                 />
               </div>
             )}
