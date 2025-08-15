@@ -149,9 +149,9 @@ function AI_Assistant({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                   <button 
                     className="bg-[#1A1A1A] hover:bg-[#2A2A2A] text-gray-300 text-sm p-3 rounded-lg text-left transition-colors"
-                    onClick={() => setPrompt("Analyze EURUSD sentiment and suggest entry points")}
+                    onClick={() => setPrompt("Analyze market sentiment and suggest entry points")}
                   >
-                    "Analyze EURUSD sentiment and suggest entry points"
+                    "Analyze market sentiment and suggest entry points"
                   </button>
                   <button 
                     className="bg-[#1A1A1A] hover:bg-[#2A2A2A] text-gray-300 text-sm p-3 rounded-lg text-left transition-colors"
@@ -478,11 +478,11 @@ function AI_AssistantWrapper() {
       case 'risk':
         return { include_open_positions: true };
       case 'patterns':
-        return { symbol: "EURUSD", timeframe: "H4" };
+        return { symbol: "", timeframe: "H4" };
       case 'position':
         return { 
           tradeSetup: {
-            symbol: "EURUSD",
+            symbol: "",
             entry_price: 1.1000,
             stop_loss: 1.0950,
             risk_percentage: 2.0
@@ -493,7 +493,7 @@ function AI_AssistantWrapper() {
       case 'stop-loss':
         return { 
           tradeSetup: {
-            symbol: "EURUSD",
+            symbol: "",
             entry_price: 1.1000,
             direction: "BUY",
             timeframe: "H4"

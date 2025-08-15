@@ -25,10 +25,12 @@ import {
   getOrderTypesForDropdown
 } from '../../api/broker';
 import { 
-  getPopularSymbols
+  getPopularSymbols, 
+  searchSymbols, 
+  mockSearchSymbols, 
+  formatSymbolsForPicker 
 } from '../../utils/symbolpicker';
 import PairTradingPanel from './PairTradingPanel';
-import EnhancedSymbolPicker from '../UI/EnhancedSymbolPicker';
 
 const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelect, onPlaceTrade }) => {
   const [activeTab, setActiveTab] = useState('order');
@@ -38,7 +40,7 @@ const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelec
 
   // Unified Order State (replaces both market and pending states)
   const [orderData, setOrderData] = useState({
-    symbol: 'EURUSD',
+    symbol: '',
     orderType: 'MARKET_BUY',
     volume: 0.1,
     price: '', // Only used for pending orders
@@ -50,7 +52,7 @@ const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelec
 
   // Pair Trading State (updated for new API structure)
   const [pairData, setPairData] = useState({
-    symbol1: 'EURUSD',
+    symbol1: '',
     symbol2: 'GBPUSD',
     volume: '0.1',
     correlation_type: 'STATISTICAL',
@@ -460,7 +462,6 @@ const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelec
               orderTypes={orderTypes}
               currentOrderConfig={currentOrderConfig}
               livePrice={livePrice}
-              selectedAccount={selectedAccount}
               onSubmit={handleUnifiedOrder}
               submitting={submitting}
             />
@@ -481,7 +482,7 @@ const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelec
 };
 
 // Unified Order Panel Component (replaces MarketOrderPanel and PendingOrderPanel)
-const UnifiedOrderPanel = ({ data, setData, orderTypes, currentOrderConfig, livePrice, selectedAccount, onSubmit, submitting }) => {
+const UnifiedOrderPanel = ({ data, setData, orderTypes, currentOrderConfig, livePrice, onSubmit, submitting }) => {
   const [showSymbolModal, setShowSymbolModal] = useState(false);
   
   const updateData = (field, value) => {
@@ -553,7 +554,7 @@ const UnifiedOrderPanel = ({ data, setData, orderTypes, currentOrderConfig, live
                 type="text"
                 value={data.symbol}
                 onChange={(e) => updateData('symbol', e.target.value.toUpperCase())}
-                placeholder="e.g., EURUSD"
+                placeholder="Symbol (e.g., GBPUSD)"
                 className="w-full bg-[#1A1A1A] border border-[#444] rounded-l-lg px-3 py-2 text-white"
               />
               <button
@@ -736,28 +737,194 @@ const UnifiedOrderPanel = ({ data, setData, orderTypes, currentOrderConfig, live
       
       {/* Symbol Selection Modal */}
       {showSymbolModal && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
-            <div className="p-4 border-b border-[#2A2A2A] flex justify-between items-center">
-              <h3 className="text-lg font-medium text-white">Select Symbol</h3>
-              <button 
-                className="text-gray-400 hover:text-white" 
-                onClick={closeSymbolModal}
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="flex-1 overflow-hidden">
-              <EnhancedSymbolPicker
-                accountId={selectedAccount?.id}
-                onSymbolSelect={handleSymbolSelect}
-                showHeader={false}
-                compact={true}
-              />
-            </div>
+        <SymbolSelectorModal 
+          onClose={closeSymbolModal} 
+          onSelect={handleSymbolSelect}
+        />
+      )}
+    </div>
+  );
+};
+
+// PairTradingPanel is now imported from a separate file
+
+// Symbol Selector Modal
+const SymbolSelectorModal = ({ onClose, onSelect }) => {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [symbols, setSymbols] = useState([]);
+  const [popularSymbols, setPopularSymbols] = useState({});
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    loadPopularSymbols();
+  }, []);
+
+  // Load popular symbols
+  const loadPopularSymbols = async () => {
+    try {
+      setLoading(true);
+      const response = await getPopularSymbols();
+      if (response && response.popular_symbols) {
+        setPopularSymbols(response.popular_symbols);
+      } else {
+        // Fallback to mock data
+        setPopularSymbols({
+          major_pairs: [],
+          cross_pairs: [],
+          commodities: []
+        });
+      }
+    } catch (error) {
+      console.error('Error loading popular symbols:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle symbol search
+  const handleSymbolSearch = async (term) => {
+    setSearchTerm(term);
+    if (!term || term.length < 2) {
+      setSymbols([]);
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      // Try to get symbols from API
+      const response = await searchSymbols(term);
+      if (response && response.symbols) {
+        setSymbols(formatSymbolsForPicker(response));
+      } else {
+        // Fallback to mock search
+        setSymbols(mockSearchSymbols(term));
+      }
+    } catch (error) {
+      console.error('Error searching symbols:', error);
+      // Fallback to mock search
+      setSymbols(mockSearchSymbols(term));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Define categories
+  const SYMBOL_CATEGORIES = {
+    major_pairs: 'MAJOR FOREX PAIRS',
+    cross_pairs: 'CROSS FOREX PAIRS',
+    exotic_pairs: 'EXOTIC PAIRS',
+    commodities: 'COMMODITIES',
+    indices: 'INDICES',
+    crypto: 'CRYPTOCURRENCY'
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg w-full max-w-md max-h-[90vh] overflow-hidden flex flex-col">
+        <div className="p-4 border-b border-[#2A2A2A] flex justify-between items-center">
+          <h3 className="text-lg font-medium text-white">Select Symbol</h3>
+          <button 
+            className="text-gray-400 hover:text-white" 
+            onClick={onClose}
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        
+        <div className="p-4 border-b border-[#2A2A2A]">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => handleSymbolSearch(e.target.value)}
+              placeholder="Search symbols..."
+              className="w-full bg-[#222] border border-[#444] rounded-lg pl-9 pr-3 py-2 text-white"
+            />
           </div>
         </div>
-      )}
+        
+        <div className="overflow-y-auto flex-1 p-2">
+          {loading && (
+            <div className="flex flex-col items-center justify-center h-32 text-gray-400">
+              <RefreshCw className="w-5 h-5 animate-spin mb-2" />
+              <p>Loading symbols...</p>
+            </div>
+          )}
+          
+          {!loading && searchTerm.length < 2 && (
+            <>
+              {Object.entries(popularSymbols).map(([category, symbolList]) => (
+                symbolList && symbolList.length > 0 && (
+                  <div key={category}>
+                    <div className="text-xs font-medium text-gray-500 px-2 py-1">
+                      {SYMBOL_CATEGORIES[category] || category.toUpperCase()}
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 mb-4">
+                      {symbolList.map(sym => (
+                        <button
+                          key={sym.symbol}
+                          onClick={() => onSelect(sym.symbol)}
+                          className={`bg-[#222] hover:bg-[#333] border border-[#444] rounded px-3 py-2 text-left transition-colors ${
+                            sym.available ? 'text-white' : 'text-gray-500'
+                          }`}
+                          disabled={!sym.available}
+                        >
+                          {sym.symbol}
+                          {sym.description && (
+                            <span className="text-xs text-gray-400 block">{sym.description}</span>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )
+              ))}
+              
+              {Object.keys(popularSymbols).length === 0 && !loading && (
+                <div className="flex flex-col items-center justify-center h-32 text-gray-400">
+                  <p>Type to search for symbols</p>
+                </div>
+              )}
+            </>
+          )}
+          
+          {!loading && searchTerm.length >= 2 && (
+            <>
+              {symbols.length > 0 ? (
+                <div className="grid grid-cols-2 gap-2">
+                  {symbols.map(symbol => (
+                    <button
+                      key={symbol.symbol}
+                      onClick={() => onSelect(symbol.symbol)}
+                      className="bg-[#222] hover:bg-[#333] border border-[#444] rounded px-3 py-2 text-white text-left transition-colors"
+                    >
+                      {symbol.symbol}
+                      {symbol.description && (
+                        <span className="text-xs text-gray-400 block">{symbol.description}</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-32 text-gray-400">
+                  <p>No symbols found</p>
+                  <p className="text-sm">Try a different search term</p>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+        
+        <div className="p-4 border-t border-[#2A2A2A]">
+          <button
+            onClick={onClose}
+            className="w-full py-2 px-4 bg-[#333] hover:bg-[#444] text-white rounded-lg transition-colors"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
     </div>
   );
 };

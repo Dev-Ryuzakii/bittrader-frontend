@@ -35,7 +35,7 @@ const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelec
 
   // Market Order State
   const [marketData, setMarketData] = useState({
-    symbol: 'EURUSD',
+    symbol: '',
     trade_type: 'BUY',
     volume: 0.1,
     stop_loss: '',
@@ -58,8 +58,8 @@ const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelec
 
   // Pair Trading State
   const [pairData, setPairData] = useState({
-    symbol1: 'EURUSD',
-    symbol2: 'GBPUSD',
+    symbol1: '',
+    symbol2: '',
     volume1: 0.01,
     volume2: 0.01,
     correlation_type: 'ANALYZE',

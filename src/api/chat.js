@@ -126,7 +126,7 @@ export const aiToolsAPI = {
   calculatePositionSize: async (tradeSetup, message = null) => {
     try {
       const payload = {
-        symbol: tradeSetup.symbol || "EURUSD",
+        symbol: tradeSetup.symbol || "",
         entry_price: parseFloat(tradeSetup.entry_price) || 1.1000,
         stop_loss: parseFloat(tradeSetup.stop_loss) || 1.0950,
         risk_percentage: parseFloat(tradeSetup.risk_percentage) || 2.0
@@ -167,7 +167,7 @@ export const aiToolsAPI = {
   },
 
   // Chart pattern detection
-  detectPatterns: async (symbol = "EURUSD", timeframe = "H4", message = null) => {
+  detectPatterns: async (symbol = "", timeframe = "H4", message = null) => {
     try {
       const payload = { symbol, timeframe };
       
@@ -183,7 +183,7 @@ export const aiToolsAPI = {
   stopLossSuggestions: async (tradeSetup, message = null) => {
     try {
       const payload = {
-        symbol: tradeSetup.symbol || "EURUSD",
+        symbol: tradeSetup.symbol || "",
         entry_price: parseFloat(tradeSetup.entry_price) || 1.1000,
         direction: tradeSetup.direction || "BUY",
         timeframe: tradeSetup.timeframe || "H4"

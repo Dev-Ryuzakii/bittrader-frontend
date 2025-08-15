@@ -2,7 +2,7 @@
  * Symbol utilities for handling broker-specific symbol mappings
  */
 
-import { symbolMappingService } from '../api/symbolMapping';
+import { symbolMappingService } from '../api/symbolMapping.js';
 
 /**
  * Normalize a symbol to standard format
@@ -94,7 +94,7 @@ export const formatSymbolForDisplay = (symbol) => {
   
   // Common currency pairs
   const majorPairs = [
-    'EURUSD', 'GBPUSD', 'USDJPY', 'USDCHF', 'AUDUSD', 'USDCAD', 'NZDUSD',
+    'GBPUSD', 'USDJPY', 'EURUSD', 'USDCHF', 'AUDUSD', 'USDCAD', 'NZDUSD',
     'EURGBP', 'EURJPY', 'GBPJPY', 'EURCHF', 'AUDCAD', 'GBPAUD', 'EURAUD'
   ];
   
@@ -113,7 +113,7 @@ export const formatSymbolForDisplay = (symbol) => {
  */
 export const isMajorPair = (symbol) => {
   const majorPairs = [
-    'EURUSD', 'GBPUSD', 'USDJPY', 'USDCHF', 'AUDUSD', 'USDCAD', 'NZDUSD'
+    'GBPUSD', 'USDJPY', 'EURUSD', 'USDCHF', 'AUDUSD', 'USDCAD', 'NZDUSD'
   ];
   return majorPairs.includes(symbol.toUpperCase());
 };

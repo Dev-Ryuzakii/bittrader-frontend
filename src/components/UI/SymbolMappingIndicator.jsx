@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
 import { CheckCircle, Clock, RefreshCw, AlertCircle, TrendingUp } from 'lucide-react';
 import { useTradingSymbol } from '../../contexts/TradingSymbolContext';
-import { refreshAccountSymbols as refreshAccountSymbolsAPI, getSymbolMappingStatus } from '../../api/broker';
-import { toast } from 'react-hot-toast';
 
 const SymbolMappingIndicator = ({ account, className = '' }) => {
   const { refreshAccountSymbols, getSymbolMappingStatus } = useTradingSymbol();
@@ -13,20 +11,12 @@ const SymbolMappingIndicator = ({ account, className = '' }) => {
   const handleRefreshSymbols = async () => {
     setRefreshing(true);
     try {
-      // Use the new API function with enhanced error handling
-      toast.loading('Refreshing symbols...', { id: 'symbol-refresh' });
-      const result = await refreshAccountSymbolsAPI(account.id);
-      
+      const result = await refreshAccountSymbols(account.id);
       if (result.success) {
-        toast.success('Symbol refresh started in background', { id: 'symbol-refresh' });
-        // Also call the context method for UI updates
-        await refreshAccountSymbols(account.id);
-      } else {
-        toast.error(`Failed to refresh symbols: ${result.error}`, { id: 'symbol-refresh' });
+        // Success feedback handled by parent component
       }
     } catch (error) {
       console.error('Failed to refresh symbols:', error);
-      toast.error(`Failed to refresh symbols: ${error.message}`, { id: 'symbol-refresh' });
     } finally {
       setRefreshing(false);
     }
@@ -92,23 +82,8 @@ export const CompactSymbolStatus = ({ account, showRefresh = true }) => {
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    try {
-      toast.loading('Refreshing symbols...', { id: 'symbol-refresh' });
-      const result = await refreshAccountSymbolsAPI(account.id);
-      
-      if (result.success) {
-        toast.success('Symbol refresh started in background', { id: 'symbol-refresh' });
-        // Also call the context method for UI updates
-        await refreshAccountSymbols(account.id);
-      } else {
-        toast.error(`Failed to refresh symbols: ${result.error}`, { id: 'symbol-refresh' });
-      }
-    } catch (error) {
-      console.error('Failed to refresh symbols:', error);
-      toast.error(`Failed to refresh symbols: ${error.message}`, { id: 'symbol-refresh' });
-    } finally {
-      setRefreshing(false);
-    }
+    await refreshAccountSymbols(account.id);
+    setRefreshing(false);
   };
 
   const symbolsMapped = account.symbols_mapped;

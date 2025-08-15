@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Eye, PenSquare, Trash2, Power, BarChart3, Shuffle, Settings, RefreshCw } from 'lucide-react';
+import { Plus, Eye, PenSquare, Trash2, Power, BarChart3, Shuffle, Settings } from 'lucide-react';
 import PlatformSelectionModal from '../modals/PlatformSelectionModal';
 import ConnectionModal from '../modals/ConnectionModal';
 import EditAccountModal from '../modals/EditAccountModal';
@@ -8,7 +8,7 @@ import SymbolMappingModal from '../modals/SymbolMappingModal';
 import CrossBrokerAnalysis from '../UI/CrossBrokerAnalysis';
 import SymbolPicker from '../UI/SymbolPicker';
 import Loader from '../UI/Loader';
-import { getAccounts, connectAccount, deleteAccount, updateAccount, toggleAccountStatus, refreshAccountSymbols, getSymbolMappingStatus } from '../../api/broker';
+import { getAccounts, connectAccount, deleteAccount, updateAccount, toggleAccountStatus } from '../../api/broker';
 import { symbolMappingService } from '../../api/symbolMapping';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
@@ -184,29 +184,6 @@ const AccountAggregation = () => {
     } catch (error) {
       console.error('Toggle error:', error);
       toast.error(`Failed to toggle connection: ${error.message}`);
-    }
-  };
-
-  const handleRefreshSymbols = async (account) => {
-    if (!isAuthenticated) {
-      toast.warning('Please login to refresh symbols.');
-      return;
-    }
-
-    try {
-      toast.loading('Refreshing symbols...', { id: 'symbol-refresh' });
-      const result = await refreshAccountSymbols(account.id);
-      
-      if (result.success) {
-        toast.success('Symbol refresh started in background', { id: 'symbol-refresh' });
-        // Refresh account list to show updated symbol count
-        fetchAccounts();
-      } else {
-        toast.error(`Failed to refresh symbols: ${result.error}`, { id: 'symbol-refresh' });
-      }
-    } catch (error) {
-      console.error('Symbol refresh error:', error);
-      toast.error(`Failed to refresh symbols: ${error.message}`, { id: 'symbol-refresh' });
     }
   };
 
@@ -528,15 +505,6 @@ const AccountAggregation = () => {
                                   <Settings size={16} />
                                 </button>
                               )}
-                              {account.is_active && (
-                                <button 
-                                  onClick={() => handleRefreshSymbols(account)}
-                                  className="p-2 text-gray-400 hover:text-blue-400 hover:bg-[#2A2A2A] rounded-lg transition-colors"
-                                  title="Refresh symbol mappings"
-                                >
-                                  <RefreshCw size={16} />
-                                </button>
-                              )}
                               <button 
                                 onClick={() => handleEditAccount(account)}
                                 className="p-2 text-gray-400 hover:text-white hover:bg-[#2A2A2A] rounded-lg transition-colors"
@@ -634,29 +602,11 @@ const AccountAggregation = () => {
                           )}
                           {account.is_active && (
                             <button 
-                              onClick={() => handleRefreshSymbols(account)}
-                              className="p-2 text-gray-400 hover:text-blue-400 hover:bg-[#2A2A2A] rounded-lg transition-colors"
-                              title="Refresh symbol mappings"
-                            >
-                              <RefreshCw size={16} />
-                            </button>
-                          )}
-                          {account.is_active && (
-                            <button 
                               onClick={() => handleOpenSymbolMappings(account)}
                               className="p-2 text-gray-400 hover:text-purple-400 hover:bg-[#2A2A2A] rounded-lg transition-colors"
                               title="Manage symbol mappings"
                             >
                               <Settings size={16} />
-                            </button>
-                          )}
-                          {account.is_active && (
-                            <button 
-                              onClick={() => handleRefreshSymbols(account)}
-                              className="p-2 text-gray-400 hover:text-blue-400 hover:bg-[#2A2A2A] rounded-lg transition-colors"
-                              title="Refresh symbol mappings"
-                            >
-                              <RefreshCw size={16} />
                             </button>
                           )}
                           <button 

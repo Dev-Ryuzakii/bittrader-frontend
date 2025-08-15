@@ -63,7 +63,7 @@ function TradeManagement({ selectedAccount, onTradeSelect, shouldRefresh, onRefr
     try {
       // Common headers for authentication
       const headers = {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'Authorization': localStorage.getItem('access_token'),
         'Content-Type': 'application/json'
       };
 
@@ -192,7 +192,7 @@ function TradeManagement({ selectedAccount, onTradeSelect, shouldRefresh, onRefr
     try {
       const response = await axios.delete(`http://127.0.0.1:8000/api/v1/broker/${selectedAccount.id}/positions/${tradeId}`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Authorization': localStorage.getItem('access_token'),
           'Content-Type': 'application/json'
         }
       });
@@ -208,7 +208,7 @@ function TradeManagement({ selectedAccount, onTradeSelect, shouldRefresh, onRefr
       try {
         const orderResponse = await axios.delete(`http://127.0.0.1:8000/api/v1/broker/${selectedAccount.id}/orders/${tradeId}`, {
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'Authorization': localStorage.getItem('access_token'),
             'Content-Type': 'application/json'
           }
         });

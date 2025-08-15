@@ -14,7 +14,7 @@ export const useTradingSymbol = () => {
 
 export const TradingSymbolProvider = ({ children }) => {
   // Global trading state
-  const [selectedSymbol, setSelectedSymbol] = useState('EURUSD');
+  const [selectedSymbol, setSelectedSymbol] = useState('');
   const [selectedAccount, setSelectedAccount] = useState(null);
   const [standardSymbols, setStandardSymbols] = useState([]);
   const [accountSymbols, setAccountSymbols] = useState({});

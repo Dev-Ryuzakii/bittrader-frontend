@@ -25,7 +25,7 @@ export const getAvailableSymbols = async (searchTerm = '', limit = 50) => {
     const response = await axios.get(`${API_BASE_URL}/broker/symbols/available`, {
       params,
       headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
+        'Authorization': localStorage.getItem('access_token')
       }
     });
     
@@ -44,7 +44,7 @@ export const getPopularSymbols = async () => {
   try {
     const response = await axios.get(`${API_BASE_URL}/broker/symbols/popular`, {
       headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
+        'Authorization': localStorage.getItem('access_token')
       }
     });
     
@@ -72,7 +72,7 @@ export const searchSymbols = async (searchTerm, limit = 20) => {
       {
         params: { limit },
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': localStorage.getItem('access_token')
         }
       }
     );
@@ -96,7 +96,7 @@ export const getSymbolPrice = async (accountId, symbol) => {
       `${API_BASE_URL}/broker/${accountId}/price/${encodeURIComponent(symbol)}`,
       {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': localStorage.getItem('access_token')
         }
       }
     );
@@ -119,7 +119,7 @@ export const getAccountSymbols = async (accountId) => {
       `${API_BASE_URL}/broker/${accountId}/symbols`,
       {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': localStorage.getItem('access_token')
         }
       }
     );
@@ -143,7 +143,7 @@ export const refreshAccountSymbols = async (accountId) => {
       {},
       {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': localStorage.getItem('access_token')
         }
       }
     );
@@ -166,7 +166,7 @@ export const getSymbolMappingStatus = async (accountId) => {
       `${API_BASE_URL}/broker/${accountId}/symbols/status`,
       {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': localStorage.getItem('access_token')
         }
       }
     );

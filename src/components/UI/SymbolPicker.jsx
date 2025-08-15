@@ -49,29 +49,8 @@ const SymbolPicker = ({ selectedSymbol, onSymbolChange, accounts = [] }) => {
       if (response && response.popular_symbols) {
         setPopularSymbols(response.popular_symbols);
       } else {
-        // Fallback to mock data
-        setPopularSymbols({
-          major_pairs: [
-            { symbol: 'EURUSD', description: 'Euro/US Dollar', available: true },
-            { symbol: 'GBPUSD', description: 'British Pound/US Dollar', available: true },
-            { symbol: 'USDJPY', description: 'US Dollar/Japanese Yen', available: true },
-            { symbol: 'USDCHF', description: 'US Dollar/Swiss Franc', available: true }
-          ],
-          cross_pairs: [
-            { symbol: 'EURGBP', description: 'Euro/British Pound', available: true },
-            { symbol: 'EURJPY', description: 'Euro/Japanese Yen', available: true },
-            { symbol: 'GBPJPY', description: 'British Pound/Japanese Yen', available: true }
-          ],
-          commodities: [
-            { symbol: 'XAUUSD', description: 'Gold/US Dollar', available: true },
-            { symbol: 'XAGUSD', description: 'Silver/US Dollar', available: true },
-            { symbol: 'XBRUSD', description: 'Brent Crude Oil/USD', available: true }
-          ],
-          crypto: [
-            { symbol: 'BTCUSD', description: 'Bitcoin/US Dollar', available: true },
-            { symbol: 'ETHUSD', description: 'Ethereum/US Dollar', available: true }
-          ]
-        });
+        // No fallback data - keep empty
+        setPopularSymbols({});
       }
     } catch (error) {
       console.error('Error loading popular symbols:', error);
@@ -282,18 +261,8 @@ export const CompactSymbolPicker = ({ selectedSymbol, onSymbolSelect, accounts =
       if (response && response.popular_symbols) {
         setPopularSymbols(response.popular_symbols);
       } else {
-        // Use mock data
-        setPopularSymbols({
-          major_pairs: [
-            { symbol: 'EURUSD', description: 'Euro/US Dollar', available: true },
-            { symbol: 'GBPUSD', description: 'British Pound/US Dollar', available: true },
-            { symbol: 'USDJPY', description: 'US Dollar/Japanese Yen', available: true }
-          ],
-          crypto: [
-            { symbol: 'BTCUSD', description: 'Bitcoin/US Dollar', available: true },
-            { symbol: 'ETHUSD', description: 'Ethereum/US Dollar', available: true }
-          ]
-        });
+        // No fallback data - keep empty
+        setPopularSymbols({});
       }
     } catch (error) {
       console.error('Error loading popular symbols:', error);

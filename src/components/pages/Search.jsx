@@ -31,8 +31,8 @@ const Search = () => {
   const mockResults = {
     symbols: [
       { id: 'btcusd', name: 'BTCUSD', description: 'Bitcoin vs US Dollar', category: 'symbols' },
-      { id: 'eurusd', name: 'EURUSD', description: 'Euro vs US Dollar', category: 'symbols' },
       { id: 'gbpusd', name: 'GBPUSD', description: 'British Pound vs US Dollar', category: 'symbols' },
+      { id: 'usdjpy', name: 'USDJPY', description: 'US Dollar vs Japanese Yen', category: 'symbols' },
     ],
     strategies: [
       { id: 'strat1', name: 'Moving Average Crossover', description: 'Popular trend following strategy', category: 'strategies' },

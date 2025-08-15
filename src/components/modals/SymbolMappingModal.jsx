@@ -143,7 +143,7 @@ const SymbolMappingModal = ({ isOpen, onClose, accountId, selectedSymbol = '', o
                   type="text"
                   value={newMapping.standardSymbol}
                   onChange={(e) => setNewMapping(prev => ({ ...prev, standardSymbol: e.target.value }))}
-                  placeholder="Standard Symbol (e.g., EURUSD)"
+                  placeholder="Standard Symbol (e.g., GBPUSD)"
                   className="px-3 py-2 bg-[#1A1A1A] border border-[#333] rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
                 <input

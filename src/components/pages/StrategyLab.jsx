@@ -40,7 +40,7 @@ const StrategyLab = () => {
             "Stop Loss": "10 pips",
             "Take Profit": "15 pips"
           },
-          supported_symbols: ["EURUSD", "GBPUSD", "USDJPY"],
+          supported_symbols: ["GBPUSD", "USDJPY", "AUDUSD"],
           timeframes: ["1m", "5m"]
         },
         {
@@ -74,7 +74,7 @@ const StrategyLab = () => {
             "Max Positions": "10",
             "Position Size": "0.1 lots"
           },
-          supported_symbols: ["EURUSD", "GBPUSD"],
+          supported_symbols: ["GBPUSD", "USDCAD"],
           timeframes: ["15m", "1h"]
         }
       ]);
@@ -525,7 +525,7 @@ const CustomStrategyRequest = () => {
               type="text"
               value={formData.title}
               onChange={(e) => setFormData({...formData, title: e.target.value})}
-              placeholder="e.g., Custom Scalping Strategy for EURUSD"
+              placeholder="e.g., Custom Scalping Strategy for Major Pairs"
               className="w-full px-4 py-2 bg-[#2A2A2A] border border-[#3A3A3A] rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
               required
             />
@@ -575,7 +575,7 @@ const CustomStrategyRequest = () => {
               type="text"
               value={formData.symbols}
               onChange={(e) => setFormData({...formData, symbols: e.target.value})}
-              placeholder="EURUSD, GBPUSD, USDJPY"
+              placeholder="GBPUSD, USDJPY, AUDUSD"
               className="w-full px-4 py-2 bg-[#2A2A2A] border border-[#3A3A3A] rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
               required
             />

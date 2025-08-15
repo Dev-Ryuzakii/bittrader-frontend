@@ -487,15 +487,6 @@ const EnhancedAccountAggregation = () => {
               </div>
             )}
 
-            {/* Advanced Trading Panel */}
-            {activeView === 'trading' && accounts.filter(acc => acc.is_active).length > 0 && (
-              <div className="mb-6">
-                <AdvancedTradingPanel
-                  userAccounts={accounts.filter(acc => acc.is_active)}
-                />
-              </div>
-            )}
-
             {/* Cross-Broker Analysis */}
             {(activeView === 'analysis' || showCrossBrokerAnalysis) && accounts.filter(acc => acc.is_active).length > 1 && (
               <div className="mb-6">

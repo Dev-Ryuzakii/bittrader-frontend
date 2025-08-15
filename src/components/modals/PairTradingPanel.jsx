@@ -178,7 +178,7 @@ const PairTradingPanel = ({ data, setData, onSubmit, submitting }) => {
                       type="text"
                       value={data.symbol1}
                       onChange={(e) => updateData('symbol1', e.target.value.toUpperCase())}
-                      placeholder="e.g., EURUSD"
+                      placeholder="Symbol (e.g., GBPUSD)"
                       className="w-full bg-[#222] border border-[#555] rounded-l-lg px-3 py-2 text-white"
                     />
                     <button
