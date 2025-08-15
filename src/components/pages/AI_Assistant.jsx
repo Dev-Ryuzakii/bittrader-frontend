@@ -1,5 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { chatAPI, aiToolsAPI, executeAITool, formatAIResponse, getDefaultPromptForTool } from '../../api/chat';
+import { 
+  chatAPI, 
+  aiToolsAPI, 
+  strategyLabAI,
+  marketDataAPI,
+  memoryAPI,
+  executeAITool, 
+  formatAIResponse, 
+  getDefaultPromptForTool 
+} from '../../api/chat';
+import { useToast } from '../../contexts/ToastContext';
 import { 
   BarChart3, 
   Target, 
@@ -10,7 +20,14 @@ import {
   Shield, 
   Microscope, 
   FlaskConical,
-  Bot 
+  Bot,
+  MessageSquare,
+  Clock,
+  Globe,
+  Activity,
+  PieChart,
+  Lightbulb,
+  Settings
 } from 'lucide-react';
 
 // Tabs for different AI features
@@ -24,62 +41,106 @@ const TABS = {
   PATTERNS: 'patterns',
 };
 
-// Quick action buttons for comprehensive AI features
+// Enhanced quick action buttons with comprehensive AI features
 const QUICK_ACTIONS = [
   { 
     id: 'sentiment',
     icon: BarChart3, 
     label: 'Market Sentiment',
-    description: 'Analyze current market sentiment for trading pairs'
+    description: 'Analyze current market sentiment with news integration',
+    category: 'analysis'
   },
   { 
     id: 'strategy',
     icon: Target, 
     label: 'Strategy Suggestions',
-    description: 'Get AI-powered strategy suggestions based on market conditions'
+    description: 'Comprehensive strategy analysis based on market conditions',
+    category: 'strategy'
   },
   { 
     id: 'risk',
     icon: Scale,
     label: 'Risk Analysis',
-    description: 'Comprehensive portfolio risk analysis and recommendations'
+    description: 'Portfolio risk analysis with optimization recommendations',
+    category: 'analysis'
+  },
+  { 
+    id: 'portfolio',
+    icon: PieChart,
+    label: 'Portfolio Analysis',
+    description: 'Comprehensive portfolio insights and diversification analysis',
+    category: 'analysis'
   },
   { 
     id: 'patterns',
     icon: TrendingUp,
     label: 'Chart Patterns',
-    description: 'Detect chart patterns and generate trading signals'
+    description: 'Detect patterns with trading signals and technical analysis',
+    category: 'analysis'
+  },
+  { 
+    id: 'opportunity',
+    icon: Lightbulb,
+    label: 'Trading Opportunities',
+    description: 'Multi-timeframe opportunity analysis with confidence scoring',
+    category: 'strategy'
   },
   { 
     id: 'position',
     icon: Calculator,
     label: 'Position Size',
-    description: 'Calculate optimal position size based on risk management'
+    description: 'Calculate optimal position size with volatility adjustment',
+    category: 'tools'
   },
   { 
     id: 'trade-eval',
     icon: Search,
     label: 'Trade Evaluation',
-    description: 'Comprehensive evaluation of trading performance'
+    description: 'Performance evaluation with improvement suggestions',
+    category: 'analysis'
   },
   { 
     id: 'stop-loss',
     icon: Shield,
     label: 'Stop Loss Suggestions',
-    description: 'Get intelligent stop loss suggestions'
+    description: 'Intelligent stop loss based on market structure',
+    category: 'tools'
   },
   { 
     id: 'analyze-trade',
     icon: Microscope,
     label: 'Analyze Trade',
-    description: 'Analyze individual trade for learning purposes'
+    description: 'Individual trade analysis for learning insights',
+    category: 'analysis'
   },
   { 
     id: 'strategy-lab',
     icon: FlaskConical,
     label: 'Strategy Lab Analysis',
-    description: 'Analyze your Strategy Lab strategies with AI insights'
+    description: 'Analyze Strategy Lab strategies with backtesting results',
+    category: 'strategy'
   },
+  { 
+    id: 'market-data',
+    icon: Activity,
+    label: 'Real-Time Data',
+    description: 'Get real-time market data with volatility analysis',
+    category: 'data'
+  },
+  { 
+    id: 'technical-indicators',
+    icon: TrendingUp,
+    label: 'Technical Indicators',
+    description: 'RSI, MACD, Bollinger Bands with trading signals',
+    category: 'data'
+  },
+  { 
+    id: 'economic-events',
+    icon: Globe,
+    label: 'Economic Events',
+    description: 'Upcoming events and their potential market impact',
+    category: 'data'
+  }
 ];
 
 // Presentational component
@@ -93,10 +154,32 @@ function AI_Assistant({
   handleQuickAction,
   selectedTool,
   setSelectedTool,
+  chatSessions,
+  currentSessionId,
+  handleCreateSession,
+  handleSwitchSession,
+  contextSummary,
 }) {
-  // State for tool dropdown
+  // State for tool dropdown and session management
   const [showToolDropdown, setShowToolDropdown] = useState(false);
+  const [showSessionDropdown, setShowSessionDropdown] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState('all');
   const dropdownRef = useRef(null);
+  const sessionDropdownRef = useRef(null);
+  
+  // Categories for tool organization
+  const categories = [
+    { id: 'all', label: 'All Tools' },
+    { id: 'analysis', label: 'Analysis' },
+    { id: 'strategy', label: 'Strategy' },
+    { id: 'tools', label: 'Tools' },
+    { id: 'data', label: 'Market Data' }
+  ];
+  
+  // Filter tools by category
+  const filteredTools = selectedCategory === 'all' 
+    ? QUICK_ACTIONS 
+    : QUICK_ACTIONS.filter(tool => tool.category === selectedCategory);
   
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -104,16 +187,83 @@ function AI_Assistant({
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setShowToolDropdown(false);
       }
+      if (sessionDropdownRef.current && !sessionDropdownRef.current.contains(event.target)) {
+        setShowSessionDropdown(false);
+      }
     }
     
     document.addEventListener("mousedown", handleClickOutside);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [dropdownRef]);
+  }, [dropdownRef, sessionDropdownRef]);
   
   return (
     <div className="min-h-screen flex flex-col bg-[#111]">
+      {/* Header with Session Management */}
+      <div className="border-b border-[#333] bg-[#111] p-4">
+        <div className="max-w-4xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <h1 className="text-xl font-bold text-white">AI Trading Assistant</h1>
+            {contextSummary && (
+              <div className="text-sm text-gray-400">
+                Context: {contextSummary.key_topics?.slice(0, 2).join(', ') || 'General trading'}
+              </div>
+            )}
+          </div>
+          
+          {/* Session Management */}
+          <div className="flex items-center gap-2">
+            <div className="relative" ref={sessionDropdownRef}>
+              <button
+                onClick={() => setShowSessionDropdown(!showSessionDropdown)}
+                className="flex items-center gap-2 px-3 py-2 bg-[#1A1A1A] hover:bg-[#2A2A2A] rounded-lg border border-[#333] text-white text-sm transition-colors"
+              >
+                <MessageSquare className="w-4 h-4" />
+                <span>Session {currentSessionId || '1'}</span>
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              
+              {showSessionDropdown && (
+                <div className="absolute top-full right-0 mt-1 w-64 bg-[#1A1A1A] border border-[#333] rounded-lg shadow-lg z-50">
+                  <div className="p-3 border-b border-[#333]">
+                    <button
+                      onClick={handleCreateSession}
+                      className="w-full flex items-center gap-2 px-3 py-2 bg-[#2F00FF] hover:bg-[#1C0099] rounded text-white text-sm transition-colors"
+                    >
+                      <MessageSquare className="w-4 h-4" />
+                      New Chat Session
+                    </button>
+                  </div>
+                  <div className="max-h-48 overflow-y-auto">
+                    {chatSessions.map((session) => (
+                      <button
+                        key={session.id}
+                        onClick={() => handleSwitchSession(session.id)}
+                        className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-[#2A2A2A] text-left transition-colors ${
+                          session.id === currentSessionId ? 'bg-[#2A2A2A]' : ''
+                        }`}
+                      >
+                        <Clock className="w-4 h-4 text-gray-400" />
+                        <div className="flex-grow min-w-0">
+                          <div className="text-white text-sm font-medium truncate">
+                            {session.name || `Session ${session.id}`}
+                          </div>
+                          <div className="text-gray-400 text-xs">
+                            {new Date(session.created_at).toLocaleDateString()}
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
       {/* Chat Messages Area */}
       <div className="flex-grow flex flex-col">
         {chatHistory.length === 0 ? (
@@ -143,33 +293,45 @@ function AI_Assistant({
                 ))}
               </div> */}
               
-              {/* Sample Prompts */}
+              {/* Enhanced Sample Prompts */}
               <div className="space-y-2">
                 <h3 className="text-white text-sm font-medium mb-3">Try asking:</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                   <button 
                     className="bg-[#1A1A1A] hover:bg-[#2A2A2A] text-gray-300 text-sm p-3 rounded-lg text-left transition-colors"
-                    onClick={() => setPrompt("Analyze market sentiment and suggest entry points")}
+                    onClick={() => setPrompt("Analyze market sentiment with news integration and suggest entry points")}
                   >
-                    "Analyze market sentiment and suggest entry points"
+                    "Analyze market sentiment with news integration and suggest entry points"
                   </button>
                   <button 
                     className="bg-[#1A1A1A] hover:bg-[#2A2A2A] text-gray-300 text-sm p-3 rounded-lg text-left transition-colors"
-                    onClick={() => setPrompt("Create a risk management strategy for my portfolio")}
+                    onClick={() => setPrompt("Provide comprehensive portfolio analysis with diversification insights")}
                   >
-                    "Create a risk management strategy for my portfolio"
+                    "Provide comprehensive portfolio analysis with diversification insights"
                   </button>
                   <button 
                     className="bg-[#1A1A1A] hover:bg-[#2A2A2A] text-gray-300 text-sm p-3 rounded-lg text-left transition-colors"
-                    onClick={() => setPrompt("Calculate position size for 2% risk on GBPUSD")}
+                    onClick={() => setPrompt("Detect chart patterns with trading signals and technical analysis")}
                   >
-                    "Calculate position size for 2% risk on GBPUSD"
+                    "Detect chart patterns with trading signals and technical analysis"
                   </button>
                   <button 
                     className="bg-[#1A1A1A] hover:bg-[#2A2A2A] text-gray-300 text-sm p-3 rounded-lg text-left transition-colors"
-                    onClick={() => setPrompt("Detect chart patterns on major forex pairs")}
+                    onClick={() => setPrompt("Analyze my Strategy Lab strategies with backtesting insights")}
                   >
-                    "Detect chart patterns on major forex pairs"
+                    "Analyze my Strategy Lab strategies with backtesting insights"
+                  </button>
+                  <button 
+                    className="bg-[#1A1A1A] hover:bg-[#2A2A2A] text-gray-300 text-sm p-3 rounded-lg text-left transition-colors"
+                    onClick={() => setPrompt("Show real-time market data with volatility analysis")}
+                  >
+                    "Show real-time market data with volatility analysis"
+                  </button>
+                  <button 
+                    className="bg-[#1A1A1A] hover:bg-[#2A2A2A] text-gray-300 text-sm p-3 rounded-lg text-left transition-colors"
+                    onClick={() => setPrompt("Calculate technical indicators with trading signals")}
+                  >
+                    "Calculate technical indicators with trading signals"
                   </button>
                 </div>
               </div>
@@ -321,57 +483,76 @@ function AI_Assistant({
               </button>
             </div>
             
-            {/* Tool Dropdown */}
+            {/* Enhanced Tool Dropdown */}
             {showToolDropdown && (
               <div className="absolute bottom-full left-0 right-0 mb-2 bg-[#1A1A1A] border border-[#333] rounded-lg shadow-lg overflow-hidden z-50">
                 <div className="p-3 border-b border-[#333]">
-                  <h3 className="text-white font-medium text-sm">AI Trading Tools</h3>
+                  <h3 className="text-white font-medium text-sm mb-3">AI Trading Tools</h3>
+                  
+                  {/* Category Filter */}
+                  <div className="flex gap-1 mb-3">
+                    {categories.map((category) => (
+                      <button
+                        key={category.id}
+                        onClick={() => setSelectedCategory(category.id)}
+                        className={`px-2 py-1 rounded text-xs transition-colors ${
+                          selectedCategory === category.id
+                            ? 'bg-[#2F00FF] text-white'
+                            : 'bg-[#2A2A2A] text-gray-400 hover:text-white'
+                        }`}
+                      >
+                        {category.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
                 
-                {/* General Chat Option */}
-                <button
-                  onClick={() => {
-                    setSelectedTool(null);
-                    setShowToolDropdown(false);
-                  }}
-                  className={`w-full px-4 py-3 flex items-center gap-3 hover:bg-[#2A2A2A] text-left transition-colors ${
-                    !selectedTool ? 'bg-[#2A2A2A]' : ''
-                  }`}
-                >
-                  <Bot className="w-5 h-5 text-gray-400" />
-                  <div>
-                    <div className="text-white font-medium text-sm">General Chat</div>
-                    <div className="text-gray-400 text-xs">Open-ended trading conversations</div>
-                  </div>
-                </button>
-                
-                {/* Tool Options */}
-                {QUICK_ACTIONS.map((tool) => (
+                <div className="max-h-80 overflow-y-auto">
+                  {/* General Chat Option */}
                   <button
-                    key={tool.id}
                     onClick={() => {
-                      setSelectedTool(tool);
+                      setSelectedTool(null);
                       setShowToolDropdown(false);
                     }}
                     className={`w-full px-4 py-3 flex items-center gap-3 hover:bg-[#2A2A2A] text-left transition-colors ${
-                      selectedTool?.id === tool.id ? 'bg-[#2A2A2A]' : ''
+                      !selectedTool ? 'bg-[#2A2A2A]' : ''
                     }`}
                   >
-                    <tool.icon className="w-5 h-5 text-gray-400" />
+                    <Bot className="w-5 h-5 text-gray-400" />
                     <div>
-                      <div className="text-white font-medium text-sm">{tool.label}</div>
-                      <div className="text-gray-400 text-xs">{tool.description}</div>
+                      <div className="text-white font-medium text-sm">Enhanced Chat</div>
+                      <div className="text-gray-400 text-xs">Open-ended conversations with comprehensive analysis</div>
                     </div>
                   </button>
-                ))}
+                  
+                  {/* Filtered Tool Options */}
+                  {filteredTools.map((tool) => (
+                    <button
+                      key={tool.id}
+                      onClick={() => {
+                        setSelectedTool(tool);
+                        setShowToolDropdown(false);
+                      }}
+                      className={`w-full px-4 py-3 flex items-center gap-3 hover:bg-[#2A2A2A] text-left transition-colors ${
+                        selectedTool?.id === tool.id ? 'bg-[#2A2A2A]' : ''
+                      }`}
+                    >
+                      <tool.icon className="w-5 h-5 text-gray-400" />
+                      <div>
+                        <div className="text-white font-medium text-sm">{tool.label}</div>
+                        <div className="text-gray-400 text-xs">{tool.description}</div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
           </div>
           
-          {/* Footer Text */}
+          {/* Enhanced Footer Text */}
           <div className="text-center mt-3">
             <p className="text-gray-500 text-xs">
-              AI Trading Assistant can make mistakes. Check important trading info and use proper risk management.
+              Enhanced AI Trading Assistant with real-time data, technical analysis, and portfolio insights. Check important trading info and use proper risk management.
             </p>
           </div>
         </div>
@@ -380,7 +561,7 @@ function AI_Assistant({
   );
 }
 
-// Container component with state and logic
+// Enhanced container component with state and logic
 function AI_AssistantWrapper() {
   // Chat state
   const [prompt, setPrompt] = useState("");
@@ -388,8 +569,16 @@ function AI_AssistantWrapper() {
   const [error, setError] = useState("");
   const [chatHistory, setChatHistory] = useState([]);
   const [selectedTool, setSelectedTool] = useState(null);
+  
+  // Session management state
+  const [chatSessions, setChatSessions] = useState([]);
+  const [currentSessionId, setCurrentSessionId] = useState(null);
+  const [contextSummary, setContextSummary] = useState(null);
+  
+  // Toast for notifications
+  const { toast } = useToast();
 
-  // Handle chat send with enhanced API
+  // Enhanced handle chat send with new API features
   async function handleSend(e) {
     if (e) e.preventDefault();
     if (!prompt.trim()) return;
@@ -414,12 +603,15 @@ function AI_AssistantWrapper() {
         const toolOptions = prepareToolOptions(selectedTool.id, userPrompt);
         data = await executeAITool(selectedTool.id, userPrompt, toolOptions);
       } else {
-        // Use enhanced chat for general conversation
+        // Use enhanced chat for general conversation with comprehensive analysis
         data = await chatAPI.enhancedChat(userPrompt, {
           include_market_data: true,
+          include_technical_analysis: true,
+          include_news: true,
           include_account_data: true,
           include_trading_history: true,
-          analysis_type: "comprehensive"
+          analysis_type: "comprehensive",
+          chat_session_id: currentSessionId
         });
       }
       
@@ -436,6 +628,9 @@ function AI_AssistantWrapper() {
         content: responseText
       }]);
       
+      // Update context summary after conversation
+      await updateContextSummary();
+      
     } catch (err) {
       setError(err.message || "An error occurred while communicating with the AI service.");
       console.error("AI chat error:", err);
@@ -450,7 +645,101 @@ function AI_AssistantWrapper() {
     }
   }
 
-  // Handle quick action button clicks
+  // Session management functions with fallback handling
+  const handleCreateSession = async () => {
+    try {
+      const response = await chatAPI.createChatSession(`Trading Session ${new Date().toLocaleDateString()}`);
+      
+      if (response.success && response.data) {
+        const newSession = response.data;
+        setChatSessions(prev => [newSession, ...prev]);
+        setCurrentSessionId(newSession.id);
+        setChatHistory([]); // Clear chat for new session
+        await updateContextSummary();
+        toast.success("New chat session created!");
+      } else {
+        // Feature not implemented yet, create local session
+        const localSession = {
+          id: Date.now().toString(),
+          name: `Local Session ${new Date().toLocaleDateString()}`,
+          created_at: new Date().toISOString()
+        };
+        setChatSessions(prev => [localSession, ...prev]);
+        setCurrentSessionId(localSession.id);
+        setChatHistory([]);
+        toast.info("Session management not yet available - using local session");
+      }
+    } catch (error) {
+      // Fallback to local session management
+      const localSession = {
+        id: Date.now().toString(),
+        name: `Local Session ${new Date().toLocaleDateString()}`,
+        created_at: new Date().toISOString()
+      };
+      setChatSessions(prev => [localSession, ...prev]);
+      setCurrentSessionId(localSession.id);
+      setChatHistory([]);
+      toast.info("Using local session management");
+      console.log("Session management not yet implemented, using local fallback");
+    }
+  };
+
+  const handleSwitchSession = async (sessionId) => {
+    try {
+      const response = await chatAPI.switchChatSession(sessionId);
+      
+      if (response.success) {
+        setCurrentSessionId(sessionId);
+        
+        // Load conversation history for this session
+        const historyResponse = await chatAPI.getConversationHistory(20, sessionId);
+        if (historyResponse.conversations) {
+          const sessionChats = historyResponse.conversations.flatMap(conv => [
+            { sender: 'user', content: conv.user_message },
+            { sender: 'ai', content: conv.assistant_response }
+          ]);
+          setChatHistory(sessionChats);
+        }
+        
+        await updateContextSummary();
+        toast.success("Switched to session successfully!");
+      } else {
+        // Feature not implemented, switch locally
+        setCurrentSessionId(sessionId);
+        setChatHistory([]); // Clear for local session switch
+        toast.info("Session switching not yet available - cleared chat locally");
+      }
+    } catch (error) {
+      // Fallback to local session switching
+      setCurrentSessionId(sessionId);
+      setChatHistory([]);
+      toast.info("Using local session switching");
+      console.log("Session switching not yet implemented, using local fallback");
+    }
+  };
+
+  // Update context summary with fallback
+  const updateContextSummary = async () => {
+    try {
+      const summary = await memoryAPI.getContextSummary(currentSessionId);
+      if (summary.success && summary.data) {
+        setContextSummary(summary.data);
+      } else {
+        // Feature not implemented, create local context
+        setContextSummary({
+          key_topics: chatHistory.length > 0 ? ['Trading Analysis', 'Market Research'] : ['General Trading'],
+          last_updated: new Date().toISOString()
+        });
+      }
+    } catch (error) {
+      // Fallback to local context summary
+      setContextSummary({
+        key_topics: chatHistory.length > 0 ? ['Trading Analysis', 'Market Research'] : ['General Trading'],
+        last_updated: new Date().toISOString()
+      });
+      console.log("Context summary not yet implemented, using local fallback");
+    }
+  };
   const handleQuickAction = async (actionId) => {
     // Find the selected tool
     const tool = QUICK_ACTIONS.find(a => a.id === actionId);
@@ -468,7 +757,7 @@ function AI_AssistantWrapper() {
     // setTimeout(() => handleSend(), 100);
   };
 
-  // Helper function to prepare tool options based on tool type
+  // Enhanced helper function to prepare tool options
   const prepareToolOptions = (toolId, message) => {
     switch(toolId) {
       case 'sentiment':
@@ -477,8 +766,12 @@ function AI_AssistantWrapper() {
         return { analysis_type: "comprehensive" };
       case 'risk':
         return { include_open_positions: true };
+      case 'portfolio':
+        return {};
       case 'patterns':
         return { symbol: "", timeframe: "H4" };
+      case 'opportunity':
+        return { symbol: "EURUSD" };
       case 'position':
         return { 
           tradeSetup: {
@@ -503,30 +796,97 @@ function AI_AssistantWrapper() {
         return { trade_id: "latest" };
       case 'strategy-lab':
         return { include_performance: true, include_insights: true };
+      case 'market-data':
+        return { symbols: ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD"] };
+      case 'technical-indicators':
+        return { symbol: "EURUSD", timeframe: "H4" };
+      case 'economic-events':
+        return {};
       default:
         return {};
     }
   };
 
-  // Load conversation history on component mount
+  // Enhanced initialization with fallback handling
   useEffect(() => {
-    async function fetchConversationHistory() {
+    async function initializeAssistant() {
       try {
-        const data = await chatAPI.getConversationHistory(5);
-        if (data.conversations && data.conversations.length > 0) {
-          // Convert conversation history to chat format
-          const recentChats = data.conversations.flatMap(conv => [
-            { sender: 'user', content: conv.user_message },
-            { sender: 'ai', content: conv.assistant_response }
-          ]);
-          setChatHistory(recentChats.slice(-6)); // Show last 6 messages (3 conversations)
+        // Try to load conversation sessions
+        const sessionResponse = await chatAPI.getConversationHistory(50);
+        if (sessionResponse.success && sessionResponse.conversations) {
+          // Group conversations by session
+          const sessions = sessionResponse.conversations.reduce((acc, conv) => {
+            const sessionId = conv.session_id || 'default';
+            if (!acc[sessionId]) {
+              acc[sessionId] = {
+                id: sessionId,
+                name: conv.session_name || `Session ${sessionId}`,
+                created_at: conv.created_at || new Date().toISOString(),
+                conversations: []
+              };
+            }
+            acc[sessionId].conversations.push(conv);
+            return acc;
+          }, {});
+          
+          const sessionList = Object.values(sessions).sort((a, b) => 
+            new Date(b.created_at) - new Date(a.created_at)
+          );
+          
+          setChatSessions(sessionList);
+          
+          // Set current session to most recent or create new one
+          if (sessionList.length > 0) {
+            const latestSession = sessionList[0];
+            setCurrentSessionId(latestSession.id);
+            
+            // Load recent chats from latest session
+            const recentChats = latestSession.conversations
+              .slice(-3)
+              .flatMap(conv => [
+                { sender: 'user', content: conv.user_message },
+                { sender: 'ai', content: conv.assistant_response }
+              ]);
+            setChatHistory(recentChats);
+          }
+        } else {
+          // No conversation history available or feature not implemented
+          console.log("Conversation history not available, starting fresh");
+          
+          // Create a default local session
+          const defaultSession = {
+            id: 'default',
+            name: 'Default Session',
+            created_at: new Date().toISOString()
+          };
+          setChatSessions([defaultSession]);
+          setCurrentSessionId('default');
         }
+        
+        // Try to load context summary
+        await updateContextSummary();
+        
       } catch (error) {
-        console.error("Error fetching conversation history:", error);
+        console.log("Error initializing AI assistant, using fallback:", error);
+        
+        // Create a default session if initialization fails
+        const defaultSession = {
+          id: 'fallback',
+          name: 'Local Session',
+          created_at: new Date().toISOString()
+        };
+        setChatSessions([defaultSession]);
+        setCurrentSessionId('fallback');
+        
+        // Set basic context
+        setContextSummary({
+          key_topics: ['General Trading'],
+          last_updated: new Date().toISOString()
+        });
       }
     }
     
-    fetchConversationHistory();
+    initializeAssistant();
   }, []);
 
   return (
@@ -541,6 +901,11 @@ function AI_AssistantWrapper() {
       handleQuickAction={handleQuickAction}
       selectedTool={selectedTool}
       setSelectedTool={setSelectedTool}
+      chatSessions={chatSessions}
+      currentSessionId={currentSessionId}
+      handleCreateSession={handleCreateSession}
+      handleSwitchSession={handleSwitchSession}
+      contextSummary={contextSummary}
     />
   );
 }
