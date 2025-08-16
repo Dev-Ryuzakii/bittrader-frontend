@@ -43,7 +43,7 @@ export const authAPI = {
       const response = await api.post('/login', credentials);
       return response.data;
     } catch (error) {
-      console.error('Login error:', error);
+      //console.error('Login error:', error);
       throw error;
     }
   },
@@ -53,7 +53,7 @@ export const authAPI = {
       const response = await api.post('/signup', userData);
       return response.data;
     } catch (error) {
-      console.error('Signup error:', error);
+      //console.error('Signup error:', error);
       throw error;
     }
   },
@@ -63,7 +63,7 @@ export const authAPI = {
       const response = await api.post('/logout');
       return response.data;
     } catch (error) {
-      console.error('Logout error:', error);
+      //console.error('Logout error:', error);
       throw error;
     }
   }
@@ -76,7 +76,7 @@ export const userAPI = {
       const response = await api.get('/profile');
       return response.data;
     } catch (error) {
-      console.error('Get profile error:', error);
+      //console.error('Get profile error:', error);
       throw error;
     }
   },
@@ -86,7 +86,7 @@ export const userAPI = {
       const response = await api.put('/profile', profileData);
       return response.data;
     } catch (error) {
-      console.error('Update profile error:', error);
+      //console.error('Update profile error:', error);
       throw error;
     }
   }
@@ -99,7 +99,7 @@ export const tradingAPI = {
       const response = await api.post('/trading/orders', orderData);
       return response.data;
     } catch (error) {
-      console.error('Place order error:', error);
+      ////console.error('Place order error:', error);
       throw error;
     }
   },
@@ -109,7 +109,7 @@ export const tradingAPI = {
       const response = await api.get('/trading/orders');
       return response.data;
     } catch (error) {
-      console.error('Get orders error:', error);
+      //console.error('Get orders error:', error);
       throw error;
     }
   },
@@ -119,7 +119,7 @@ export const tradingAPI = {
       const response = await api.delete(`/trading/orders/${orderId}`);
       return response.data;
     } catch (error) {
-      console.error('Cancel order error:', error);
+      //console.error('Cancel order error:', error);
       throw error;
     }
   },
@@ -129,7 +129,7 @@ export const tradingAPI = {
       const response = await api.get('/trading/positions');
       return response.data;
     } catch (error) {
-      console.error('Get positions error:', error);
+      //console.error('Get positions error:', error);
       throw error;
     }
   }
@@ -142,7 +142,7 @@ export const marketAPI = {
       const response = await api.get(`/market/price/${symbol}`);
       return response.data;
     } catch (error) {
-      console.error('Get current price error:', error);
+      //console.error('Get current price error:', error);
       throw error;
     }
   },
@@ -154,7 +154,7 @@ export const marketAPI = {
       });
       return response.data;
     } catch (error) {
-      console.error('Get market data error:', error);
+      //console.error('Get market data error:', error);
       throw error;
     }
   },
@@ -164,7 +164,7 @@ export const marketAPI = {
       const response = await api.get('/market/symbols');
       return response.data;
     } catch (error) {
-      console.error('Get symbols error:', error);
+      //console.error('Get symbols error:', error);
       throw error;
     }
   }

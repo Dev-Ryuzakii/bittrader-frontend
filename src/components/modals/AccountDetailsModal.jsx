@@ -32,7 +32,7 @@ const AccountDetailsModal = ({ isOpen, onClose, account }) => {
         setError(result.error || 'Failed to fetch account details');
       }
     } catch (err) {
-      console.error('Error fetching account details:', err);
+      //console.error('Error fetching account details:', err);
       setError(err.message || 'Failed to fetch account details');
     } finally {
       setLoading(false);

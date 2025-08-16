@@ -14,7 +14,7 @@ const validateToken = () => {
     }
     return token;
   } catch (e) {
-    console.error('Token validation error:', e);
+    //console.error('Token validation error:', e);
     auth.clearAuth();
     return null;
   }
@@ -23,7 +23,7 @@ const validateToken = () => {
 const request = async (endpoint, options = {}) => {
   try {
     const token = validateToken();
-    console.log('Using token:', token);
+    //console.log('Using token:', token);
 
     const headers = Object.assign(
       { 'Content-Type': 'application/json' },
@@ -31,9 +31,9 @@ const request = async (endpoint, options = {}) => {
       options.headers || {}
     );
 
-    console.log('Request headers:', headers);
-    console.log('Request URL:', `${API_URL}${endpoint}`);
-    console.log('Request options:', options);
+    //console.log('Request headers:', headers);
+    //console.log('Request URL:', `${API_URL}${endpoint}`);
+    //console.log('Request options:', options);
 
     const response = await fetch(`${API_URL}${endpoint}`, {
       ...options,
@@ -41,14 +41,14 @@ const request = async (endpoint, options = {}) => {
       credentials: 'include'
     });
 
-    console.log('Response status:', response.status);
-    console.log('Response headers:', response.headers);
+    //console.log('Response status:', response.status);
+    //console.log('Response headers:', response.headers);
 
     const data = await response.json();
 
     if (!response.ok) {
       if (response.status === 401) {
-        console.log('Auth error detected, redirecting to login...');
+        //console.log('Auth error detected, redirecting to login...');
         auth.clearAuth();
         auth.redirectToLogin();
         return null;
@@ -58,7 +58,7 @@ const request = async (endpoint, options = {}) => {
 
     return data;
   } catch (error) {
-    console.error('Request failed:', {
+    //console.error('Request failed:', {
       error,
       endpoint,
       options

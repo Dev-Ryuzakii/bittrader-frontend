@@ -24,8 +24,8 @@ const cn = (...classes) => classes.filter(Boolean).join(' ');
 const createWebSocket = (accountId, onUpdate) => {
   // Implement your WebSocket connection here
   return {
-    subscribe: () => console.log('WebSocket subscribed'),
-    unsubscribe: () => console.log('WebSocket unsubscribed')
+    subscribe: () => {}, //console.log('WebSocket subscribed'),
+    unsubscribe: () => {} //console.log('WebSocket unsubscribed')
   };
 };
 
@@ -75,9 +75,9 @@ function TradeManagement({ selectedAccount, onTradeSelect, shouldRefresh, onRefr
       ]);
 
       // Debugging output
-      console.log('Balance Response:', balanceResponse.data);
-      console.log('Positions Response:', positionsResponse.data);
-      console.log('Orders Response:', ordersResponse.data);
+      //console.log('Balance Response:', balanceResponse.data);
+      //console.log('Positions Response:', positionsResponse.data);
+      //console.log('Orders Response:', ordersResponse.data);
 
       // Ensure positionsResponse.data is always an array
       const positionsArray = Array.isArray(positionsResponse.data)

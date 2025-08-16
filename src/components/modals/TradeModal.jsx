@@ -99,7 +99,7 @@ const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelec
         setLivePrice(response.data);
       }
     } catch (error) {
-      console.log('Could not fetch live price:', error);
+      //console.log('Could not fetch live price:', error);
       // Don't show error to user for price fetching failures
       // Just silently fail and don't display price
     }
@@ -155,11 +155,11 @@ const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelec
         payload.expiration = orderData.expiration;
       }
 
-      console.log('Sending unified order payload:', payload);
+      //console.log('Sending unified order payload:', payload);
 
       const response = await executeOrder(selectedAccount.id, orderData.orderType, payload);
       
-      console.log('Order response:', response);
+      //console.log('Order response:', response);
       
       if (response.success) {
         const orderTypeLabel = currentOrderConfig.label;
@@ -259,10 +259,10 @@ const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelec
         payload.comment = pairData.comment.trim();
       }
 
-      console.log('Sending pair trade payload:', payload);
+      //console.log('Sending pair trade payload:', payload);
       const response = await placePairTrade(selectedAccount.id, payload);
       
-      console.log('Pair trade response:', response);
+      //console.log('Pair trade response:', response);
       
       if (response.success) {
         // Handle successful pair trade
@@ -775,7 +775,7 @@ const SymbolSelectorModal = ({ onClose, onSelect }) => {
         });
       }
     } catch (error) {
-      console.error('Error loading popular symbols:', error);
+      //console.error('Error loading popular symbols:', error);
     } finally {
       setLoading(false);
     }
@@ -800,7 +800,7 @@ const SymbolSelectorModal = ({ onClose, onSelect }) => {
         setSymbols(mockSearchSymbols(term));
       }
     } catch (error) {
-      console.error('Error searching symbols:', error);
+      //console.error('Error searching symbols:', error);
       // Fallback to mock search
       setSymbols(mockSearchSymbols(term));
     } finally {

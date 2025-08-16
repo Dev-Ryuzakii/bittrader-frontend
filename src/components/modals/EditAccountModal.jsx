@@ -47,7 +47,7 @@ const EditAccountModal = ({ isOpen, onClose, onSubmit, account }) => {
       });
     } catch (error) {
       setError(error.message);
-      console.error('Update error:', error);
+      //console.error('Update error:', error);
     } finally {
       setLoading(false);
     }

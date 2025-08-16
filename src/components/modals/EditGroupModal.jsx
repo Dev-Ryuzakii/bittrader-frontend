@@ -38,7 +38,7 @@ const EditGroupModal = ({ isOpen, onClose, group, onGroupUpdated, onGroupDeleted
       onGroupUpdated(updatedGroup)
       onClose()
     } catch (error) {
-      console.error('Failed to update group:', error)
+      //console.error('Failed to update group:', error)
       toast.error('Failed to update group. Please try again.')
     } finally {
       setLoading(false)
@@ -54,7 +54,7 @@ const EditGroupModal = ({ isOpen, onClose, group, onGroupUpdated, onGroupDeleted
       onGroupDeleted(group.id)
       onClose()
     } catch (error) {
-      console.error('Failed to delete group:', error)
+      //console.error('Failed to delete group:', error)
       toast.error('Failed to delete group. Please try again.')
     } finally {
       setDeleteLoading(false)

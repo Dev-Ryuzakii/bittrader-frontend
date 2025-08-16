@@ -37,7 +37,7 @@ const Navbar = ({ isMobileMenuOpen, setIsMobileMenuOpen }) => {
     try {
       await refreshUserProfile();
     } catch (error) {
-      console.error('Failed to refresh profile:', error);
+      //console.error('Failed to refresh profile:', error);
     } finally {
       setIsRefreshing(false);
     }
@@ -49,7 +49,7 @@ const Navbar = ({ isMobileMenuOpen, setIsMobileMenuOpen }) => {
       await logout();
       navigate('/signin');
     } catch (error) {
-      console.error('Logout failed:', error);
+      //console.error('Logout failed:', error);
     }
   };
 

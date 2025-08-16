@@ -16,7 +16,7 @@ const SymbolMappingIndicator = ({ account, className = '' }) => {
         // Success feedback handled by parent component
       }
     } catch (error) {
-      console.error('Failed to refresh symbols:', error);
+      //console.error('Failed to refresh symbols:', error);
     } finally {
       setRefreshing(false);
     }

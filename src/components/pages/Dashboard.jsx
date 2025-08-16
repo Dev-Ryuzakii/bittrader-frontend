@@ -49,7 +49,7 @@ const Dashboard = () => {
           setTransactions(transactionsResponse.data);
         }
       } catch (transactionError) {
-        console.log('⚠️ Transactions API unavailable, dashboard will work without transaction data');
+        //console.log('⚠️ Transactions API unavailable, dashboard will work without transaction data');
       }
       setTransactionsLoading(false);
       
@@ -57,7 +57,7 @@ const Dashboard = () => {
       try {
         const accountsResponse = await getAccounts();
         if (accountsResponse.success && accountsResponse.data && accountsResponse.data.length > 0) {
-          console.log('✅ Broker accounts loaded:', accountsResponse.data);
+          //console.log('✅ Broker accounts loaded:', accountsResponse.data);
           // Assign color variants to accounts
           const accountsWithColors = accountsResponse.data.map((account, index) => ({
             ...account,
@@ -66,11 +66,11 @@ const Dashboard = () => {
           setBrokerAccounts(accountsWithColors);
           setSelectedAccount(accountsWithColors[0]);
         } else {
-          console.log('⚠️ No broker accounts found');
+          //console.log('⚠️ No broker accounts found');
           setBrokerAccounts([]);
         }
       } catch (brokerError) {
-        console.log('⚠️ Broker API unavailable');
+        //console.log('⚠️ Broker API unavailable');
         setBrokerAccounts([]);
       }
       setAccountsLoading(false);
@@ -86,7 +86,7 @@ const Dashboard = () => {
     try {
       const response = await placeTrade(accountId, tradeData);
       
-      console.log('Trade response:', response);
+      //console.log('Trade response:', response);
       
       if (response.success) {
         setTradeStatus({ loading: false, success: true, error: null });
@@ -105,7 +105,7 @@ const Dashboard = () => {
         throw new Error(response.error || response.message || 'Failed to place trade');
       }
     } catch (error) {
-      console.error('Trade placement error:', error);
+      //console.error('Trade placement error:', error);
       setTradeStatus({ loading: false, success: false, error: error.message });
       throw error;
     }
@@ -363,7 +363,7 @@ const Dashboard = () => {
                 setIsTradeModalOpen(false);
               } catch (error) {
                 // Error is already handled in handlePlaceTrade
-                console.error('Trade placement failed:', error);
+                ////console.error('Trade placement failed:', error);
               }
             }}
           />

@@ -31,7 +31,7 @@ export const getAvailableSymbols = async (searchTerm = '', limit = 50) => {
     
     return response.data;
   } catch (error) {
-    console.error('Error fetching available symbols:', error);
+    //console.error('Error fetching available symbols:', error);
     throw error;
   }
 };
@@ -50,7 +50,7 @@ export const getPopularSymbols = async () => {
     
     return response.data;
   } catch (error) {
-    console.error('Error fetching popular symbols:', error);
+    //console.error('Error fetching popular symbols:', error);
     throw error;
   }
 };
@@ -79,7 +79,7 @@ export const searchSymbols = async (searchTerm, limit = 20) => {
     
     return response.data;
   } catch (error) {
-    console.error('Error searching symbols:', error);
+    //console.error('Error searching symbols:', error);
     throw error;
   }
 };
@@ -103,7 +103,7 @@ export const getSymbolPrice = async (accountId, symbol) => {
     
     return response.data;
   } catch (error) {
-    console.error(`Error fetching price for ${symbol}:`, error);
+    //console.error(`Error fetching price for ${symbol}:`, error);
     throw error;
   }
 };
@@ -126,7 +126,7 @@ export const getAccountSymbols = async (accountId) => {
     
     return response.data;
   } catch (error) {
-    console.error('Error fetching account symbols:', error);
+    //console.error('Error fetching account symbols:', error);
     throw error;
   }
 };
@@ -150,7 +150,7 @@ export const refreshAccountSymbols = async (accountId) => {
     
     return response.data;
   } catch (error) {
-    console.error('Error refreshing account symbols:', error);
+    //console.error('Error refreshing account symbols:', error);
     throw error;
   }
 };
@@ -173,7 +173,7 @@ export const getSymbolMappingStatus = async (accountId) => {
     
     return response.data;
   } catch (error) {
-    console.error('Error fetching symbol mapping status:', error);
+    //console.error('Error fetching symbol mapping status:', error);
     throw error;
   }
 };

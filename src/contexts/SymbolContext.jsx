@@ -39,7 +39,7 @@ export const SymbolProvider = ({ children }) => {
       }
       return null;
     } catch (error) {
-      console.error('Failed to get symbol mapping:', error);
+      //console.error('Failed to get symbol mapping:', error);
       return null;
     }
   };
@@ -63,7 +63,7 @@ export const SymbolProvider = ({ children }) => {
       
       return response.available;
     } catch (error) {
-      console.error('Failed to check symbol availability:', error);
+      //console.error('Failed to check symbol availability:', error);
       return false;
     }
   };
@@ -96,7 +96,7 @@ export const SymbolProvider = ({ children }) => {
 
       return data;
     } catch (error) {
-      console.error('Failed to get cross-broker analysis:', error);
+      //console.error('Failed to get cross-broker analysis:', error);
       return null;
     } finally {
       setLoading(false);
@@ -126,7 +126,7 @@ export const SymbolProvider = ({ children }) => {
 
       return response;
     } catch (error) {
-      console.error('Failed to create symbol mapping:', error);
+      //console.error('Failed to create symbol mapping:', error);
       throw error;
     }
   };
@@ -144,7 +144,7 @@ export const SymbolProvider = ({ children }) => {
 
       return response;
     } catch (error) {
-      console.error('Failed to update symbol mapping:', error);
+      //console.error('Failed to update symbol mapping:', error);
       throw error;
     }
   };
@@ -160,7 +160,7 @@ export const SymbolProvider = ({ children }) => {
       
       return true;
     } catch (error) {
-      console.error('Failed to delete symbol mapping:', error);
+      //console.error('Failed to delete symbol mapping:', error);
       throw error;
     }
   };

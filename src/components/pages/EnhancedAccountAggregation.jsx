@@ -91,7 +91,7 @@ const EnhancedAccountAggregation = () => {
           await loadAccountSymbols(account.id);
         }
       } else {
-        console.error('Failed to fetch accounts:', result.error);
+        //console.error('Failed to fetch accounts:', result.error);
         setAccounts([]);
         // If it's an auth error, the client.js will handle redirect
         if (result.error.includes('unauthorized') || result.error.includes('403')) {
@@ -99,7 +99,7 @@ const EnhancedAccountAggregation = () => {
         }
       }
     } catch (error) {
-      console.error('Failed to fetch accounts:', error);
+      //console.error('Failed to fetch accounts:', error);
       setAccounts([]);
       if (error.message.includes('unauthorized') || error.message.includes('403')) {
         toast.error('Session expired. Please login again.');
@@ -122,7 +122,7 @@ const EnhancedAccountAggregation = () => {
     }
 
     try {
-      console.log('Connecting account with data:', formData);
+      //console.log('Connecting account with data:', formData);
       const result = await connectAccount(formData);
       if (result.success) {
         setShowConnectionModal(false);
@@ -136,12 +136,12 @@ const EnhancedAccountAggregation = () => {
         
         return { account_id: result.account_id };
       } else {
-        console.error('Connection error:', result.error);
+        //console.error('Connection error:', result.error);
         toast.error(`Connection failed: ${result.error}`);
         throw new Error(result.error || 'Connection failed');
       }
     } catch (error) {
-      console.error('Connection error:', error);
+      //console.error('Connection error:', error);
       toast.error(`Connection failed: ${error.message}`);
       throw error;
     }
@@ -168,11 +168,11 @@ const EnhancedAccountAggregation = () => {
         fetchAccounts();
         toast.success('Account deleted successfully!');
       } else {
-        console.error('Delete error:', result.error);
+        //console.error('Delete error:', result.error);
         toast.error(`Delete failed: ${result.error}`);
       }
     } catch (error) {
-      console.error('Delete error:', error);
+      //console.error('Delete error:', error);
       toast.error(`Delete failed: ${error.message}`);
     }
   };
@@ -204,11 +204,11 @@ const EnhancedAccountAggregation = () => {
         const status = !account.is_active ? 'connected' : 'disconnected';
         toast.success(`Account ${status} successfully!`);
       } else {
-        console.error('Toggle error:', result.error);
+        //console.error('Toggle error:', result.error);
         toast.error(`Failed to toggle connection: ${result.error}`);
       }
     } catch (error) {
-      console.error('Toggle error:', error);
+      //console.error('Toggle error:', error);
       toast.error(`Failed to toggle connection: ${error.message}`);
     }
   };
@@ -224,11 +224,11 @@ const EnhancedAccountAggregation = () => {
         fetchAccounts();
         toast.success('Account updated successfully!');
       } else {
-        console.error('Update error:', result.error);
+        //console.error('Update error:', result.error);
         throw new Error(result.error);
       }
     } catch (error) {
-      console.error('Update error:', error);
+      //console.error('Update error:', error);
       throw error; // Re-throw to be handled by the modal
     }
   };
@@ -244,16 +244,16 @@ const EnhancedAccountAggregation = () => {
     setLoadingMappings(true);
     try {
       // Debug: Log account structure to identify correct field
-      console.log('Active accounts for symbol mapping:', activeAccounts);
+      //console.log('Active accounts for symbol mapping:', activeAccounts);
       activeAccounts.forEach((account, index) => {
-        console.log(`Account ${index} structure:`, {
-          id: account.id,
-          account_id: account.account_id,
-          metaapi_account_id: account.metaapi_account_id,
-          login: account.login,
-          platform: account.platform,
-          allKeys: Object.keys(account)
-        });
+        //console.log(`Account ${index} structure:`, {
+        //   id: account.id,
+        //   account_id: account.account_id,
+        //   metaapi_account_id: account.metaapi_account_id,
+        //   login: account.login,
+        //   platform: account.platform,
+        //   allKeys: Object.keys(account)
+        // });
       });
 
       // Try multiple possible field names for MetaAPI account ID
@@ -265,7 +265,7 @@ const EnhancedAccountAggregation = () => {
                acc.login; // Sometimes login is used as account ID
       }).filter(id => id && id !== undefined && id !== null && id !== '');
 
-      console.log('Extracted account IDs:', accountIds);
+      //console.log('Extracted account IDs:', accountIds);
 
       if (accountIds.length === 0) {
         toast.error('No valid MetaAPI account IDs found. Please check account configuration.');
@@ -285,7 +285,7 @@ const EnhancedAccountAggregation = () => {
         toast.error(`Failed to fetch symbol mappings: ${result.error || 'Unknown error'}`);
       }
     } catch (error) {
-      console.error('Error fetching symbol mappings:', error);
+      //console.error('Error fetching symbol mappings:', error);
       toast.error(`Failed to fetch symbol mappings: ${error.message}`);
     } finally {
       setLoadingMappings(false);
@@ -306,7 +306,7 @@ const EnhancedAccountAggregation = () => {
         return;
       }
 
-      console.log('Refreshing mappings for account ID:', accountId);
+      //console.log('Refreshing mappings for account ID:', accountId);
       const result = await symbolMappingService.refreshAccountMappings(accountId);
       if (result.success) {
         toast.success(`Refreshed mappings for account ${accountId}`);
@@ -318,7 +318,7 @@ const EnhancedAccountAggregation = () => {
         toast.error('Failed to refresh account mappings');
       }
     } catch (error) {
-      console.error('Error refreshing mappings:', error);
+      //console.error('Error refreshing mappings:', error);
       toast.error('Failed to refresh account mappings');
     }
   };
@@ -340,7 +340,7 @@ const EnhancedAccountAggregation = () => {
                acc.login;
       }).filter(id => id && id !== undefined && id !== null && id !== '');
 
-      console.log('Getting symbol statistics for account IDs:', accountIds);
+      //console.log('Getting symbol statistics for account IDs:', accountIds);
 
       if (accountIds.length === 0) {
         toast.error('No valid MetaAPI account IDs found for statistics.');
@@ -355,7 +355,7 @@ const EnhancedAccountAggregation = () => {
         toast.success('Symbol statistics loaded');
       }
     } catch (error) {
-      console.error('Error getting statistics:', error);
+      //console.error('Error getting statistics:', error);
       toast.error('Failed to get symbol statistics');
     }
   };
@@ -378,7 +378,7 @@ const EnhancedAccountAggregation = () => {
       try {
         await refreshAccountSymbols(account.id);
       } catch (error) {
-        console.error(`Failed to refresh symbols for account ${account.id}:`, error);
+        //console.error(`Failed to refresh symbols for account ${account.id}:`, error);
       }
     }
   };

@@ -46,7 +46,7 @@ const logout = async () => {
     const { authAPI } = await import('../api/api.js');
     await authAPI.logout();
   } catch (error) {
-    console.error('API logout failed:', error);
+    //console.error('API logout failed:', error);
     // Continue with local cleanup even if API fails
   } finally {
     clearAuth();

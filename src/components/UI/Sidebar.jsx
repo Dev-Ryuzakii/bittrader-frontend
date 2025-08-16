@@ -55,7 +55,7 @@ const Sidebar = ({ isMobileMenuOpen, setIsMobileMenuOpen }) => {
       await logout();
       // The logout function handles navigation
     } catch (error) {
-      console.error('Logout failed:', error);
+      //console.error('Logout failed:', error);
       // If logout fails, still try to redirect
       window.location.href = '/signin';
     } finally {

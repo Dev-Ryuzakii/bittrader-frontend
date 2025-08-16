@@ -24,7 +24,7 @@ const TradingViewChart = ({ onPlaceTrade, symbol = 'BTC/USD' }) => {
             try {
               chartRef.current.remove();
             } catch (e) {
-              console.warn('Error removing existing chart:', e);
+              //console.warn('Error removing existing chart:', e);
             }
             chartRef.current = null;
             seriesRef.current = null;
@@ -85,7 +85,7 @@ const TradingViewChart = ({ onPlaceTrade, symbol = 'BTC/USD' }) => {
 
             setIsLoading(false);
           } catch (seriesError) {
-            console.error('Error creating series:', seriesError);
+            //console.error('Error creating series:', seriesError);
             setChartError('Failed to create chart series');
             setIsLoading(false);
             return;
@@ -99,7 +99,7 @@ const TradingViewChart = ({ onPlaceTrade, symbol = 'BTC/USD' }) => {
                   width: chartContainerRef.current.clientWidth,
                 });
               } catch (e) {
-                console.warn('Error resizing chart:', e);
+                //console.warn('Error resizing chart:', e);
               }
             }
           };
@@ -130,7 +130,7 @@ const TradingViewChart = ({ onPlaceTrade, symbol = 'BTC/USD' }) => {
               
               setCurrentPrice(newPoint.close);
             } catch (error) {
-              console.error("Error updating chart:", error);
+              //console.error("Error updating chart:", error);
             }
           }, 3000);
 
@@ -142,7 +142,7 @@ const TradingViewChart = ({ onPlaceTrade, symbol = 'BTC/USD' }) => {
               try {
                 chartRef.current.remove();
               } catch (e) {
-                console.warn('Error cleaning up chart:', e);
+                //console.warn('Error cleaning up chart:', e);
               }
               chartRef.current = null;
               seriesRef.current = null;
@@ -150,7 +150,7 @@ const TradingViewChart = ({ onPlaceTrade, symbol = 'BTC/USD' }) => {
           };
         }
       } catch (error) {
-        console.error("Error initializing chart:", error);
+        //console.error("Error initializing chart:", error);
         setChartError(`Failed to load chart library: ${error.message}`);
         setIsLoading(false);
       }

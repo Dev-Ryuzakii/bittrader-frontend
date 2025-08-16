@@ -103,7 +103,7 @@ const TradingViewChart = ({ onPlaceTrade, symbol = 'BTC/USD' }) => {
           },
         });
       } catch (error) {
-        console.error("Error creating chart series:", error);
+        //console.error("Error creating chart series:", error);
       }
 
       // Example data - in a real app, this would come from your API
@@ -145,7 +145,7 @@ const TradingViewChart = ({ onPlaceTrade, symbol = 'BTC/USD' }) => {
             title: 'Last Price',
           });
         } catch (error) {
-          console.error("Error creating price line:", error);
+          //console.error("Error creating price line:", error);
         }
       }
       
@@ -153,7 +153,7 @@ const TradingViewChart = ({ onPlaceTrade, symbol = 'BTC/USD' }) => {
       try {
         chartRef.current.timeScale().fitContent();
       } catch (error) {
-        console.error("Error fitting content to view:", error);
+        //console.error("Error fitting content to view:", error);
       }
 
       // Simulate real-time updates
@@ -191,7 +191,7 @@ const TradingViewChart = ({ onPlaceTrade, symbol = 'BTC/USD' }) => {
       };
     }
     } catch (error) {
-      console.error("Error initializing chart:", error);
+      //console.error("Error initializing chart:", error);
       setChartError(`Failed to initialize chart: ${error.message}`);
     }
   }, [dimensions.width, chartType]);

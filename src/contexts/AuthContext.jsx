@@ -28,7 +28,7 @@ export const AuthProvider = ({ children }) => {
         localStorage.setItem('user', JSON.stringify(updatedUserData));
       }
     } catch (error) {
-      console.error('Failed to fetch user profile:', error);
+      //console.error('Failed to fetch user profile:', error);
       // If profile fetch fails, still use cached data if available
     }
   };
@@ -54,7 +54,7 @@ export const AuthProvider = ({ children }) => {
           setUser(null);
         }
       } catch (error) {
-        console.error('Auth check error:', error);
+        //console.error('Auth check error:', error);
         setIsAuthenticated(false);
         setUser(null);
       } finally {
@@ -85,7 +85,7 @@ export const AuthProvider = ({ children }) => {
       // Fetch complete profile after login
       await fetchUserProfile();
     } catch (error) {
-      console.error('Login error:', error);
+      //console.error('Login error:', error);
       throw error;
     }
   };
@@ -96,7 +96,7 @@ export const AuthProvider = ({ children }) => {
       setUser(null);
       setIsAuthenticated(false);
     } catch (error) {
-      console.error('Logout error:', error);
+      //console.error('Logout error:', error);
       // Still clear local state even if API call fails
       setUser(null);
       setIsAuthenticated(false);

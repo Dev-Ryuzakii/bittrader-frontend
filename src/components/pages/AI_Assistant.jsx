@@ -633,7 +633,7 @@ function AI_AssistantWrapper() {
       
     } catch (err) {
       setError(err.message || "An error occurred while communicating with the AI service.");
-      console.error("AI chat error:", err);
+      //console.error("AI chat error:", err);
       
       // Add error message to chat
       setChatHistory(prev => [...prev, {
@@ -680,7 +680,7 @@ function AI_AssistantWrapper() {
       setCurrentSessionId(localSession.id);
       setChatHistory([]);
       toast.info("Using local session management");
-      console.log("Session management not yet implemented, using local fallback");
+      //console.log("Session management not yet implemented, using local fallback");
     }
   };
 
@@ -714,7 +714,7 @@ function AI_AssistantWrapper() {
       setCurrentSessionId(sessionId);
       setChatHistory([]);
       toast.info("Using local session switching");
-      console.log("Session switching not yet implemented, using local fallback");
+      //console.log("Session switching not yet implemented, using local fallback");
     }
   };
 
@@ -737,7 +737,7 @@ function AI_AssistantWrapper() {
         key_topics: chatHistory.length > 0 ? ['Trading Analysis', 'Market Research'] : ['General Trading'],
         last_updated: new Date().toISOString()
       });
-      console.log("Context summary not yet implemented, using local fallback");
+      //console.log("Context summary not yet implemented, using local fallback");
     }
   };
   const handleQuickAction = async (actionId) => {
@@ -851,7 +851,7 @@ function AI_AssistantWrapper() {
           }
         } else {
           // No conversation history available or feature not implemented
-          console.log("Conversation history not available, starting fresh");
+          //console.log("Conversation history not available, starting fresh");
           
           // Create a default local session
           const defaultSession = {
@@ -867,7 +867,7 @@ function AI_AssistantWrapper() {
         await updateContextSummary();
         
       } catch (error) {
-        console.log("Error initializing AI assistant, using fallback:", error);
+        //console.log("Error initializing AI assistant, using fallback:", error);
         
         // Create a default session if initialization fails
         const defaultSession = {

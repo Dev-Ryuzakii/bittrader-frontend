@@ -31,7 +31,7 @@ export const chatAPI = {
       const response = await api.post('/chat', payload);
       return response.data;
     } catch (error) {
-      console.error('Chat error:', error);
+      //console.error('Chat error:', error);
       throw error;
     }
   },
@@ -53,7 +53,7 @@ export const chatAPI = {
       const response = await api.post('/chat/enhanced', payload);
       return response.data;
     } catch (error) {
-      console.error('Enhanced chat error:', error);
+      //console.error('Enhanced chat error:', error);
       throw error;
     }
   },
@@ -61,12 +61,12 @@ export const chatAPI = {
   // Note: Chat session management endpoints are not yet implemented in the backend
   // These functions are placeholders for future implementation
   createChatSession: async (sessionName = null) => {
-    console.warn('Chat session creation not yet implemented in backend');
+    //console.warn('Chat session creation not yet implemented in backend');
     return { success: false, message: 'Feature not yet implemented' };
   },
 
   switchChatSession: async (sessionId) => {
-    console.warn('Chat session switching not yet implemented in backend');
+    //console.warn('Chat session switching not yet implemented in backend');
     return { success: false, message: 'Feature not yet implemented' };
   },
 
@@ -79,7 +79,7 @@ export const chatAPI = {
       const response = await api.get(`/conversations?${params.toString()}`);
       return response.data;
     } catch (error) {
-      console.error('Get conversation history error:', error);
+      //console.error('Get conversation history error:', error);
       throw error;
     }
   },
@@ -91,7 +91,7 @@ export const chatAPI = {
       const response = await api.post('/conversations/search', payload);
       return response.data;
     } catch (error) {
-      console.error('Search conversations error:', error);
+      //console.error('Search conversations error:', error);
       throw error;
     }
   },
@@ -102,7 +102,7 @@ export const chatAPI = {
       const response = await api.get('/profile');
       return response.data;
     } catch (error) {
-      console.error('Get user profile error:', error);
+      //console.error('Get user profile error:', error);
       throw error;
     }
   },
@@ -113,7 +113,7 @@ export const chatAPI = {
       const response = await api.put('/profile', profileData);
       return response.data;
     } catch (error) {
-      console.error('Update user profile error:', error);
+      //console.error('Update user profile error:', error);
       throw error;
     }
   }
@@ -130,7 +130,7 @@ export const aiToolsAPI = {
       const response = await api.post('/sentiment-analysis', payload);
       return response.data;
     } catch (error) {
-      console.error('Sentiment analysis error:', error);
+      //console.error('Sentiment analysis error:', error);
       throw error;
     }
   },
@@ -143,7 +143,7 @@ export const aiToolsAPI = {
       const response = await api.post('/strategy-suggestions', payload);
       return response.data;
     } catch (error) {
-      console.error('Strategy analysis error:', error);
+      //console.error('Strategy analysis error:', error);
       throw error;
     }
   },
@@ -156,7 +156,7 @@ export const aiToolsAPI = {
       const response = await api.post('/risk-analysis', payload);
       return response.data;
     } catch (error) {
-      console.error('Risk analysis error:', error);
+      //console.error('Risk analysis error:', error);
       throw error;
     }
   },
@@ -169,7 +169,7 @@ export const aiToolsAPI = {
       const response = await api.post('/risk-analysis', { include_open_positions: true });
       return response.data;
     } catch (error) {
-      console.error('Portfolio analysis error:', error);
+      //console.error('Portfolio analysis error:', error);
       throw error;
     }
   },
@@ -187,7 +187,7 @@ export const aiToolsAPI = {
       const response = await api.post('/calculate-position-size', payload);
       return response.data;
     } catch (error) {
-      console.error('Position size calculation error:', error);
+      //console.error('Position size calculation error:', error);
       throw error;
     }
   },
@@ -200,7 +200,7 @@ export const aiToolsAPI = {
       const response = await api.post('/trade-evaluation', payload);
       return response.data;
     } catch (error) {
-      console.error('Trade evaluation error:', error);
+      //console.error('Trade evaluation error:', error);
       throw error;
     }
   },
@@ -213,7 +213,7 @@ export const aiToolsAPI = {
       const response = await api.post('/analyze-trade', payload);
       return response.data;
     } catch (error) {
-      console.error('Analyze trade error:', error);
+      //console.error('Analyze trade error:', error);
       throw error;
     }
   },
@@ -226,7 +226,7 @@ export const aiToolsAPI = {
       const response = await api.post('/detect-patterns', payload);
       return response.data;
     } catch (error) {
-      console.error('Pattern detection error:', error);
+      //console.error('Pattern detection error:', error);
       throw error;
     }
   },
@@ -239,7 +239,7 @@ export const aiToolsAPI = {
       const response = await api.post('/detect-patterns', { symbol, timeframe: 'H4' });
       return response.data;
     } catch (error) {
-      console.error('Opportunity analysis error:', error);
+      //console.error('Opportunity analysis error:', error);
       throw error;
     }
   },
@@ -257,7 +257,7 @@ export const aiToolsAPI = {
       const response = await api.post('/stop-loss-suggestions', payload);
       return response.data;
     } catch (error) {
-      console.error('Stop loss suggestions error:', error);
+      //console.error('Stop loss suggestions error:', error);
       throw error;
     }
   }
@@ -276,7 +276,7 @@ export const strategyLabAI = {
       const response = await api.post('/strategy-lab/analyze', payload);
       return response.data;
     } catch (error) {
-      console.error('Strategy Lab analysis error:', error);
+      //console.error('Strategy Lab analysis error:', error);
       throw error;
     }
   },
@@ -289,7 +289,7 @@ export const strategyLabAI = {
       const response = await api.post('/strategy-lab/performance', payload);
       return response.data;
     } catch (error) {
-      console.error('Strategy performance analysis error:', error);
+      //console.error('Strategy performance analysis error:', error);
       throw error;
     }
   },
@@ -302,7 +302,7 @@ export const strategyLabAI = {
       const response = await api.post('/strategy-lab/improvements', payload);
       return response.data;
     } catch (error) {
-      console.error('Strategy improvements error:', error);
+      //console.error('Strategy improvements error:', error);
       throw error;
     }
   },
@@ -315,7 +315,7 @@ export const strategyLabAI = {
       const response = await api.post('/strategy-lab/learn', payload);
       return response.data;
     } catch (error) {
-      console.error('Strategy learning error:', error);
+      //console.error('Strategy learning error:', error);
       throw error;
     }
   },
@@ -328,7 +328,7 @@ export const strategyLabAI = {
       const response = await api.post('/strategy-lab/analyze', payload);
       return response.data;
     } catch (error) {
-      console.error('Strategy integration error:', error);
+      //console.error('Strategy integration error:', error);
       throw error;
     }
   },
@@ -339,7 +339,7 @@ export const strategyLabAI = {
       const response = await api.get('/strategy-lab/strategies');
       return response.data;
     } catch (error) {
-      console.error('Get user strategies error:', error);
+      //console.error('Get user strategies error:', error);
       throw error;
     }
   }
@@ -360,7 +360,7 @@ export const marketDataAPI = {
       });
       return response.data;
     } catch (error) {
-      console.error('Real-time market data error:', error);
+      //console.error('Real-time market data error:', error);
       throw error;
     }
   },
@@ -372,7 +372,7 @@ export const marketDataAPI = {
       const response = await api.post('/detect-patterns', { symbol, timeframe });
       return response.data;
     } catch (error) {
-      console.error('Technical indicators error:', error);
+      //console.error('Technical indicators error:', error);
       throw error;
     }
   },
@@ -387,7 +387,7 @@ export const marketDataAPI = {
       });
       return response.data;
     } catch (error) {
-      console.error('Economic events error:', error);
+      //console.error('Economic events error:', error);
       throw error;
     }
   }
@@ -444,7 +444,7 @@ export const executeAITool = async (toolId, userMessage, options = {}) => {
         return await chatAPI.enhancedChat(userMessage, options);
     }
   } catch (error) {
-    console.error(`Error executing AI tool ${toolId}:`, error);
+    //console.error(`Error executing AI tool ${toolId}:`, error);
     throw error;
   }
 };
@@ -638,7 +638,7 @@ export const formatAIResponse = (toolId, data) => {
     return data.data?.message || data.message || "Analysis completed successfully.";
     
   } catch (error) {
-    console.error('Error formatting response:', error);
+    //console.error('Error formatting response:', error);
     return data.data?.message || data.message || "Analysis completed successfully.";
   }
 };
@@ -684,7 +684,7 @@ export const getDefaultPromptForTool = (toolId) => {
 export const streamingAPI = {
   // Create streaming connection for real-time AI responses
   createStreamingChat: async (message, options = {}) => {
-    console.warn('Streaming chat not yet implemented in backend');
+    //console.warn('Streaming chat not yet implemented in backend');
     // Fallback to regular enhanced chat
     try {
       const payload = {
@@ -697,7 +697,7 @@ export const streamingAPI = {
       const response = await api.post('/chat/enhanced', payload);
       return response.data;
     } catch (error) {
-      console.error('Streaming chat error:', error);
+      //console.error('Streaming chat error:', error);
       throw error;
     }
   }
@@ -708,7 +708,7 @@ export const streamingAPI = {
 export const memoryAPI = {
   // Get conversation context summary
   getContextSummary: async (sessionId = null) => {
-    console.warn('Context summary not yet implemented in backend');
+    //console.warn('Context summary not yet implemented in backend');
     return { success: false, message: 'Feature not yet implemented' };
   },
 
@@ -719,7 +719,7 @@ export const memoryAPI = {
       const response = await api.put('/profile', preferences);
       return response.data;
     } catch (error) {
-      console.error('Update preferences error:', error);
+      //console.error('Update preferences error:', error);
       throw error;
     }
   }

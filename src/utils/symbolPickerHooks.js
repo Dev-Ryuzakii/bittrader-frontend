@@ -33,7 +33,7 @@ export const useSymbolPicker = ({
         setRecentSymbols(JSON.parse(stored));
       }
     } catch (error) {
-      console.error('Error loading recent symbols:', error);
+      //console.error('Error loading recent symbols:', error);
       setError('Failed to load recent symbols');
     }
   }, []);
@@ -79,7 +79,7 @@ export const useSymbolPicker = ({
         setCachedData('popularSymbols', response);
       }
     } catch (error) {
-      console.error('Error loading popular symbols:', error);
+      //console.error('Error loading popular symbols:', error);
       setError('Failed to load popular symbols');
       // Fallback to empty structure
       setPopularSymbols({
@@ -115,7 +115,7 @@ export const useSymbolPicker = ({
         setCachedData('availableSymbols', response.symbols || []);
       }
     } catch (error) {
-      console.error('Error loading available symbols:', error);
+      //console.error('Error loading available symbols:', error);
       setError('Failed to load available symbols');
       setAvailableSymbols([]);
     } finally {
@@ -138,7 +138,7 @@ export const useSymbolPicker = ({
       const response = await searchSymbols(term.trim(), 20);
       setSearchResults(response.symbols || []);
     } catch (error) {
-      console.error('Error searching symbols:', error);
+      //console.error('Error searching symbols:', error);
       setError('Failed to search symbols');
       setSearchResults([]);
     } finally {
@@ -158,7 +158,7 @@ export const useSymbolPicker = ({
     try {
       localStorage.setItem('recentSymbols', JSON.stringify(updated));
     } catch (error) {
-      console.error('Error saving recent symbols:', error);
+      //console.error('Error saving recent symbols:', error);
     }
   };
 
@@ -170,7 +170,7 @@ export const useSymbolPicker = ({
     try {
       localStorage.removeItem('recentSymbols');
     } catch (error) {
-      console.error('Error clearing recent symbols:', error);
+      //console.error('Error clearing recent symbols:', error);
     }
   };
 
@@ -215,7 +215,7 @@ export const useSymbolPicker = ({
         }
       }
     } catch (error) {
-      console.error('Error reading cache:', error);
+      //console.error('Error reading cache:', error);
     }
     return null;
   };
@@ -230,7 +230,7 @@ export const useSymbolPicker = ({
       };
       localStorage.setItem(`symbol_cache_${key}`, JSON.stringify(data));
     } catch (error) {
-      console.error('Error setting cache:', error);
+      //console.error('Error setting cache:', error);
     }
   };
 
@@ -242,7 +242,7 @@ export const useSymbolPicker = ({
       const keys = Object.keys(localStorage).filter(key => key.startsWith('symbol_cache_'));
       keys.forEach(key => localStorage.removeItem(key));
     } catch (error) {
-      console.error('Error clearing cache:', error);
+      //console.error('Error clearing cache:', error);
     }
   };
 
@@ -328,7 +328,7 @@ export const useSymbolSearch = (delay = 300) => {
       const response = await searchSymbols(term.trim(), 15);
       setResults(response.symbols || []);
     } catch (error) {
-      console.error('Search error:', error);
+      //console.error('Search error:', error);
       setResults([]);
     } finally {
       setIsSearching(false);
@@ -357,7 +357,7 @@ export const useSymbolFavorites = () => {
         setFavorites(JSON.parse(stored));
       }
     } catch (error) {
-      console.error('Error loading favorites:', error);
+      //console.error('Error loading favorites:', error);
     }
   }, []);
 
@@ -368,7 +368,7 @@ export const useSymbolFavorites = () => {
       try {
         localStorage.setItem('favoriteSymbols', JSON.stringify(updated));
       } catch (error) {
-        console.error('Error saving favorites:', error);
+        //console.error('Error saving favorites:', error);
       }
     }
   };
@@ -379,7 +379,7 @@ export const useSymbolFavorites = () => {
     try {
       localStorage.setItem('favoriteSymbols', JSON.stringify(updated));
     } catch (error) {
-      console.error('Error saving favorites:', error);
+      //console.error('Error saving favorites:', error);
     }
   };
 

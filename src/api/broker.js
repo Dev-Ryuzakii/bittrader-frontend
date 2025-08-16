@@ -12,7 +12,7 @@ export const connectAccount = async (accountData) => {
       data: response
     };
   } catch (error) {
-    console.error('Error connecting account:', error);
+    //console.error('Error connecting account:', error);
     return {
       success: false,
       error: error.message || 'Failed to connect account'
@@ -28,7 +28,7 @@ export const deleteAccount = async (accountId) => {
       data: response
     };
   } catch (error) {
-    console.error('Error deleting account:', error);
+    //console.error('Error deleting account:', error);
     return {
       success: false,
       error: error.message || 'Failed to delete account'
@@ -44,7 +44,7 @@ export const updateAccount = async (accountId, updateData) => {
       data: response
     };
   } catch (error) {
-    console.error('Error updating account:', error);
+    //console.error('Error updating account:', error);
     return {
       success: false,
       error: error.message || 'Failed to update account'
@@ -60,7 +60,7 @@ export const toggleAccountStatus = async (accountId) => {
       data: response
     };
   } catch (error) {
-    console.error('Error toggling account status:', error);
+    //console.error('Error toggling account status:', error);
     return {
       success: false,
       error: error.message || 'Failed to toggle account status'
@@ -76,7 +76,7 @@ export const getAccountDetails = async (accountId) => {
       data: response
     };
   } catch (error) {
-    console.error('Error fetching account details:', error);
+    //console.error('Error fetching account details:', error);
     return {
       success: false,
       error: error.message || 'Failed to fetch account details'
@@ -92,7 +92,7 @@ export const getAccounts = async () => {
       data: response || []
     };
   } catch (error) {
-    console.error('Error fetching broker accounts:', error);
+    //console.error('Error fetching broker accounts:', error);
     return {
       success: false,
       error: error.message || 'Failed to fetch broker accounts',
@@ -109,7 +109,7 @@ export const getAccountBalance = async (accountId) => {
       data: response
     };
   } catch (error) {
-    console.error('Error fetching account balance:', error);
+    //console.error('Error fetching account balance:', error);
     return {
       success: false,
       error: error.message || 'Failed to fetch account balance'
@@ -129,7 +129,7 @@ export const validateSymbol = async (accountId, symbol) => {
       data: response
     };
   } catch (error) {
-    console.error('Error validating symbol:', error);
+    //console.error('Error validating symbol:', error);
     
     let errorMessage = 'Failed to validate symbol';
     let suggestions = [];
@@ -162,7 +162,7 @@ export const getAccountSymbols = async (accountId) => {
       data: response
     };
   } catch (error) {
-    console.error('Error fetching account symbols:', error);
+    //console.error('Error fetching account symbols:', error);
     return {
       success: false,
       error: error.message || 'Failed to fetch account symbols',
@@ -177,7 +177,7 @@ export const getAccountSymbols = async (accountId) => {
 
 export const placeTrade = async (accountId, tradeData) => {
   try {
-    console.log('Placing trade with payload:', tradeData);
+    //console.log('Placing trade with payload:', tradeData);
     const response = await api.post(`/api/v1/broker/${accountId}/trade`, tradeData);
     
     // The response structure matches TradeResponse from FastAPI
@@ -191,12 +191,12 @@ export const placeTrade = async (accountId, tradeData) => {
       ...response.data  // Include any additional fields
     };
     
-    console.log('Trade response:', result);
+    //console.log('Trade response:', result);
     return result;
   } catch (error) {
-    console.error('Error placing trade:', error);
-    console.error('Error response:', error.response?.data);
-    console.error('Error status:', error.response?.status);
+    //console.error('Error placing trade:', error);
+    //console.error('Error response:', error.response?.data);
+    //console.error('Error status:', error.response?.status);
     
     let errorMessage = 'Failed to place trade';
     let errorType = 'unknown';
@@ -262,7 +262,7 @@ export const placeTrade = async (accountId, tradeData) => {
 
 export const placePendingOrder = async (accountId, orderData) => {
   try {
-    console.log('Placing pending order with payload:', orderData);
+    //console.log('Placing pending order with payload:', orderData);
     const response = await api.post(`/api/v1/broker/${accountId}/pending-order`, orderData);
     
     // The response structure matches PendingOrderResponse from FastAPI
@@ -275,10 +275,10 @@ export const placePendingOrder = async (accountId, orderData) => {
       ...response.data  // Include any additional fields
     };
     
-    console.log('Pending order response:', result);
+    //console.log('Pending order response:', result);
     return result;
   } catch (error) {
-    console.error('Error placing pending order:', error);
+    //console.error('Error placing pending order:', error);
     
     let errorMessage = 'Failed to place pending order';
     let errorType = 'unknown';
@@ -334,7 +334,7 @@ export const modifyOrder = async (accountId, orderId, modifications) => {
       data: response
     };
   } catch (error) {
-    console.error('Error modifying order:', error);
+    //console.error('Error modifying order:', error);
     return {
       success: false,
       error: error.message || 'Failed to modify order'
@@ -350,7 +350,7 @@ export const cancelOrder = async (accountId, orderId) => {
       data: response
     };
   } catch (error) {
-    console.error('Error cancelling order:', error);
+    //console.error('Error cancelling order:', error);
     return {
       success: false,
       error: error.message || 'Failed to cancel order'
@@ -366,7 +366,7 @@ export const getOrders = async (accountId) => {
       data: response
     };
   } catch (error) {
-    console.error('Error fetching orders:', error);
+    //console.error('Error fetching orders:', error);
     return {
       success: false,
       error: error.message || 'Failed to fetch orders'
@@ -386,7 +386,7 @@ export const getPositions = async (accountId) => {
       data: response
     };
   } catch (error) {
-    console.error('Error fetching positions:', error);
+    //console.error('Error fetching positions:', error);
     return {
       success: false,
       error: error.message || 'Failed to fetch positions'
@@ -403,7 +403,7 @@ export const closePosition = async (accountId, positionId) => {
       data: response
     };
   } catch (error) {
-    console.error('Error closing position:', error);
+    //console.error('Error closing position:', error);
     
     let errorMessage = 'Failed to close position';
     
@@ -430,7 +430,7 @@ export const modifyPosition = async (accountId, positionId, modifications) => {
       data: response
     };
   } catch (error) {
-    console.error('Error modifying position:', error);
+    //console.error('Error modifying position:', error);
     return {
       success: false,
       error: error.message || 'Failed to modify position'
@@ -444,7 +444,7 @@ export const modifyPosition = async (accountId, positionId, modifications) => {
 
 export const placePairTrade = async (accountId, pairData) => {
   try {
-    console.log('Placing pair trade with payload:', pairData);
+    //console.log('Placing pair trade with payload:', pairData);
     const response = await api.post(`/api/v1/broker/${accountId}/pair-trade`, pairData);
     
     // The response structure matches the new PairTradeResponse from FastAPI
@@ -460,11 +460,11 @@ export const placePairTrade = async (accountId, pairData) => {
       ...response.data  // Include any additional fields
     };
     
-    console.log('Pair trade response:', result);
+    //console.log('Pair trade response:', result);
     return result;
   } catch (error) {
-    console.error('Error placing pair trade:', error);
-    console.error('Error response:', error.response?.data);
+    //console.error('Error placing pair trade:', error);
+    //console.error('Error response:', error.response?.data);
     
     let errorMessage = 'Failed to place pair trade';
     let errorType = 'unknown';
@@ -530,7 +530,7 @@ export const getSpreadPrice = async (accountId, symbol1, symbol2) => {
       data: response
     };
   } catch (error) {
-    console.error('Error fetching spread price:', error);
+    //console.error('Error fetching spread price:', error);
     
     let errorMessage = 'Failed to fetch spread price';
     
@@ -560,7 +560,7 @@ export const getSpreadPrice = async (accountId, symbol1, symbol2) => {
 
 export const placeMultiAccountTrade = async (tradeData) => {
   try {
-    console.log('Placing multi-account trade with payload:', tradeData);
+    //console.log('Placing multi-account trade with payload:', tradeData);
     const response = await api.post('/api/v1/broker/multi-account-trade', tradeData);
     
     // The response structure matches MultiAccountTradeResponse from FastAPI
@@ -573,11 +573,11 @@ export const placeMultiAccountTrade = async (tradeData) => {
       data: response.data  // Keep for backward compatibility
     };
     
-    console.log('Multi-account trade response:', result);
+    //console.log('Multi-account trade response:', result);
     return result;
   } catch (error) {
-    console.error('Error placing multi-account trade:', error);
-    console.error('Error response:', error.response?.data);
+    //console.error('Error placing multi-account trade:', error);
+    //console.error('Error response:', error.response?.data);
     
     let errorMessage = 'Failed to place multi-account trade';
     
@@ -703,7 +703,7 @@ export const executeOrder = async (accountId, orderType, orderData) => {
       return await placePendingOrder(accountId, payload);
     }
   } catch (error) {
-    console.error('Error executing order:', error);
+    //console.error('Error executing order:', error);
     return {
       success: false,
       error: error.message || 'Failed to execute order'
@@ -734,7 +734,7 @@ export const getSymbolPrice = async (accountId, symbol) => {
       data: response
     };
   } catch (error) {
-    console.error('Error fetching symbol price:', error);
+    //console.error('Error fetching symbol price:', error);
     
     let errorMessage = 'Failed to fetch symbol price';
     let suggestions = [];
@@ -769,7 +769,7 @@ export const getMultipleSymbolPrices = async (accountId, symbols) => {
       data: response
     };
   } catch (error) {
-    console.error('Error fetching multiple symbol prices:', error);
+    //console.error('Error fetching multiple symbol prices:', error);
     
     let errorMessage = 'Failed to fetch symbol prices';
     
@@ -797,7 +797,7 @@ export const getLivePrice = async (symbol) => {
       data: response
     };
   } catch (error) {
-    console.error('Error fetching live price:', error);
+    //console.error('Error fetching live price:', error);
     
     // Enhanced error handling for market data
     let errorMessage = 'Failed to fetch live price';
@@ -946,7 +946,7 @@ export const getTradeHistory = async (accountId, limit = 50, offset = 0) => {
       data: response
     };
   } catch (error) {
-    console.error('Error fetching trade history:', error);
+    //console.error('Error fetching trade history:', error);
     return {
       success: false,
       error: error.message || 'Failed to fetch trade history',
@@ -963,7 +963,7 @@ export const getTradingHistory = async (accountId, limit = 50, offset = 0) => {
       data: response
     };
   } catch (error) {
-    console.error('Error fetching trading history:', error);
+    //console.error('Error fetching trading history:', error);
     return {
       success: false,
       error: error.message || 'Failed to fetch trading history',
@@ -977,7 +977,7 @@ export const getTradingHistory = async (accountId, limit = 50, offset = 0) => {
 // =============================================================================
 
 export const handleApiError = (error, context = 'API call') => {
-  console.error(`${context} error:`, error);
+  //console.error(`${context} error:`, error);
   
   let errorMessage = `${context} failed`;
   let errorType = 'unknown';

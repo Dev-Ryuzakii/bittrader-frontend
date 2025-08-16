@@ -65,7 +65,7 @@ const PairTradingPanel = ({ data, setData, onSubmit, submitting }) => {
         });
       }
     } catch (error) {
-      console.error('Error loading popular symbols:', error);
+      //console.error('Error loading popular symbols:', error);
     } finally {
       setLoading(false);
     }
@@ -109,7 +109,7 @@ const PairTradingPanel = ({ data, setData, onSubmit, submitting }) => {
         setSymbols(mockSearchSymbols(term));
       }
     } catch (error) {
-      console.error('Error searching symbols:', error);
+      //console.error('Error searching symbols:', error);
       // Fallback to mock search
       setSymbols(mockSearchSymbols(term));
     } finally {

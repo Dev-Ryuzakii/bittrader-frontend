@@ -53,7 +53,7 @@ const SymbolPicker = ({ selectedSymbol, onSymbolChange, accounts = [] }) => {
         setPopularSymbols({});
       }
     } catch (error) {
-      console.error('Error loading popular symbols:', error);
+      //console.error('Error loading popular symbols:', error);
     } finally {
       setLoading(false);
     }
@@ -78,7 +78,7 @@ const SymbolPicker = ({ selectedSymbol, onSymbolChange, accounts = [] }) => {
         setSymbols(mockSearchSymbols(term));
       }
     } catch (error) {
-      console.error('Error searching symbols:', error);
+      //console.error('Error searching symbols:', error);
       // Fallback to mock search
       setSymbols(mockSearchSymbols(term));
     } finally {
@@ -265,7 +265,7 @@ export const CompactSymbolPicker = ({ selectedSymbol, onSymbolSelect, accounts =
         setPopularSymbols({});
       }
     } catch (error) {
-      console.error('Error loading popular symbols:', error);
+      //console.error('Error loading popular symbols:', error);
     } finally {
       setLoading(false);
     }
@@ -288,7 +288,7 @@ export const CompactSymbolPicker = ({ selectedSymbol, onSymbolSelect, accounts =
         setSymbols(mockSearchSymbols(term));
       }
     } catch (error) {
-      console.error('Error searching symbols:', error);
+      //console.error('Error searching symbols:', error);
       setSymbols(mockSearchSymbols(term));
     } finally {
       setLoading(false);

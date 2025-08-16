@@ -55,19 +55,19 @@ const OrderManagementPanel = ({ selectedAccount, shouldRefresh, onRefreshComplet
       if (positionsRes.success) {
         setPositions(positionsRes.data || []);
       } else {
-        console.warn('Failed to fetch positions:', positionsRes.error);
+        //console.warn('Failed to fetch positions:', positionsRes.error);
         setPositions([]);
       }
 
       if (ordersRes.success) {
         setOrders(ordersRes.data || []);
       } else {
-        console.warn('Failed to fetch orders:', ordersRes.error);
+        //console.warn('Failed to fetch orders:', ordersRes.error);
         setOrders([]);
       }
     } catch (error) {
       toast.error('Failed to fetch positions and orders');
-      console.error('Error fetching data:', error);
+      //console.error('Error fetching data:', error);
     } finally {
       setLoading(false);
     }

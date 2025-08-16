@@ -70,15 +70,15 @@ const Community = () => {
           websocket.on('group_message', handleNewGroupMessage)
           websocket.on('user_typing', handleTypingUpdate)
           websocket.on('connection_established', (data) => {
-            console.log('WebSocket connection established:', data)
+            //console.log('WebSocket connection established:', data)
             setIsConnected(true)
           })
           websocket.on('error', (error) => {
-            console.error('WebSocket error:', error)
+            //console.error('WebSocket error:', error)
             setIsConnected(false)
           })
           websocket.on('disconnect', () => {
-            console.log('WebSocket disconnected')
+            //console.log('WebSocket disconnected')
             setIsConnected(false)
           })
         }
@@ -88,7 +88,7 @@ const Community = () => {
         
         setLoading(false)
       } catch (error) {
-        console.error('Failed to initialize chat:', error)
+        //console.error('Failed to initialize chat:', error)
         setLoading(false)
       }
     }
@@ -130,7 +130,7 @@ const Community = () => {
           setSearchResults(results)
         }
       } catch (error) {
-        console.error('Search error:', error)
+        //console.error('Search error:', error)
         setSearchResults([])
       } finally {
         setIsSearching(false)
@@ -204,7 +204,7 @@ const Community = () => {
       const response = await groupChatAPI.getGroups()
       setGroups(response)
     } catch (error) {
-      console.error('Failed to load groups:', error)
+      //console.error('Failed to load groups:', error)
     }
   }
 
@@ -232,7 +232,7 @@ const Community = () => {
       const membersResponse = await groupChatAPI.getMembers(group.id)
       setMembers(membersResponse)
     } catch (error) {
-      console.error('Failed to load group messages:', error)
+      //console.error('Failed to load group messages:', error)
     }
   }
 
@@ -267,7 +267,7 @@ const Community = () => {
 
       setNewMessage('')
     } catch (error) {
-      console.error('Failed to send message:', error)
+      //console.error('Failed to send message:', error)
     }
   }
 
@@ -338,7 +338,7 @@ const Community = () => {
 
   const handleChatStarted = () => {
     // Placeholder for when direct messages are implemented
-    console.log('Direct message feature not implemented yet')
+    //console.log('Direct message feature not implemented yet')
   }
 
   const followUser = async (userId) => {
@@ -359,7 +359,7 @@ const Community = () => {
         ))
       }
     } catch (error) {
-      console.error('Error following user:', error)
+      //console.error('Error following user:', error)
     }
   }
 
@@ -382,7 +382,7 @@ const Community = () => {
         await loadGroups()
       }
     } catch (error) {
-      console.error('Error joining group:', error)
+      //console.error('Error joining group:', error)
     }
   }
 
@@ -403,7 +403,7 @@ const Community = () => {
         setMessages(prev => prev.filter(msg => msg.id !== messageId))
       }
     } catch (error) {
-      console.error('Error deleting message:', error)
+      //console.error('Error deleting message:', error)
     }
   }
 

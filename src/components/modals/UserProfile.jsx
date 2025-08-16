@@ -31,7 +31,7 @@ const UserProfile = ({ isOpen, onClose, username, currentUser }) => {
       setFollowers(followersRes)
       setFollowing(followingRes)
     } catch (error) {
-      console.error('Failed to load profile:', error)
+      //console.error('Failed to load profile:', error)
     } finally {
       setLoading(false)
     }
@@ -55,7 +55,7 @@ const UserProfile = ({ isOpen, onClose, username, currentUser }) => {
         }))
       }
     } catch (error) {
-      console.error('Failed to toggle follow:', error)
+      //console.error('Failed to toggle follow:', error)
     }
   }
 

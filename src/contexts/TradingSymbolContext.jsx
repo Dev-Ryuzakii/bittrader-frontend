@@ -53,7 +53,7 @@ export const TradingSymbolProvider = ({ children }) => {
         setStandardSymbols(response.standard_symbols || []);
       }
     } catch (error) {
-      console.error('Failed to load standard symbols:', error);
+      //console.error('Failed to load standard symbols:', error);
     }
   };
 
@@ -69,7 +69,7 @@ export const TradingSymbolProvider = ({ children }) => {
         [accountId]: response
       }));
     } catch (error) {
-      console.error(`Failed to load symbols for account ${accountId}:`, error);
+      //console.error(`Failed to load symbols for account ${accountId}:`, error);
     } finally {
       setLoading(false);
     }
@@ -85,7 +85,7 @@ export const TradingSymbolProvider = ({ children }) => {
       await loadAccountSymbols(accountId);
       return { success: true };
     } catch (error) {
-      console.error(`Failed to refresh symbols for account ${accountId}:`, error);
+      //console.error(`Failed to refresh symbols for account ${accountId}:`, error);
       return { success: false, error: error.message };
     } finally {
       setLoading(false);

@@ -66,7 +66,7 @@ const StrategyLab = () => {
         }
       }
     } catch (error) {
-      console.error("Strategy analysis error:", error);
+      //console.error("Strategy analysis error:", error);
       toast.error("AI analysis temporarily unavailable. Showing general insights.");
       setAiAnalysis({
         analysis: "AI strategy analysis is temporarily unavailable. The system is showing general trading insights based on best practices.",
@@ -101,7 +101,7 @@ const StrategyLab = () => {
         return formatAIResponse('strategy', fallback);
       }
     } catch (error) {
-      console.error("Performance analysis error:", error);
+      //console.error("Performance analysis error:", error);
       toast.error("Performance analysis temporarily unavailable.");
       return "Strategy performance analysis is temporarily unavailable. Please try again later.";
     }
@@ -124,7 +124,7 @@ const StrategyLab = () => {
         };
       }
     } catch (error) {
-      console.error("Strategy improvements error:", error);
+      //console.error("Strategy improvements error:", error);
       toast.info("Strategy improvements analysis not yet available");
       return {
         improvements: [
@@ -431,7 +431,7 @@ const StrategyCard = ({ strategy, isFeatured = false }) => {
       const insights = await getStrategyImprovements(strategy.id);
       setAiInsights(insights);
     } catch (error) {
-      console.error("Error getting AI insights:", error);
+      //console.error("Error getting AI insights:", error);
     } finally {
       setLoadingInsights(false);
     }
@@ -1005,7 +1005,7 @@ const AIRecommendedStrategies = () => {
         throw new Error("Strategy analysis unavailable");
       }
     } catch (error) {
-      console.error("Error generating AI recommendations:", error);
+      //console.error("Error generating AI recommendations:", error);
       toast.info("AI recommendations temporarily unavailable. Showing sample strategies.");
       
       // Fallback recommendations when AI service is unavailable

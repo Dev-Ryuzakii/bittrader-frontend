@@ -106,7 +106,7 @@ const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelec
         setLivePrice(response.data);
       }
     } catch (error) {
-      console.log('Could not fetch live price:', error);
+      //console.log('Could not fetch live price:', error);
     }
   };
 
@@ -164,11 +164,11 @@ const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelec
         cleanPayload.comment = marketData.comment.trim();
       }
 
-      console.log('Sending trade payload:', cleanPayload);
+      //console.log('Sending trade payload:', cleanPayload);
 
       const response = await placeTrade(selectedAccount.id, cleanPayload);
       
-      console.log('Trade response:', response);
+      //console.log('Trade response:', response);
       
       if (response.success) {
         const message = response.message || `Market ${cleanPayload.trade_type} order placed successfully for ${cleanPayload.volume} ${cleanPayload.symbol}`;
@@ -244,7 +244,7 @@ const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelec
 
       const response = await placePendingOrder(selectedAccount.id, payload);
       
-      console.log('Pending order response:', response);
+      //console.log('Pending order response:', response);
       
       if (response.success) {
         const message = response.message || `Pending order placed successfully`;
@@ -367,10 +367,10 @@ const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelec
         payload.comment = pairData.comment.trim();
       }
 
-      console.log('Sending pair trade payload:', payload);
+      //console.log('Sending pair trade payload:', payload);
       const response = await placePairTrade(selectedAccount.id, payload);
       
-      console.log('Pair trade response:', response);
+      //console.log('Pair trade response:', response);
       
       if (response.success) {
         // Handle successful pair trade
@@ -440,7 +440,7 @@ const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelec
         throw new Error(response.error || response.message || 'Failed to place pair trade');
       }
     } catch (error) {
-      console.error('Pair trade error:', error);
+      //console.error('Pair trade error:', error);
       setError(error.message || 'Failed to place pair trade. Please try again.');
       toast.error(error.message || 'Failed to place pair trade');
     } finally {
@@ -914,7 +914,7 @@ const SymbolSelectorModal = ({ onClose, onSelect }) => {
         });
       }
     } catch (error) {
-      console.error('Error loading popular symbols:', error);
+      //console.error('Error loading popular symbols:', error);
     } finally {
       setLoading(false);
     }
@@ -939,7 +939,7 @@ const SymbolSelectorModal = ({ onClose, onSelect }) => {
         setSymbols(mockSearchSymbols(term));
       }
     } catch (error) {
-      console.error('Error searching symbols:', error);
+      //console.error('Error searching symbols:', error);
       // Fallback to mock search
       setSymbols(mockSearchSymbols(term));
     } finally {
