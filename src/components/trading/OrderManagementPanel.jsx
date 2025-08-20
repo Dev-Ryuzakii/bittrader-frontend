@@ -19,7 +19,7 @@ import {
   modifyOrder 
 } from '../../api/broker';
 
-const OrderManagementPanel = ({ selectedAccount }) => {
+const OrderManagementPanel = ({ selectedAccount, shouldRefresh, onRefreshComplete }) => {
   const [positions, setPositions] = useState([]);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -30,6 +30,17 @@ const OrderManagementPanel = ({ selectedAccount }) => {
       fetchPositionsAndOrders();
     }
   }, [selectedAccount]);
+  
+  // Refresh when shouldRefresh is true
+  useEffect(() => {
+    if (shouldRefresh && selectedAccount) {
+      fetchPositionsAndOrders().then(() => {
+        if (onRefreshComplete) {
+          onRefreshComplete();
+        }
+      });
+    }
+  }, [shouldRefresh]);
 
   const fetchPositionsAndOrders = async () => {
     if (!selectedAccount) return;
@@ -44,19 +55,19 @@ const OrderManagementPanel = ({ selectedAccount }) => {
       if (positionsRes.success) {
         setPositions(positionsRes.data || []);
       } else {
-        console.warn('Failed to fetch positions:', positionsRes.error);
+        //console.warn('Failed to fetch positions:', positionsRes.error);
         setPositions([]);
       }
 
       if (ordersRes.success) {
         setOrders(ordersRes.data || []);
       } else {
-        console.warn('Failed to fetch orders:', ordersRes.error);
+        //console.warn('Failed to fetch orders:', ordersRes.error);
         setOrders([]);
       }
     } catch (error) {
       toast.error('Failed to fetch positions and orders');
-      console.error('Error fetching data:', error);
+      //console.error('Error fetching data:', error);
     } finally {
       setLoading(false);
     }
@@ -143,6 +154,39 @@ const OrderManagementPanel = ({ selectedAccount }) => {
           <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
           {refreshing ? 'Refreshing...' : 'Refresh'}
         </button>
+      </div>
+
+      {/* Trade Statistics */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="bg-[#222] border border-[#333] rounded-lg p-4">
+          <h4 className="text-sm text-gray-400 mb-2">Total Positions</h4>
+          <div className="text-2xl font-bold text-white">{positions.length}</div>
+        </div>
+        <div className="bg-[#222] border border-[#333] rounded-lg p-4">
+          <h4 className="text-sm text-gray-400 mb-2">Win Rate</h4>
+          <div className="text-2xl font-bold text-green-400">
+            {positions.length > 0 ? 
+              `${((positions.filter(p => (p.profit || p.pnl || 0) > 0).length / positions.length) * 100).toFixed(1)}%` 
+              : '0%'}
+          </div>
+        </div>
+        <div className="bg-[#222] border border-[#333] rounded-lg p-4">
+          <h4 className="text-sm text-gray-400 mb-2">Total P/L</h4>
+          {(() => {
+            const totalPnl = positions.reduce((sum, p) => sum + (p.profit || p.pnl || 0), 0);
+            return (
+              <div className={`text-2xl font-bold ${totalPnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                {totalPnl >= 0 ? '+' : ''}{totalPnl.toFixed(2)}
+              </div>
+            );
+          })()}
+        </div>
+        <div className="bg-[#222] border border-[#333] rounded-lg p-4">
+          <h4 className="text-sm text-gray-400 mb-2">Trading Volume</h4>
+          <div className="text-2xl font-bold text-white">
+            {positions.reduce((sum, p) => sum + (p.volume || p.lots || 0), 0).toFixed(2)}
+          </div>
+        </div>
       </div>
 
       {loading ? (

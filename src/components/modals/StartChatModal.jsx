@@ -21,7 +21,7 @@ const StartChatModal = ({ isOpen, onClose, onChatStarted }) => {
       const response = await profileAPI.searchUsers(searchQuery.trim(), 10)
       setSearchResults(response)
     } catch (error) {
-      console.error('Failed to search users:', error)
+      //console.error('Failed to search users:', error)
       setSearchResults([])
     } finally {
       setLoading(false)
@@ -35,7 +35,7 @@ const StartChatModal = ({ isOpen, onClose, onChatStarted }) => {
       onChatStarted(response)
       handleClose()
     } catch (error) {
-      console.error('Failed to start chat:', error)
+      //console.error('Failed to start chat:', error)
     } finally {
       setLoading(false)
     }

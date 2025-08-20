@@ -89,14 +89,14 @@ const TransactionsTable = ({ transactions, isLoading, limit }) => {
 
   // Handle view invoice
   const handleViewInvoice = (transaction) => {
-    console.log('View invoice for transaction:', transaction);
+    //console.log('View invoice for transaction:', transaction);
     // TODO: Implement invoice viewing logic
     // This could open a modal or navigate to an invoice page
   };
 
   // Handle download
   const handleDownload = (transaction) => {
-    console.log('Download transaction details:', transaction);
+    //console.log('Download transaction details:', transaction);
     // TODO: Implement download logic
     // This could generate a PDF or CSV file
   };

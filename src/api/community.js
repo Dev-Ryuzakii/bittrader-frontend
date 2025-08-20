@@ -8,7 +8,7 @@ export const profileAPI = {
       const response = await api.get('/community/profile/me');
       return response.data;
     } catch (error) {
-      console.error('Get current profile error:', error);
+      //console.error('Get current profile error:', error);
       throw error;
     }
   },
@@ -19,7 +19,7 @@ export const profileAPI = {
       const response = await api.get(`/community/profile/${username}`);
       return response.data;
     } catch (error) {
-      console.error('Get profile by username error:', error);
+      //console.error('Get profile by username error:', error);
       throw error;
     }
   },
@@ -30,7 +30,7 @@ export const profileAPI = {
       const response = await api.get(`/community/search/users?q=${encodeURIComponent(query)}&limit=${limit}`);
       return response.data;
     } catch (error) {
-      console.error('Search users error:', error);
+      //console.error('Search users error:', error);
       throw error;
     }
   },
@@ -41,7 +41,7 @@ export const profileAPI = {
       const response = await api.put('/community/profile/me', profileData);
       return response.data;
     } catch (error) {
-      console.error('Update profile error:', error);
+      //console.error('Update profile error:', error);
       throw error;
     }
   }
@@ -51,31 +51,31 @@ export const profileAPI = {
 export const relationshipsAPI = {
   // Follow a user - PLACEHOLDER (endpoint doesn't exist)
   followUser: async (userId) => {
-    console.warn('Follow user endpoint not implemented in backend');
+    //console.warn('Follow user endpoint not implemented in backend');
     return Promise.resolve({ success: false, message: 'Feature not available' });
   },
 
   // Unfollow a user - PLACEHOLDER (endpoint doesn't exist)
   unfollowUser: async (userId) => {
-    console.warn('Unfollow user endpoint not implemented in backend');
+    //console.warn('Unfollow user endpoint not implemented in backend');
     return Promise.resolve({ success: false, message: 'Feature not available' });
   },
 
   // Get user's followers - PLACEHOLDER (endpoint doesn't exist)
   getUserFollowers: async (username) => {
-    console.warn('Get user followers endpoint not implemented in backend');
+    //console.warn('Get user followers endpoint not implemented in backend');
     return Promise.resolve([]);
   },
 
   // Get users that a user is following - PLACEHOLDER (endpoint doesn't exist)
   getUserFollowing: async (username) => {
-    console.warn('Get user following endpoint not implemented in backend');
+    //console.warn('Get user following endpoint not implemented in backend');
     return Promise.resolve([]);
   },
 
   // Check if current user is following another user - PLACEHOLDER (endpoint doesn't exist)
   isFollowing: async (userId) => {
-    console.warn('Is following endpoint not implemented in backend');
+    //console.warn('Is following endpoint not implemented in backend');
     return Promise.resolve(false);
   }
 };
@@ -88,7 +88,7 @@ export const groupChatAPI = {
       const response = await api.get('/community/groups');
       return response.data;
     } catch (error) {
-      console.error('Get group chats error:', error);
+      //console.error('Get group chats error:', error);
       throw error;
     }
   },
@@ -104,7 +104,7 @@ export const groupChatAPI = {
       const response = await api.post('/community/groups', groupData);
       return response.data;
     } catch (error) {
-      console.error('Create group chat error:', error);
+      //console.error('Create group chat error:', error);
       throw error;
     }
   },
@@ -120,7 +120,7 @@ export const groupChatAPI = {
       const response = await api.put(`/community/groups/${groupId}`, groupData);
       return response.data;
     } catch (error) {
-      console.error('Update group error:', error);
+      //console.error('Update group error:', error);
       throw error;
     }
   },
@@ -131,7 +131,7 @@ export const groupChatAPI = {
       const response = await api.delete(`/community/groups/${groupId}`);
       return response.data;
     } catch (error) {
-      console.error('Delete group error:', error);
+      //console.error('Delete group error:', error);
       throw error;
     }
   },
@@ -142,7 +142,7 @@ export const groupChatAPI = {
       const response = await api.post(`/community/groups/${groupId}/join`);
       return response.data;
     } catch (error) {
-      console.error('Join group chat error:', error);
+      //console.error('Join group chat error:', error);
       throw error;
     }
   },
@@ -153,7 +153,7 @@ export const groupChatAPI = {
       const response = await api.delete(`/community/groups/${groupId}/leave`);
       return response.data;
     } catch (error) {
-      console.error('Leave group chat error:', error);
+      //console.error('Leave group chat error:', error);
       throw error;
     }
   },
@@ -164,7 +164,7 @@ export const groupChatAPI = {
       const response = await api.get(`/community/groups/${groupId}/messages?page=${page}&limit=${limit}`);
       return response.data;
     } catch (error) {
-      console.error('Get group messages error:', error);
+      //console.error('Get group messages error:', error);
       throw error;
     }
   },
@@ -180,7 +180,7 @@ export const groupChatAPI = {
       const response = await api.post(`/community/groups/${groupId}/messages`, messageData);
       return response.data;
     } catch (error) {
-      console.error('Send group message error:', error);
+      //console.error('Send group message error:', error);
       throw error;
     }
   },
@@ -196,7 +196,7 @@ export const groupChatAPI = {
       const response = await api.get(`/community/groups/${groupId}/members`);
       return response.data;
     } catch (error) {
-      console.error('Get group members error:', error);
+      //console.error('Get group members error:', error);
       throw error;
     }
   }
@@ -206,31 +206,31 @@ export const groupChatAPI = {
 export const directMessagesAPI = {
   // Get direct message conversations - PLACEHOLDER (endpoint doesn't exist)
   getConversations: async () => {
-    console.warn('Direct messages not implemented in backend');
+    //console.warn('Direct messages not implemented in backend');
     return Promise.resolve([]);
   },
 
   // Get messages in a conversation - PLACEHOLDER (endpoint doesn't exist)
   getMessages: async (conversationId, page = 1, limit = 50) => {
-    console.warn('Direct messages not implemented in backend');
+    //console.warn('Direct messages not implemented in backend');
     return Promise.resolve([]);
   },
 
   // Send direct message - PLACEHOLDER (endpoint doesn't exist)
   sendMessage: async (recipientId, message) => {
-    console.warn('Direct messages not implemented in backend');
+    //console.warn('Direct messages not implemented in backend');
     return Promise.resolve({ success: false, message: 'Feature not available' });
   },
 
   // Start new conversation - PLACEHOLDER (endpoint doesn't exist)
   startConversation: async (recipientId) => {
-    console.warn('Direct messages not implemented in backend');
+    //console.warn('Direct messages not implemented in backend');
     return Promise.resolve({ success: false, message: 'Feature not available' });
   },
 
   // Get or create chat with a specific user - PLACEHOLDER (endpoint doesn't exist)
   getChatWithUser: async (username) => {
-    console.warn('Direct messages not implemented in backend');
+    //console.warn('Direct messages not implemented in backend');
     return Promise.resolve({ success: false, message: 'Feature not available' });
   }
 };
@@ -254,11 +254,12 @@ export class ChatWebSocket {
         throw new Error('No authentication token found');
       }
 
-      const wsUrl = `ws://127.0.0.1:8000/ws/chat/group/${this.groupId}?token=${encodeURIComponent(token)}`;
+      // Use production WebSocket URL instead of localhost
+      const wsUrl = `ws://api.tradexas.com/ws/chat/group/${this.groupId}?token=${encodeURIComponent(token)}`;
       this.ws = new WebSocket(wsUrl);
 
       this.ws.onopen = () => {
-        console.log('WebSocket connected');
+        //console.log('WebSocket connected');
         this.reconnectAttempts = 0;
         this.reconnectDelay = 1000;
       };
@@ -268,23 +269,23 @@ export class ChatWebSocket {
           const data = JSON.parse(event.data);
           this.onMessage(data);
         } catch (error) {
-          console.error('Error parsing WebSocket message:', error);
+          //console.error('Error parsing WebSocket message:', error);
         }
       };
 
       this.ws.onclose = (event) => {
-        console.log('WebSocket closed:', event.code, event.reason);
+        //console.log('WebSocket closed:', event.code, event.reason);
         this.attemptReconnect();
       };
 
       this.ws.onerror = (error) => {
-        console.error('WebSocket error:', error);
+        //console.error('WebSocket error:', error);
         if (this.onError) {
           this.onError(error);
         }
       };
     } catch (error) {
-      console.error('Failed to create WebSocket connection:', error);
+      //console.error('Failed to create WebSocket connection:', error);
       if (this.onError) {
         this.onError(error);
       }
@@ -294,7 +295,7 @@ export class ChatWebSocket {
   attemptReconnect() {
     if (this.reconnectAttempts < this.maxReconnectAttempts) {
       this.reconnectAttempts++;
-      console.log(`Attempting to reconnect... (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
+      //console.log(`Attempting to reconnect... (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
       
       setTimeout(() => {
         this.connect();
@@ -303,7 +304,7 @@ export class ChatWebSocket {
       // Exponential backoff
       this.reconnectDelay *= 2;
     } else {
-      console.error('Max reconnection attempts reached');
+      //console.error('Max reconnection attempts reached');
       if (this.onError) {
         this.onError(new Error('Failed to reconnect after maximum attempts'));
       }
@@ -317,7 +318,7 @@ export class ChatWebSocket {
         message: message
       }));
     } else {
-      console.error('WebSocket is not connected');
+      //console.error('WebSocket is not connected');
     }
   }
 

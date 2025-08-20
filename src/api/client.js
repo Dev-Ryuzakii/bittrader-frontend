@@ -1,6 +1,12 @@
 import { auth } from '../utils/auth';
 
-const API_URL = 'http://127.0.0.1:8000';
+// Production URL - only use this URL for all environments
+const API_URL = 'http://api.tradexas.com';
+
+// Always return the production API URL
+const getApiUrl = () => {
+  return API_URL;
+};
 
 const validateToken = () => {
   const token = auth.getAuthToken();
@@ -14,7 +20,7 @@ const validateToken = () => {
     }
     return token;
   } catch (e) {
-    console.error('Token validation error:', e);
+    //console.error('Token validation error:', e);
     auth.clearAuth();
     return null;
   }
@@ -23,7 +29,6 @@ const validateToken = () => {
 const request = async (endpoint, options = {}) => {
   try {
     const token = validateToken();
-    console.log('Using token:', token);
 
     const headers = Object.assign(
       { 'Content-Type': 'application/json' },
@@ -31,39 +36,27 @@ const request = async (endpoint, options = {}) => {
       options.headers || {}
     );
 
-    console.log('Request headers:', headers);
-    console.log('Request URL:', `${API_URL}${endpoint}`);
-    console.log('Request options:', options);
-
-    const response = await fetch(`${API_URL}${endpoint}`, {
+    const apiUrl = getApiUrl();
+    const response = await fetch(`${apiUrl}${endpoint}`, {
       ...options,
       headers,
       credentials: 'include'
     });
-
-    console.log('Response status:', response.status);
-    console.log('Response headers:', response.headers);
-
-    const data = await response.json();
+    
+    const responseData = await response.json();
 
     if (!response.ok) {
       if (response.status === 401) {
-        console.log('Auth error detected, redirecting to login...');
         auth.clearAuth();
         auth.redirectToLogin();
         return null;
       }
-      const errorMessage = data.detail || data.message || `HTTP ${response.status}: ${response.statusText}`;
+      const errorMessage = responseData.detail || responseData.message || `HTTP ${response.status}: ${response.statusText}`;
       throw new Error(errorMessage);
     }
 
-    return data;
+    return responseData;
   } catch (error) {
-    console.error('Request failed:', {
-      error: error.message,
-      endpoint,
-      options
-    });
     throw error;
   }
 };
@@ -82,5 +75,8 @@ export const api = {
     method: 'PATCH',
     body: JSON.stringify(data)
   }),
-  delete: (endpoint) => request(endpoint, { method: 'DELETE' })
+  delete: (endpoint) => request(endpoint, { method: 'DELETE' }),
+  
+  // Simple method to get current API URL (always returns production URL)
+  getCurrentApiUrl: () => getApiUrl()
 };

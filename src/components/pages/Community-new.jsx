@@ -43,10 +43,10 @@ const Community = () => {
           // Set up WebSocket event listeners
           websocket.on('group_message', handleNewGroupMessage)
           websocket.on('connection_established', (data) => {
-            console.log('WebSocket connection established:', data)
+            //console.log('WebSocket connection established:', data)
           })
           websocket.on('error', (error) => {
-            console.error('WebSocket error:', error)
+            //console.error('WebSocket error:', error)
           })
         }
 
@@ -55,7 +55,7 @@ const Community = () => {
         
         setLoading(false)
       } catch (error) {
-        console.error('Failed to initialize chat:', error)
+        //console.error('Failed to initialize chat:', error)
         setLoading(false)
       }
     }
@@ -83,7 +83,7 @@ const Community = () => {
       const response = await groupChatAPI.getGroups()
       setGroups(response)
     } catch (error) {
-      console.error('Failed to load groups:', error)
+      //console.error('Failed to load groups:', error)
     }
   }
 
@@ -111,7 +111,7 @@ const Community = () => {
       const membersResponse = await groupChatAPI.getMembers(group.id)
       setMembers(membersResponse)
     } catch (error) {
-      console.error('Failed to load group messages:', error)
+      //console.error('Failed to load group messages:', error)
     }
   }
 
@@ -137,7 +137,7 @@ const Community = () => {
 
       setNewMessage('')
     } catch (error) {
-      console.error('Failed to send message:', error)
+      //console.error('Failed to send message:', error)
     }
   }
 
@@ -175,7 +175,7 @@ const Community = () => {
 
   const handleChatStarted = () => {
     // Placeholder for when direct messages are implemented
-    console.log('Direct message feature not implemented yet')
+    //console.log('Direct message feature not implemented yet')
   }
 
   const formatTime = (timestamp) => {

@@ -201,7 +201,7 @@ class TradingViewSync {
         }
       }
     } catch (error) {
-      console.warn('Failed to update TradingView chart:', error);
+      //console.warn('Failed to update TradingView chart:', error);
     }
   }
 
@@ -253,7 +253,7 @@ class TradingViewSync {
       try {
         callback(symbol);
       } catch (error) {
-        console.error('Error in symbol change callback:', error);
+        //console.error('Error in symbol change callback:', error);
       }
     });
   }

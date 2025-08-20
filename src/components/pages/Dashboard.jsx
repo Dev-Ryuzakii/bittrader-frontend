@@ -5,6 +5,7 @@ import MarketOverview from '../UI/MarketOverview';
 import TradingViewWidget from '../UI/TradingViewWidget';
 import TradeModal from '../modals/TradeModal';
 import TransactionsTable from '../UI/TransactionsTable';
+import TradeManagement from '../trading/TradeManagement';
 import Loader from '../UI/Loader';
 import { TrendingUp, Users, Activity, Target, Plus, BarChart3, Zap, Signal } from 'lucide-react';
 import { getTransactions } from '../../api/transactions';
@@ -21,9 +22,8 @@ const Dashboard = () => {
   const [tradeStatus, setTradeStatus] = useState({ loading: false, success: false, error: null });
   const [selectedSymbol, setSelectedSymbol] = useState('BTCUSD');
   const [activeSection, setActiveSection] = useState('market'); // 'market' or 'signals'
+  const [shouldRefreshOrders, setShouldRefreshOrders] = useState(false);
   const { isAuthenticated } = useAuth();
-
-  // Define color variants for account cards (same as in AccountAggregation)
   const colorVariants = [
     { bg: 'bg-gradient-to-r from-[#2F00FF] to-[#1C0099]/20', text: 'text-blue-400', border: 'border-blue-600/30' },
     { bg: 'bg-green-600/20', text: 'text-green-400', border: 'border-green-600/30' },
@@ -49,7 +49,7 @@ const Dashboard = () => {
           setTransactions(transactionsResponse.data);
         }
       } catch (transactionError) {
-        console.log('⚠️ Transactions API unavailable, dashboard will work without transaction data');
+        //console.log('⚠️ Transactions API unavailable, dashboard will work without transaction data');
       }
       setTransactionsLoading(false);
       
@@ -57,7 +57,7 @@ const Dashboard = () => {
       try {
         const accountsResponse = await getAccounts();
         if (accountsResponse.success && accountsResponse.data && accountsResponse.data.length > 0) {
-          console.log('✅ Broker accounts loaded:', accountsResponse.data);
+          //console.log('✅ Broker accounts loaded:', accountsResponse.data);
           // Assign color variants to accounts
           const accountsWithColors = accountsResponse.data.map((account, index) => ({
             ...account,
@@ -66,11 +66,11 @@ const Dashboard = () => {
           setBrokerAccounts(accountsWithColors);
           setSelectedAccount(accountsWithColors[0]);
         } else {
-          console.log('⚠️ No broker accounts found');
+          //console.log('⚠️ No broker accounts found');
           setBrokerAccounts([]);
         }
       } catch (brokerError) {
-        console.log('⚠️ Broker API unavailable');
+        //console.log('⚠️ Broker API unavailable');
         setBrokerAccounts([]);
       }
       setAccountsLoading(false);
@@ -86,15 +86,26 @@ const Dashboard = () => {
     try {
       const response = await placeTrade(accountId, tradeData);
       
+      //console.log('Trade response:', response);
+      
       if (response.success) {
         setTradeStatus({ loading: false, success: true, error: null });
-        // You could update the UI or show a success message here
-        console.log('Trade placed successfully:', response.data);
-        return response.data;
+        // Trigger OrderManagementPanel refresh
+        setShouldRefreshOrders(true);
+        
+        // Return the full response data for enhanced UI feedback
+        return {
+          success: true,
+          message: response.message,
+          order_id: response.order_id,
+          position_id: response.position_id,
+          details: response.details
+        };
       } else {
-        throw new Error(response.error || 'Failed to place trade');
+        throw new Error(response.error || response.message || 'Failed to place trade');
       }
     } catch (error) {
+      //console.error('Trade placement error:', error);
       setTradeStatus({ loading: false, success: false, error: error.message });
       throw error;
     }
@@ -254,7 +265,7 @@ const Dashboard = () => {
         )}
       </div>
 
-      {/* TradingView Chart Section */}
+      {/* TradingView Chart and Trading Panel Section */}
         <div className="mb-8">
           <div className="flex flex-col space-y-4 mb-4 lg:flex-row lg:items-center lg:justify-between lg:space-y-0">
             <div className="flex flex-col space-y-3 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-4">
@@ -297,39 +308,66 @@ const Dashboard = () => {
             </div>
           </div>
           
-          <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg overflow-hidden" style={{ minHeight: '700px' }}>
-            <div className="h-96 sm:h-[700px] lg:h-[660px] w-full">
-          <TradingViewWidget symbol={selectedSymbol} theme="dark" />
+          {/* Trading Chart */}
+          <div className="grid grid-cols-1 gap-6">
+            <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg overflow-hidden">
+              <div className="h-[800px] w-full">
+                <TradingViewWidget 
+                  symbol={selectedSymbol} 
+                  theme="dark"
+                />
+              </div>
             </div>
+          </div>
+
+          {/* Trade Management */}
+          <div className="mt-6">
+            <TradeManagement 
+              selectedAccount={selectedAccount}
+              shouldRefresh={shouldRefreshOrders}
+              onTradeSelect={(trade) => {
+                // Handle trade selection - you can use this to show details in a modal or update the chart
+                setSelectedSymbol(trade.asset);
+              }}
+              onRefreshComplete={() => setShouldRefreshOrders(false)}
+            />
           </div>
           
           {/* Trading status message */}
-        {tradeStatus.success && (
-          <div className="mt-2 bg-green-900/30 border border-green-700/50 text-green-400 px-4 py-2 rounded">
-            Trade placed successfully
-          </div>
-        )}
-        
-        {tradeStatus.error && (
-          <div className="mt-2 bg-red-900/30 border border-red-700/50 text-red-400 px-4 py-2 rounded">
-            Error placing trade: {tradeStatus.error}
-          </div>
-        )}
-        
-        {/* Trade Modal */}
-        <TradeModal 
-          isOpen={isTradeModalOpen}
-          onClose={() => {
-            setIsTradeModalOpen(false);
-            // Reset trade status when closing modal
-            setTradeStatus({ loading: false, success: false, error: null });
-          }}
-          accounts={formattedAccounts}
-          selectedAccount={selectedAccount}
-          onAccountSelect={setSelectedAccount}
-          onPlaceTrade={handlePlaceTrade}
-        />
-      </div>
+          {tradeStatus.success && (
+            <div className="mt-2 bg-green-900/30 border border-green-700/50 text-green-400 px-4 py-2 rounded">
+              Trade placed successfully
+            </div>
+          )}
+          
+          {tradeStatus.error && (
+            <div className="mt-2 bg-red-900/30 border border-red-700/50 text-red-400 px-4 py-2 rounded">
+              Error placing trade: {tradeStatus.error}
+            </div>
+          )}
+          
+          {/* Trade Modal */}
+          <TradeModal 
+            isOpen={isTradeModalOpen}
+            onClose={() => {
+              setIsTradeModalOpen(false);
+              // Reset trade status when closing modal
+              setTradeStatus({ loading: false, success: false, error: null });
+            }}
+            accounts={formattedAccounts}
+            selectedAccount={selectedAccount}
+            onAccountSelect={setSelectedAccount}
+            onPlaceTrade={async (accountId, tradeData) => {
+              try {
+                await handlePlaceTrade(accountId, tradeData);
+                setIsTradeModalOpen(false);
+              } catch (error) {
+                // Error is already handled in handlePlaceTrade
+                ////console.error('Trade placement failed:', error);
+              }
+            }}
+          />
+        </div>
       
       {/* Transactions Section */}
       <div className="mb-8">

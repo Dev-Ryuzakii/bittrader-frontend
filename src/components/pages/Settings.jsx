@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Bell, User, Shield, ChevronRight, Sliders, LineChart, AlertTriangle, Globe, Monitor, Zap, Lock, LogOut, Loader, RefreshCw } from 'lucide-react';
+import { Bell, User, Shield, ChevronRight, Sliders, LineChart, AlertTriangle, Globe, Monitor, Zap, Lock, LogOut, Loader, RefreshCw, Server } from 'lucide-react';
 import { userAPI, tradingAPI } from '../../api/api';
 import { auth } from '../../utils/auth';
+import { api } from '../../api/client'; // Import the api object from client.js
 
 const Settings = () => {
   const [activeTab, setActiveTab] = useState('account');
@@ -25,7 +26,7 @@ const Settings = () => {
         setProfileData(data);
         setError(null);
       } catch (err) {
-        console.error('Error fetching profile data:', err);
+        //console.error('Error fetching profile data:', err);
         setError('Failed to load profile data. Please try again.');
       } finally {
         setIsLoading(false);
@@ -85,6 +86,8 @@ const Settings = () => {
     switch(activeTab) {
       case 'account':
         return <AccountSettings profileData={profileData} />;
+      case 'api-server':
+        return <ApiServerSettings />;
       case 'notifications':
         return <NotificationSettings notifications={notifications} handleNotificationChange={handleNotificationChange} />;
       case 'trading':
@@ -142,6 +145,15 @@ const Settings = () => {
                   <User size={18} />
                   <span>Account</span>
                   {activeTab === 'account' && <ChevronRight className="ml-auto" size={16} />}
+                </button>
+                
+                <button 
+                  onClick={() => setActiveTab('api-server')}
+                  className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-colors ${activeTab === 'api-server' ? 'bg-gray-700/70 text-white' : 'text-white hover:bg-gray-700/40 hover:text-white'}`}
+                >
+                  <Server size={18} />
+                  <span>API Server</span>
+                  {activeTab === 'api-server' && <ChevronRight className="ml-auto" size={16} />}
                 </button>
                 
                 {/* <button 
@@ -231,7 +243,7 @@ const AccountSettings = ({ profileData }) => {
       setIsEditing(false);
       // Ideally you would refresh the profile data here
     } catch (error) {
-      console.error('Error updating profile:', error);
+      //console.error('Error updating profile:', error);
       alert('Failed to update profile. Please try again.');
     }
   };
@@ -589,7 +601,7 @@ const TradingSettings = () => {
           setIsLoading(false);
         }, 500);
       } catch (error) {
-        console.error('Error fetching trading preferences:', error);
+        //console.error('Error fetching trading preferences:', error);
         setIsLoading(false);
       }
     };
@@ -860,7 +872,7 @@ const SecuritySettings = () => {
           setIsLoading(false);
         }, 500);
       } catch (error) {
-        console.error('Error fetching security settings:', error);
+        //console.error('Error fetching security settings:', error);
         setIsLoading(false);
       }
     };
@@ -919,7 +931,7 @@ const SecuritySettings = () => {
         });
       }, 2000);
     } catch (error) {
-      console.error('Error updating password:', error);
+      //console.error('Error updating password:', error);
       setPasswordError('Failed to update password. Please try again.');
     }
   };
@@ -1113,3 +1125,4 @@ const SecuritySettings = () => {
 };
 
 export default Settings;
+

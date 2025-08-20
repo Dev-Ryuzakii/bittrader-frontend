@@ -50,7 +50,7 @@ export const getTransactions = async (params = {}) => {
     }
     
     if (process.env.NODE_ENV === 'development') {
-      console.log('Fetching transactions with params:', queryParams.toString());
+      //console.log('Fetching transactions with params:', queryParams.toString());
     }
     
     const response = await api.get(`/transactions?${queryParams.toString()}`);
@@ -65,14 +65,15 @@ export const getTransactions = async (params = {}) => {
         page_size: response.data.page_size || pageSize,
         total_pages: Math.ceil((response.data.total || 0) / pageSize)
       }
-    };  } catch (apiError) {
+    };
+  } catch (apiError) {
     // Log API failures in development
     if (process.env.NODE_ENV === 'development') {
-      console.error('Transactions API failed:', {
-        status: apiError.response?.status,
-        message: apiError.message,
-        endpoint: '/transactions'
-      });
+      //console.error('Transactions API failed:', {
+        //status: apiError.response?.status,
+        //message: apiError.message,
+        //endpoint: '/transactions'
+      //});
     }
     
     // Return error response instead of mock data
@@ -100,11 +101,11 @@ export const getTransaction = async (transactionId) => {
     };
   } catch (apiError) {
     if (process.env.NODE_ENV === 'development') {
-      console.error('Transaction fetch by ID failed:', {
-        id: transactionId,
-        status: apiError.response?.status,
-        message: apiError.message
-      });
+      //console.error('Transaction fetch by ID failed:', {
+        //id: transactionId,
+        //status: apiError.response?.status,
+       // message: apiError.message
+      //});
     }
     
     return {
@@ -139,11 +140,11 @@ export const createTransaction = async (transactionData) => {
     };
   } catch (apiError) {
     if (process.env.NODE_ENV === 'development') {
-      console.warn('Transaction creation failed:', {
-        status: apiError.response?.status,
-        message: apiError.message,
-        data: transactionData
-      });
+        // //console.warn('Transaction creation failed:', {
+        //   status: apiError.response?.status,
+        //   message: apiError.message,
+        //   data: transactionData
+        // });
     }
     
     return {
@@ -177,11 +178,11 @@ export const updateTransaction = async (transactionId, updateData) => {
     };
   } catch (apiError) {
     if (process.env.NODE_ENV === 'development') {
-      console.warn('Transaction update failed:', {
-        id: transactionId,
-        status: apiError.response?.status,
-        message: apiError.message
-      });
+      // //console.warn('Transaction update failed:', {
+      //   id: transactionId,
+      //   status: apiError.response?.status,
+      //   message: apiError.message
+      // });
     }
     
     return {
@@ -202,11 +203,11 @@ export const deleteTransaction = async (transactionId) => {
     };
   } catch (apiError) {
     if (process.env.NODE_ENV === 'development') {
-      console.warn('Transaction deletion failed:', {
-        id: transactionId,
-        status: apiError.response?.status,
-        message: apiError.message
-      });
+        // //console.warn('Transaction deletion failed:', {
+        //   id: transactionId,
+        //   status: apiError.response?.status,
+        //   message: apiError.message
+        // });
     }
     
     return {
@@ -239,10 +240,10 @@ export const getTransactionSummary = async (params = {}) => {
     };
   } catch (apiError) {
     if (process.env.NODE_ENV === 'development') {
-      console.error('Transaction summary failed:', {
-        status: apiError.response?.status,
-        message: apiError.message
-      });
+      // //console.error('Transaction summary failed:', {
+      //   status: apiError.response?.status,
+      //   message: apiError.message
+      // });
     }
     
     return {
@@ -263,10 +264,10 @@ export const getTransactionAccounts = async () => {
     };
   } catch (apiError) {
     if (process.env.NODE_ENV === 'development') {
-      console.error('Transaction accounts failed:', {
-        status: apiError.response?.status,
-        message: apiError.message
-      });
+      // //console.error('Transaction accounts failed:', {
+      //   status: apiError.response?.status,
+      //   message: apiError.message
+      // });
     }
     
     return {

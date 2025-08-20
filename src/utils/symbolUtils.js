@@ -2,7 +2,7 @@
  * Symbol utilities for handling broker-specific symbol mappings
  */
 
-import { symbolMappingService } from '../api/symbolMapping';
+import { symbolMappingService } from '../api/symbolMapping.js';
 
 /**
  * Normalize a symbol to standard format
@@ -14,7 +14,7 @@ export const normalizeSymbol = async (brokerSymbol) => {
     const result = await symbolMappingService.normalizeSymbol(brokerSymbol);
     return result.normalized_symbol;
   } catch (error) {
-    console.error('Error normalizing symbol:', error);
+    //console.error('Error normalizing symbol:', error);
     // Fallback: basic normalization
     return brokerSymbol.replace(/[^A-Z]/g, '').substring(0, 6);
   }
@@ -31,7 +31,7 @@ export const getBrokerSymbolForAccount = async (accountId, standardSymbol) => {
     const result = await symbolMappingService.getBrokerSymbol(accountId, standardSymbol);
     return result.success ? result.broker_symbol : null;
   } catch (error) {
-    console.error('Error getting broker symbol:', error);
+    //console.error('Error getting broker symbol:', error);
     return null;
   }
 };
@@ -47,7 +47,7 @@ export const validateSymbolAcrossAccounts = async (standardSymbol, accountIds) =
     const result = await symbolMappingService.validateSymbolAcrossAccounts(standardSymbol, accountIds);
     return result.account_availability || {};
   } catch (error) {
-    console.error('Error validating symbol:', error);
+    //console.error('Error validating symbol:', error);
     return {};
   }
 };
@@ -65,7 +65,7 @@ export const getCommonSymbols = async (accountIds) => {
     }
     return [];
   } catch (error) {
-    console.error('Error getting common symbols:', error);
+    //console.error('Error getting common symbols:', error);
     return [];
   }
 };
@@ -79,7 +79,7 @@ export const getStandardSymbols = async () => {
     const result = await symbolMappingService.getStandardSymbols();
     return result.success ? result.standard_symbols : [];
   } catch (error) {
-    console.error('Error getting standard symbols:', error);
+    //console.error('Error getting standard symbols:', error);
     return [];
   }
 };
@@ -94,7 +94,7 @@ export const formatSymbolForDisplay = (symbol) => {
   
   // Common currency pairs
   const majorPairs = [
-    'EURUSD', 'GBPUSD', 'USDJPY', 'USDCHF', 'AUDUSD', 'USDCAD', 'NZDUSD',
+    'GBPUSD', 'USDJPY', 'EURUSD', 'USDCHF', 'AUDUSD', 'USDCAD', 'NZDUSD',
     'EURGBP', 'EURJPY', 'GBPJPY', 'EURCHF', 'AUDCAD', 'GBPAUD', 'EURAUD'
   ];
   
@@ -113,7 +113,7 @@ export const formatSymbolForDisplay = (symbol) => {
  */
 export const isMajorPair = (symbol) => {
   const majorPairs = [
-    'EURUSD', 'GBPUSD', 'USDJPY', 'USDCHF', 'AUDUSD', 'USDCAD', 'NZDUSD'
+    'GBPUSD', 'USDJPY', 'EURUSD', 'USDCHF', 'AUDUSD', 'USDCAD', 'NZDUSD'
   ];
   return majorPairs.includes(symbol.toUpperCase());
 };

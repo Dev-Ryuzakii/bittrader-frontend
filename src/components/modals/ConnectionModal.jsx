@@ -56,7 +56,7 @@ const ConnectionModal = ({ isOpen, onClose, onSubmit, platform }) => {
     } catch (error) {
       setError(error.message);
       setConnectionStep('form');
-      console.error('Connection error:', error);
+      //console.error('Connection error:', error);
     } finally {
       setLoading(false);
     }
@@ -91,7 +91,7 @@ const ConnectionModal = ({ isOpen, onClose, onSubmit, platform }) => {
           
           attempts++;
         } catch (pollError) {
-          console.error('Polling error:', pollError);
+          //console.error('Polling error:', pollError);
           attempts++;
         }
       }
@@ -105,7 +105,7 @@ const ConnectionModal = ({ isOpen, onClose, onSubmit, platform }) => {
         });
       }
     } catch (mappingError) {
-      console.error('Symbol mapping error:', mappingError);
+      //console.error('Symbol mapping error:', mappingError);
       setMappingStatus({
         inProgress: false,
         completed: false,

@@ -33,7 +33,7 @@ const CreateGroupModal = ({ isOpen, onClose, onGroupCreated }) => {
       onGroupCreated(response)
       handleClose()
     } catch (error) {
-      console.error('Failed to create group:', error)
+      //console.error('Failed to create group:', error)
       setError(error.response?.data?.detail || 'Failed to create group')
     } finally {
       setLoading(false)

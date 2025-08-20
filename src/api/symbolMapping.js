@@ -8,7 +8,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 class SymbolMappingService {
   constructor() {
     this.baseURL = `${API_BASE_URL}/api/v1/symbol-mapping`;
-    this.brokerAccountsURL = `${API_BASE_URL}/api/v1/broker-accounts`;
+    this.brokerAccountsURL = `${API_BASE_URL}/api/v1/broker`;
   }
 
   /**
@@ -41,7 +41,7 @@ class SymbolMappingService {
 
       return await response.json();
     } catch (error) {
-      console.error(`Error getting account symbols for ${accountId}:`, error);
+      //console.error(`Error getting account symbols for ${accountId}:`, error);
       throw error;
     }
   }
@@ -65,7 +65,7 @@ class SymbolMappingService {
 
       return await response.json();
     } catch (error) {
-      console.error(`Error refreshing symbols for ${accountId}:`, error);
+      //console.error(`Error refreshing symbols for ${accountId}:`, error);
       throw error;
     }
   }
@@ -94,7 +94,7 @@ class SymbolMappingService {
         // Wait 1 second before next attempt
         await new Promise(resolve => setTimeout(resolve, 1000));
       } catch (error) {
-        console.error(`Error polling symbol mapping status (attempt ${attempts + 1}):`, error);
+        //console.error(`Error polling symbol mapping status (attempt ${attempts + 1}):`, error);
       }
     }
 
@@ -122,7 +122,7 @@ class SymbolMappingService {
 
       return await response.json();
     } catch (error) {
-      console.error('Error normalizing symbol:', error);
+      //console.error('Error normalizing symbol:', error);
       throw error;
     }
   }
@@ -150,7 +150,7 @@ class SymbolMappingService {
 
       return await response.json();
     } catch (error) {
-      console.error('Error getting broker symbol:', error);
+      //console.error('Error getting broker symbol:', error);
       throw error;
     }
   }
@@ -173,7 +173,7 @@ class SymbolMappingService {
 
       return await response.json();
     } catch (error) {
-      console.error('Error getting account symbol mapping:', error);
+      //console.error('Error getting account symbol mapping:', error);
       throw error;
     }
   }
@@ -202,7 +202,7 @@ class SymbolMappingService {
         throw new Error('No valid account IDs provided');
       }
 
-      console.log('Fetching cross-broker mappings for accounts:', validAccountIds);
+      //console.log('Fetching cross-broker mappings for accounts:', validAccountIds);
       
       const response = await fetch(`${this.baseURL}/cross-broker`, {
         method: 'POST',
@@ -214,15 +214,15 @@ class SymbolMappingService {
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('API Error Response:', errorText);
+        //console.error('API Error Response:', errorText);
         throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
       }
 
       const result = await response.json();
-      console.log('Cross-broker mappings result:', result);
+      //console.log('Cross-broker mappings result:', result);
       return result;
     } catch (error) {
-      console.error('Error getting cross-broker mappings:', error);
+      //console.error('Error getting cross-broker mappings:', error);
       throw error;
     }
   }
@@ -250,7 +250,7 @@ class SymbolMappingService {
 
       return await response.json();
     } catch (error) {
-      console.error('Error validating symbol:', error);
+      //console.error('Error validating symbol:', error);
       throw error;
     }
   }
@@ -279,7 +279,7 @@ class SymbolMappingService {
         throw new Error('No valid account IDs provided');
       }
 
-      console.log('Fetching symbol statistics for accounts:', validAccountIds);
+      //console.log('Fetching symbol statistics for accounts:', validAccountIds);
       
       const response = await fetch(`${this.baseURL}/statistics`, {
         method: 'POST',
@@ -291,15 +291,15 @@ class SymbolMappingService {
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('API Error Response:', errorText);
+        //console.error('API Error Response:', errorText);
         throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
       }
 
       const result = await response.json();
-      console.log('Symbol statistics result:', result);
+      //console.log('Symbol statistics result:', result);
       return result;
     } catch (error) {
-      console.error('Error getting symbol statistics:', error);
+      //console.error('Error getting symbol statistics:', error);
       throw error;
     }
   }
@@ -321,7 +321,7 @@ class SymbolMappingService {
 
       return await response.json();
     } catch (error) {
-      console.error('Error getting standard symbols:', error);
+      //console.error('Error getting standard symbols:', error);
       throw error;
     }
   }
@@ -344,7 +344,7 @@ class SymbolMappingService {
 
       return await response.json();
     } catch (error) {
-      console.error('Error refreshing account mappings:', error);
+      //console.error('Error refreshing account mappings:', error);
       throw error;
     }
   }
@@ -372,7 +372,7 @@ class SymbolMappingService {
 
       return await response.json();
     } catch (error) {
-      console.error('Error mapping symbol:', error);
+      //console.error('Error mapping symbol:', error);
       throw error;
     }
   }
@@ -400,7 +400,7 @@ class SymbolMappingService {
 
       return await response.json();
     } catch (error) {
-      console.error('Error checking symbol availability:', error);
+      //console.error('Error checking symbol availability:', error);
       throw error;
     }
   }
@@ -426,7 +426,7 @@ class SymbolMappingService {
 
       return await response.json();
     } catch (error) {
-      console.error('Error getting available symbols:', error);
+      //console.error('Error getting available symbols:', error);
       throw error;
     }
   }
@@ -449,7 +449,7 @@ class SymbolMappingService {
 
       return await response.json();
     } catch (error) {
-      console.error('Error getting symbol mappings:', error);
+      //console.error('Error getting symbol mappings:', error);
       throw error;
     }
   }
@@ -479,7 +479,7 @@ class SymbolMappingService {
 
       return await response.json();
     } catch (error) {
-      console.error('Error creating symbol mapping:', error);
+      //console.error('Error creating symbol mapping:', error);
       throw error;
     }
   }
@@ -504,7 +504,7 @@ class SymbolMappingService {
 
       return await response.json();
     } catch (error) {
-      console.error('Error updating symbol mapping:', error);
+      //console.error('Error updating symbol mapping:', error);
       throw error;
     }
   }
@@ -527,7 +527,7 @@ class SymbolMappingService {
 
       return await response.json();
     } catch (error) {
-      console.error('Error deleting symbol mapping:', error);
+      //console.error('Error deleting symbol mapping:', error);
       throw error;
     }
   }

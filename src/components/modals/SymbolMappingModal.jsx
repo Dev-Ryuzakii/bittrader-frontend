@@ -27,7 +27,7 @@ const SymbolMappingModal = ({ isOpen, onClose, accountId, selectedSymbol = '', o
         setMappings(response.mappings);
       }
     } catch (error) {
-      console.error('Failed to fetch mappings:', error);
+      //console.error('Failed to fetch mappings:', error);
     } finally {
       setLoading(false);
     }
@@ -52,7 +52,7 @@ const SymbolMappingModal = ({ isOpen, onClose, accountId, selectedSymbol = '', o
         onMappingUpdate?.(response.mapping);
       }
     } catch (error) {
-      console.error('Failed to add mapping:', error);
+      //console.error('Failed to add mapping:', error);
     }
   };
 
@@ -68,7 +68,7 @@ const SymbolMappingModal = ({ isOpen, onClose, accountId, selectedSymbol = '', o
         onMappingUpdate?.(response.mapping);
       }
     } catch (error) {
-      console.error('Failed to update mapping:', error);
+      //console.error('Failed to update mapping:', error);
     }
   };
 
@@ -77,7 +77,7 @@ const SymbolMappingModal = ({ isOpen, onClose, accountId, selectedSymbol = '', o
       await symbolMappingService.deleteSymbolMapping(mappingId);
       setMappings(prev => prev.filter(m => m.id !== mappingId));
     } catch (error) {
-      console.error('Failed to delete mapping:', error);
+      //console.error('Failed to delete mapping:', error);
     }
   };
 
@@ -143,7 +143,7 @@ const SymbolMappingModal = ({ isOpen, onClose, accountId, selectedSymbol = '', o
                   type="text"
                   value={newMapping.standardSymbol}
                   onChange={(e) => setNewMapping(prev => ({ ...prev, standardSymbol: e.target.value }))}
-                  placeholder="Standard Symbol (e.g., EURUSD)"
+                  placeholder="Standard Symbol (e.g., GBPUSD)"
                   className="px-3 py-2 bg-[#1A1A1A] border border-[#333] rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
                 <input

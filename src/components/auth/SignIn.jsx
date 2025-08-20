@@ -54,7 +54,7 @@ const SignIn = () => {
         // Navigate to intended page
         navigate(from, { replace: true });
       } catch (error) {
-        console.error('Login Error:', error);
+        //console.error('Login Error:', error);
         let errorMessage = 'Invalid credentials or server error!';
         if (error.response?.data?.detail) {
           errorMessage = error.response.data.detail;

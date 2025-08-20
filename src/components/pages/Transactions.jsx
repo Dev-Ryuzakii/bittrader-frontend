@@ -38,7 +38,7 @@ const Transactions = () => {
         setTotalPages(Math.ceil((response.meta?.total || 0) / pageSize));
       }
     } catch (error) {
-      console.error('Error fetching transactions:', error);
+      //console.error('Error fetching transactions:', error);
     } finally {
       setIsLoading(false);
     }
@@ -92,7 +92,7 @@ const Transactions = () => {
   // Download all transactions
   const downloadTransactions = () => {
     // Logic to download transactions as CSV or PDF
-    console.log('Downloading transactions');
+    //console.log('Downloading transactions');
   };
 
   return (

@@ -16,29 +16,29 @@ const CrossBrokerAnalysis = ({ accountIds, accounts = [] }) => {
   const fetchCrossBrokerData = async () => {
     setLoading(true);
     try {
-      console.log('CrossBrokerAnalysis: Fetching data for accounts:', accountIds);
+      //console.log('CrossBrokerAnalysis: Fetching data for accounts:', accountIds);
       
       // Get cross-broker mappings
       const mappingsResponse = await symbolMappingService.getCrossBrokerMappings(accountIds);
-      console.log('Mappings response:', mappingsResponse);
+      //console.log('Mappings response:', mappingsResponse);
 
       // Get statistics
       const statsResponse = await symbolMappingService.getSymbolStatistics(accountIds);
-      console.log('Statistics response:', statsResponse);
+      //console.log('Statistics response:', statsResponse);
 
       if (mappingsResponse && mappingsResponse.success) {
         setCrossMappings(mappingsResponse.cross_mappings || mappingsResponse.data?.cross_mappings || {});
       } else {
-        console.error('Failed to get mappings:', mappingsResponse);
+        //console.error('Failed to get mappings:', mappingsResponse);
       }
       
       if (statsResponse && statsResponse.success) {
         setStatistics(statsResponse.statistics || statsResponse.data?.statistics || {});
       } else {
-        console.error('Failed to get statistics:', statsResponse);
+        //console.error('Failed to get statistics:', statsResponse);
       }
     } catch (error) {
-      console.error('Failed to fetch cross-broker data:', error);
+      //console.error('Failed to fetch cross-broker data:', error);
     } finally {
       setLoading(false);
     }

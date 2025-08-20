@@ -22,16 +22,16 @@ export const getAvailableSymbols = async (searchTerm = '', limit = 50) => {
     if (searchTerm) params.append('search', searchTerm);
     if (limit) params.append('limit', limit.toString());
 
-    const response = await axios.get(`${API_BASE_URL}/broker-accounts/symbols/available`, {
+    const response = await axios.get(`${API_BASE_URL}/broker/symbols/available`, {
       params,
       headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
+        'Authorization': localStorage.getItem('access_token')
       }
     });
     
     return response.data;
   } catch (error) {
-    console.error('Error fetching available symbols:', error);
+    //console.error('Error fetching available symbols:', error);
     throw error;
   }
 };
@@ -42,15 +42,15 @@ export const getAvailableSymbols = async (searchTerm = '', limit = 50) => {
  */
 export const getPopularSymbols = async () => {
   try {
-    const response = await axios.get(`${API_BASE_URL}/broker-accounts/symbols/popular`, {
+    const response = await axios.get(`${API_BASE_URL}/broker/symbols/popular`, {
       headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
+        'Authorization': localStorage.getItem('access_token')
       }
     });
     
     return response.data;
   } catch (error) {
-    console.error('Error fetching popular symbols:', error);
+    //console.error('Error fetching popular symbols:', error);
     throw error;
   }
 };
@@ -68,18 +68,18 @@ export const searchSymbols = async (searchTerm, limit = 20) => {
   
   try {
     const response = await axios.get(
-      `${API_BASE_URL}/broker-accounts/symbols/search/${encodeURIComponent(searchTerm)}`, 
+      `${API_BASE_URL}/broker/symbols/search/${encodeURIComponent(searchTerm)}`, 
       {
         params: { limit },
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': localStorage.getItem('access_token')
         }
       }
     );
     
     return response.data;
   } catch (error) {
-    console.error('Error searching symbols:', error);
+    //console.error('Error searching symbols:', error);
     throw error;
   }
 };
@@ -93,17 +93,17 @@ export const searchSymbols = async (searchTerm, limit = 20) => {
 export const getSymbolPrice = async (accountId, symbol) => {
   try {
     const response = await axios.get(
-      `${API_BASE_URL}/broker-accounts/${accountId}/price/${encodeURIComponent(symbol)}`,
+      `${API_BASE_URL}/broker/${accountId}/price/${encodeURIComponent(symbol)}`,
       {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': localStorage.getItem('access_token')
         }
       }
     );
     
     return response.data;
   } catch (error) {
-    console.error(`Error fetching price for ${symbol}:`, error);
+    //console.error(`Error fetching price for ${symbol}:`, error);
     throw error;
   }
 };
@@ -116,17 +116,17 @@ export const getSymbolPrice = async (accountId, symbol) => {
 export const getAccountSymbols = async (accountId) => {
   try {
     const response = await axios.get(
-      `${API_BASE_URL}/broker-accounts/${accountId}/symbols`,
+      `${API_BASE_URL}/broker/${accountId}/symbols`,
       {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': localStorage.getItem('access_token')
         }
       }
     );
     
     return response.data;
   } catch (error) {
-    console.error('Error fetching account symbols:', error);
+    //console.error('Error fetching account symbols:', error);
     throw error;
   }
 };
@@ -139,18 +139,18 @@ export const getAccountSymbols = async (accountId) => {
 export const refreshAccountSymbols = async (accountId) => {
   try {
     const response = await axios.post(
-      `${API_BASE_URL}/broker-accounts/${accountId}/symbols/refresh`,
+      `${API_BASE_URL}/broker/${accountId}/symbols/refresh`,
       {},
       {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': localStorage.getItem('access_token')
         }
       }
     );
     
     return response.data;
   } catch (error) {
-    console.error('Error refreshing account symbols:', error);
+    //console.error('Error refreshing account symbols:', error);
     throw error;
   }
 };
@@ -163,17 +163,17 @@ export const refreshAccountSymbols = async (accountId) => {
 export const getSymbolMappingStatus = async (accountId) => {
   try {
     const response = await axios.get(
-      `${API_BASE_URL}/broker-accounts/${accountId}/symbols/status`,
+      `${API_BASE_URL}/broker/${accountId}/symbols/status`,
       {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': localStorage.getItem('access_token')
         }
       }
     );
     
     return response.data;
   } catch (error) {
-    console.error('Error fetching symbol mapping status:', error);
+    //console.error('Error fetching symbol mapping status:', error);
     throw error;
   }
 };

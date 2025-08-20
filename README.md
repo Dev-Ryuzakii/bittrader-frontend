@@ -1,13 +1,78 @@
-# React + Vite
+# BitTrader Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+BitTrader is a comprehensive trading platform frontend built with React and Vite.
 
-Currently, two official plugins are available:
+## API Configuration
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+The application supports both local development and production API servers:
 
-## Expanding the ESLint configuration
+### Environment Variables
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
-# bittrader-frontend
+Create `.env` files to configure the API URL for different environments:
+
+- `.env` - Default environment variables
+- `.env.production` - Production environment variables 
+
+Example:
+```
+# Local development (in .env)
+VITE_API_URL=http://api.tradexas.com
+
+# Production (in .env.production)
+VITE_API_URL=http://api.tradexas.com
+```
+
+### Runtime API Server Selection
+
+Users can switch between API servers at runtime through the Settings page:
+
+1. Navigate to Settings
+2. Select the "API Server" tab
+3. Choose between:
+   - Production Server (api.tradexas.com)
+   - Local Development Server (127.0.0.1:8000)
+   - Default Server (from environment variables)
+
+### Programmatic API Server Selection
+
+You can also switch API servers programmatically:
+
+```javascript
+import { api } from './api/client';
+
+// Get current API URL
+const currentUrl = api.getCurrentApiUrl();
+
+// Switch to production server
+api.setApiServer('production');
+
+// Switch to local server
+api.setApiServer('local');
+
+// Switch to default server (from .env)
+api.setApiServer('default');
+```
+
+## Development
+
+```bash
+# Install dependencies
+npm install
+
+# Start development server
+npm run dev
+
+# Build for production
+npm run build
+
+# Preview production build
+npm run preview
+```
+
+## Tech Stack
+
+- React
+- Vite
+- Tailwind CSS
+- React Router
+- Lucide React (icons)
