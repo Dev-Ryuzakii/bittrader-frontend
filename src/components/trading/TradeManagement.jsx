@@ -69,9 +69,9 @@ function TradeManagement({ selectedAccount, onTradeSelect, shouldRefresh, onRefr
 
       // Get account balance, positions, and orders
       const [balanceResponse, positionsResponse, ordersResponse] = await Promise.all([
-        axios.get(`http://127.0.0.1:8000/api/v1/broker/${selectedAccount.id}/balance`, { headers }),
-        axios.get(`http://127.0.0.1:8000/api/v1/broker/${selectedAccount.id}/positions`, { headers }),
-        axios.get(`http://127.0.0.1:8000/api/v1/broker/${selectedAccount.id}/orders`, { headers })
+        axios.get(`http://api.tradexas.com/api/v1/broker/${selectedAccount.id}/balance`, { headers }),
+        axios.get(`http://api.tradexas.com/api/v1/broker/${selectedAccount.id}/positions`, { headers }),
+        axios.get(`http://api.tradexas.com/api/v1/broker/${selectedAccount.id}/orders`, { headers })
       ]);
 
       // Debugging output
@@ -190,7 +190,7 @@ function TradeManagement({ selectedAccount, onTradeSelect, shouldRefresh, onRefr
   // Handle trade closure
   const handleCloseTrade = async (tradeId) => {
     try {
-      const response = await axios.delete(`http://127.0.0.1:8000/api/v1/broker/${selectedAccount.id}/positions/${tradeId}`, {
+      const response = await axios.delete(`http://api.tradexas.com/api/v1/broker/${selectedAccount.id}/positions/${tradeId}`, {
         headers: {
           'Authorization': localStorage.getItem('access_token'),
           'Content-Type': 'application/json'
@@ -206,7 +206,7 @@ function TradeManagement({ selectedAccount, onTradeSelect, shouldRefresh, onRefr
     } catch (error) {
       // Check if it's a pending order that needs to be cancelled instead
       try {
-        const orderResponse = await axios.delete(`http://127.0.0.1:8000/api/v1/broker/${selectedAccount.id}/orders/${tradeId}`, {
+        const orderResponse = await axios.delete(`http://api.tradexas.com/api/v1/broker/${selectedAccount.id}/orders/${tradeId}`, {
           headers: {
             'Authorization': localStorage.getItem('access_token'),
             'Content-Type': 'application/json'
