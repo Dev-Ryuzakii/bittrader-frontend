@@ -254,7 +254,8 @@ export class ChatWebSocket {
         throw new Error('No authentication token found');
       }
 
-      const wsUrl = `ws://127.0.0.1:8000/ws/chat/group/${this.groupId}?token=${encodeURIComponent(token)}`;
+      // Use production WebSocket URL instead of localhost
+      const wsUrl = `ws://api.tradexas.com/ws/chat/group/${this.groupId}?token=${encodeURIComponent(token)}`;
       this.ws = new WebSocket(wsUrl);
 
       this.ws.onopen = () => {

@@ -16,7 +16,7 @@ Create `.env` files to configure the API URL for different environments:
 Example:
 ```
 # Local development (in .env)
-VITE_API_URL=http://127.0.0.1:8000
+VITE_API_URL=http://api.tradexas.com
 
 # Production (in .env.production)
 VITE_API_URL=http://api.tradexas.com
