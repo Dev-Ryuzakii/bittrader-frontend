@@ -8,7 +8,24 @@ import SymbolMappingModal from '../modals/SymbolMappingModal';
 import CrossBrokerAnalysis from '../UI/CrossBrokerAnalysis';
 import SymbolPicker from '../UI/SymbolPicker';
 import Loader from '../UI/Loader';
-import { getAccounts, connectAccount, deleteAccount, updateAccount, toggleAccountStatus } from '../../api/broker';
+import { getEAAccounts as getAccounts } from '../../api/ea';
+
+// EA account management stubs - EA accounts are auto-connected when EA runs
+const connectAccount = async (formData) => {
+  return { success: false, error: 'EA accounts are automatically connected when EA is deployed' };
+};
+
+const deleteAccount = async (accountId) => {
+  return { success: false, error: 'EA accounts cannot be deleted from frontend. Stop EA to disconnect.' };
+};
+
+const updateAccount = async (accountId, updateData) => {
+  return { success: false, error: 'EA account settings are managed by the EA configuration' };
+};
+
+const toggleAccountStatus = async (accountId) => {
+  return { success: false, error: 'EA account status is managed by EA connection state' };
+};
 import { symbolMappingService } from '../../api/symbolMapping';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';

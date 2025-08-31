@@ -9,7 +9,7 @@ import TradeManagement from '../trading/TradeManagement';
 import Loader from '../UI/Loader';
 import { TrendingUp, Users, Activity, Target, Plus, BarChart3, Zap, Signal } from 'lucide-react';
 import { getTransactions } from '../../api/transactions';
-import { getAccounts, placeTrade } from '../../api/broker';
+import { getEAAccounts as getAccounts, placeEATrade as placeTrade } from '../../api/ea';
 import { useAuth } from '../../contexts/AuthContext';
 
 const Dashboard = () => {

@@ -15,11 +15,11 @@ import {
   Zap
 } from 'lucide-react';
 import { 
-  placeTrade, 
-  placePendingOrder, 
-  placePairTrade, 
-  getSymbolPrice 
-} from '../../api/broker';
+  placeEATrade as placeTrade, 
+  placeEAPendingOrder as placePendingOrder, 
+  placeEAPairTrade as placePairTrade, 
+  getEASymbolPrice as getSymbolPrice 
+} from '../../api/ea';
 import { 
   getPopularSymbols, 
   searchSymbols, 

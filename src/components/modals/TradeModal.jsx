@@ -12,18 +12,23 @@ import {
   RefreshCw,
   Link2,
   BarChart3,
-  Zap
+  Zap,
+  AlertTriangle
 } from 'lucide-react';
 import { 
-  placeTrade, 
-  placePendingOrder, 
-  placePairTrade, 
-  getSymbolPrice,
-  getLivePrice,
-  ORDER_TYPES,
-  executeOrder,
-  getOrderTypesForDropdown
-} from '../../api/broker';
+  placeEATrade as placeTrade, 
+  placeEAPendingOrder as placePendingOrder, 
+  placeEAPairTrade as placePairTrade, 
+  getEASymbolPrice as getSymbolPrice,
+  getEASymbolPrice as getLivePrice,
+  EA_ORDER_TYPES as ORDER_TYPES,
+  executeEAOrder as executeOrder,
+  getEAOrderTypesForDropdown as getOrderTypesForDropdown
+} from '../../api/ea';
+import { 
+  getMultiplePrices, 
+  setupPriceStream 
+} from '../../api/livePrices';
 import { 
   getPopularSymbols, 
   searchSymbols, 
@@ -31,11 +36,21 @@ import {
   formatSymbolsForPicker 
 } from '../../utils/symbolpicker';
 import PairTradingPanel from './PairTradingPanel';
+import SymbolBrowser from './SymbolBrowser';
 
 const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelect, onPlaceTrade }) => {
   const [activeTab, setActiveTab] = useState('order');
   const [submitting, setSubmitting] = useState(false);
+  const commonSymbols = [
+    'EURUSD', 'GBPUSD', 'USDJPY', 'USDCAD', 'AUDUSD', 'NZDUSD', 'USDCHF',
+    'EURGBP', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'BTCUSD', 'ETHUSD',
+    'US30', 'SPX500', 'NAS100', 'UK100', 'GER30', 'JPN225', 'AUS200'
+  ];
+
   const [livePrice, setLivePrice] = useState(null);
+  const [priceLoading, setPriceLoading] = useState(false);
+  const [priceError, setPriceError] = useState(null);
+  const [priceUpdateTime, setPriceUpdateTime] = useState(null);
   const [error, setError] = useState('');
 
   // Unified Order State (replaces both market and pending states)
@@ -70,38 +85,51 @@ const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelec
   const orderTypes = getOrderTypesForDropdown();
   const currentOrderConfig = ORDER_TYPES[orderData.orderType];
 
-  // Fetch live price when symbol changes
+  // Fetch live price when symbol changes with enhanced error handling
   useEffect(() => {
     if (isOpen && selectedAccount && orderData.symbol) {
       fetchLivePrice(orderData.symbol);
+      
+      // Set up interval for continuous price updates
+      const priceInterval = setInterval(() => {
+        fetchLivePrice(orderData.symbol);
+      }, 2000); // Update every 2 seconds
+      
+      return () => clearInterval(priceInterval);
     }
   }, [isOpen, orderData.symbol, selectedAccount]);
 
   const fetchLivePrice = async (symbol) => {
+    if (!symbol || !selectedAccount) return;
+    
+    setPriceLoading(true);
+    setPriceError(null);
+    
     try {
-      // Try to use the symbolpicker's getSymbolPrice function first
-      if (selectedAccount) {
-        const response = await getSymbolPrice(selectedAccount.id, symbol);
-        if (response && response.success && response.data) {
-          setLivePrice({
-            bid: response.data.bid,
-            ask: response.data.ask,
-            spread: response.data.spread || (response.data.ask - response.data.bid),
-            time: response.data.time
-          });
-          return;
-        }
+      // Use EA API for price fetching
+      const response = await getSymbolPrice(selectedAccount.id, symbol);
+      
+      if (response && response.success && response.data) {
+        setLivePrice({
+          bid: response.data.bid,
+          ask: response.data.ask,
+          spread: response.data.spread || (response.data.ask - response.data.bid),
+          time: response.data.time || new Date().toISOString(),
+          symbol: response.data.symbol || symbol,
+          broker_symbol: response.data.broker_symbol
+        });
+        setPriceUpdateTime(new Date());
+        setPriceError(null);
+        return;
       }
       
-      // Fall back to the broker API's getLivePrice if symbolpicker fails
-      const response = await getLivePrice(symbol);
-      if (response && response.success && response.data) {
-        setLivePrice(response.data);
-      }
+      throw new Error('Failed to fetch price from EA');
     } catch (error) {
-      //console.log('Could not fetch live price:', error);
-      // Don't show error to user for price fetching failures
-      // Just silently fail and don't display price
+      console.error('Price fetch error:', error);
+      setPriceError(`Failed to fetch price: ${error.message}`);
+      setLivePrice(null);
+    } finally {
+      setPriceLoading(false);
     }
   };
 
@@ -462,8 +490,13 @@ const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelec
               orderTypes={orderTypes}
               currentOrderConfig={currentOrderConfig}
               livePrice={livePrice}
+              priceLoading={priceLoading}
+              priceError={priceError}
+              priceUpdateTime={priceUpdateTime}
               onSubmit={handleUnifiedOrder}
               submitting={submitting}
+              fetchLivePrice={fetchLivePrice}
+              selectedAccount={selectedAccount}
             />
           )}
           
@@ -482,8 +515,23 @@ const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelec
 };
 
 // Unified Order Panel Component (replaces MarketOrderPanel and PendingOrderPanel)
-const UnifiedOrderPanel = ({ data, setData, orderTypes, currentOrderConfig, livePrice, onSubmit, submitting }) => {
+const UnifiedOrderPanel = ({ 
+  data, 
+  setData, 
+  orderTypes, 
+  currentOrderConfig, 
+  livePrice, 
+  priceLoading, 
+  priceError, 
+  priceUpdateTime, 
+  onSubmit, 
+  submitting, 
+  fetchLivePrice,
+  selectedAccount
+}) => {
   const [showSymbolModal, setShowSymbolModal] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [symbolSuggestions, setSymbolSuggestions] = useState([]);
   
   const updateData = (field, value) => {
     setData(prev => ({ ...prev, [field]: value }));
@@ -500,6 +548,36 @@ const UnifiedOrderPanel = ({ data, setData, orderTypes, currentOrderConfig, live
   const handleSymbolSelect = (symbol) => {
     updateData('symbol', symbol);
     setShowSymbolModal(false);
+  };
+
+  // Common trading symbols for suggestions
+  const getSymbolSuggestions = (input) => {
+    const commonSymbols = [
+      'EURUSD', 'GBPUSD', 'USDJPY', 'USDCHF', 'AUDUSD', 'USDCAD', 'NZDUSD',
+      'EURGBP', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'BTCUSD', 'ETHUSD'
+    ];
+    
+    if (!input || input.length < 2) return [];
+    
+    return commonSymbols
+      .filter(symbol => symbol.toLowerCase().includes(input.toLowerCase()))
+      .slice(0, 5);
+  };
+
+  const handleSymbolInputChange = (value) => {
+    // Keep the user's original case preference
+    updateData('symbol', value);
+    
+    // Show suggestions for partial matches (use case-insensitive search)
+    const suggestions = getSymbolSuggestions(value);
+    setSymbolSuggestions(suggestions);
+    setShowSuggestions(suggestions.length > 0 && value.length >= 2);
+  };
+
+  const selectSuggestion = (symbol) => {
+    updateData('symbol', symbol);
+    setShowSuggestions(false);
+    setSymbolSuggestions([]);
   };
 
   // Group order types by category for better UX
@@ -549,20 +627,50 @@ const UnifiedOrderPanel = ({ data, setData, orderTypes, currentOrderConfig, live
           {/* Symbol Selection */}
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">Symbol</label>
-            <div className="flex">
+            <div className="flex relative">
               <input
                 type="text"
                 value={data.symbol}
-                onChange={(e) => updateData('symbol', e.target.value.toUpperCase())}
-                placeholder="Symbol (e.g., GBPUSD)"
+                onChange={(e) => handleSymbolInputChange(e.target.value)}
+                onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                placeholder="Symbol (e.g., EURUSD, eurusd, btcusd)"
                 className="w-full bg-[#1A1A1A] border border-[#444] rounded-l-lg px-3 py-2 text-white"
               />
               <button
                 onClick={openSymbolSelector}
-                className="bg-[#333] border border-[#555] border-l-0 rounded-r-lg px-3 text-blue-400 hover:text-blue-300"
+                className="bg-[#333] border border-[#555] border-l-0 px-3 text-blue-400 hover:text-blue-300"
               >
                 <Search className="w-4 h-4" />
               </button>
+              {data.symbol && (
+                <button
+                  onClick={() => fetchLivePrice(data.symbol)}
+                  disabled={priceLoading}
+                  className="bg-[#333] border border-[#555] border-l-0 rounded-r-lg px-3 text-yellow-400 hover:text-yellow-300 disabled:opacity-50"
+                  title="Refresh live price"
+                >
+                  <RefreshCw className={`w-4 h-4 ${priceLoading ? 'animate-spin' : ''}`} />
+                </button>
+              )}
+              
+              {/* Symbol Suggestions Dropdown */}
+              {showSuggestions && symbolSuggestions.length > 0 && (
+                <div className="absolute top-full left-0 right-0 z-50 bg-[#1A1A1A] border border-[#444] rounded-b-lg shadow-lg">
+                  {symbolSuggestions.map((symbol, index) => (
+                    <button
+                      key={symbol}
+                      type="button"
+                      onClick={() => {
+                        selectSuggestion(symbol);
+                        fetchLivePrice(symbol);
+                      }}
+                      className="w-full text-left px-3 py-2 hover:bg-[#333] text-gray-300 hover:text-white border-b border-[#444] last:border-b-0"
+                    >
+                      {symbol}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
           
@@ -580,17 +688,115 @@ const UnifiedOrderPanel = ({ data, setData, orderTypes, currentOrderConfig, live
           </div>
         </div>
 
-        {/* Live Price Display */}
-        {livePrice && (
-          <div className="mt-4 bg-[#1A1A1A] border border-[#444] rounded-lg p-3">
-            <div className="flex justify-between items-center">
-              <span className="text-gray-300">Live Price:</span>
-              <div className="flex gap-4">
-                <span className="text-red-400">Bid: {livePrice.bid?.toFixed(5)}</span>
-                <span className="text-green-400">Ask: {livePrice.ask?.toFixed(5)}</span>
-                <span className="text-gray-400">Spread: {((livePrice.ask - livePrice.bid) || 0).toFixed(5)}</span>
+        {/* Enhanced Live Price Display */}
+        {data.symbol && (
+          <div className="mt-4">
+            {priceLoading && !livePrice && (
+              <div className="bg-[#1A1A1A] border border-[#444] rounded-lg p-3">
+                <div className="flex items-center justify-center gap-2 text-gray-400">
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  <span>Loading live price for {data.symbol}...</span>
+                </div>
               </div>
-            </div>
+            )}
+            
+            {priceError && !livePrice && (
+              <div className="bg-orange-900/30 border border-orange-700 rounded-lg p-3">
+                <div className="flex items-center gap-2 text-orange-300">
+                  <AlertTriangle className="w-4 h-4" />
+                  <div className="text-sm">
+                    <div>{priceError}</div>
+                    <div className="text-xs text-orange-200 mt-1">
+                      Tip: Try symbols like EURUSD, GBPUSD, or check available symbols for this broker
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {livePrice && (
+              <div className="bg-[#1A1A1A] border border-[#444] rounded-lg p-3">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-gray-300 flex items-center gap-2">
+                    <Activity className="w-4 h-4" />
+                    Live Price - {livePrice.symbol}
+                    {livePrice.broker_symbol && livePrice.broker_symbol !== livePrice.symbol && (
+                      <span className="text-xs text-gray-500">({livePrice.broker_symbol})</span>
+                    )}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    {priceLoading && (
+                      <RefreshCw className="w-3 h-3 animate-spin text-blue-400" />
+                    )}
+                    {priceUpdateTime && (
+                      <span className="text-xs text-gray-500">
+                        {priceUpdateTime.toLocaleTimeString()}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="text-center">
+                    <div className="text-xs text-gray-400 mb-1">BID</div>
+                    <div className="text-lg font-mono text-red-400">
+                      {livePrice.bid?.toFixed(5) || '-.-----'}
+                    </div>
+                  </div>
+                  
+                  <div className="text-center">
+                    <div className="text-xs text-gray-400 mb-1">ASK</div>
+                    <div className="text-lg font-mono text-green-400">
+                      {livePrice.ask?.toFixed(5) || '-.-----'}
+                    </div>
+                  </div>
+                  
+                  <div className="text-center">
+                    <div className="text-xs text-gray-400 mb-1">SPREAD</div>
+                    <div className="text-lg font-mono text-gray-300">
+                      {livePrice.spread ? livePrice.spread.toFixed(5) : 
+                       (livePrice.bid && livePrice.ask) ? (livePrice.ask - livePrice.bid).toFixed(5) : '-.-----'}
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Price Direction Indicator */}
+                <div className="mt-2 flex justify-center">
+                  <div className="flex items-center gap-1 text-xs text-gray-500">
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                    <span>Live Market Data</span>
+                  </div>
+                </div>
+                
+                {/* Quick Price Actions */}
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => {
+                      if (livePrice.bid) {
+                        updateData('price', livePrice.bid.toString());
+                        updateData('orderType', 'LIMIT_SELL');
+                      }
+                    }}
+                    className="text-xs bg-red-600/20 hover:bg-red-600/30 text-red-300 px-2 py-1 rounded border border-red-600/30"
+                    disabled={!currentOrderConfig?.requiresPrice}
+                  >
+                    Use Bid as Entry
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (livePrice.ask) {
+                        updateData('price', livePrice.ask.toString());
+                        updateData('orderType', 'LIMIT_BUY');
+                      }
+                    }}
+                    className="text-xs bg-green-600/20 hover:bg-green-600/30 text-green-300 px-2 py-1 rounded border border-green-600/30"
+                    disabled={!currentOrderConfig?.requiresPrice}
+                  >
+                    Use Ask as Entry
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -737,9 +943,10 @@ const UnifiedOrderPanel = ({ data, setData, orderTypes, currentOrderConfig, live
       
       {/* Symbol Selection Modal */}
       {showSymbolModal && (
-        <SymbolSelectorModal 
+        <SymbolBrowser 
           onClose={closeSymbolModal} 
           onSelect={handleSymbolSelect}
+          selectedAccount={selectedAccount}
         />
       )}
     </div>
@@ -747,186 +954,5 @@ const UnifiedOrderPanel = ({ data, setData, orderTypes, currentOrderConfig, live
 };
 
 // PairTradingPanel is now imported from a separate file
-
-// Symbol Selector Modal
-const SymbolSelectorModal = ({ onClose, onSelect }) => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [symbols, setSymbols] = useState([]);
-  const [popularSymbols, setPopularSymbols] = useState({});
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    loadPopularSymbols();
-  }, []);
-
-  // Load popular symbols
-  const loadPopularSymbols = async () => {
-    try {
-      setLoading(true);
-      const response = await getPopularSymbols();
-      if (response && response.popular_symbols) {
-        setPopularSymbols(response.popular_symbols);
-      } else {
-        // Fallback to mock data
-        setPopularSymbols({
-          major_pairs: [],
-          cross_pairs: [],
-          commodities: []
-        });
-      }
-    } catch (error) {
-      //console.error('Error loading popular symbols:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Handle symbol search
-  const handleSymbolSearch = async (term) => {
-    setSearchTerm(term);
-    if (!term || term.length < 2) {
-      setSymbols([]);
-      return;
-    }
-    
-    try {
-      setLoading(true);
-      // Try to get symbols from API
-      const response = await searchSymbols(term);
-      if (response && response.symbols) {
-        setSymbols(formatSymbolsForPicker(response));
-      } else {
-        // Fallback to mock search
-        setSymbols(mockSearchSymbols(term));
-      }
-    } catch (error) {
-      //console.error('Error searching symbols:', error);
-      // Fallback to mock search
-      setSymbols(mockSearchSymbols(term));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Define categories
-  const SYMBOL_CATEGORIES = {
-    major_pairs: 'MAJOR FOREX PAIRS',
-    cross_pairs: 'CROSS FOREX PAIRS',
-    exotic_pairs: 'EXOTIC PAIRS',
-    commodities: 'COMMODITIES',
-    indices: 'INDICES',
-    crypto: 'CRYPTOCURRENCY'
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg w-full max-w-md max-h-[90vh] overflow-hidden flex flex-col">
-        <div className="p-4 border-b border-[#2A2A2A] flex justify-between items-center">
-          <h3 className="text-lg font-medium text-white">Select Symbol</h3>
-          <button 
-            className="text-gray-400 hover:text-white" 
-            onClick={onClose}
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-        
-        <div className="p-4 border-b border-[#2A2A2A]">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => handleSymbolSearch(e.target.value)}
-              placeholder="Search symbols..."
-              className="w-full bg-[#222] border border-[#444] rounded-lg pl-9 pr-3 py-2 text-white"
-            />
-          </div>
-        </div>
-        
-        <div className="overflow-y-auto flex-1 p-2">
-          {loading && (
-            <div className="flex flex-col items-center justify-center h-32 text-gray-400">
-              <RefreshCw className="w-5 h-5 animate-spin mb-2" />
-              <p>Loading symbols...</p>
-            </div>
-          )}
-          
-          {!loading && searchTerm.length < 2 && (
-            <>
-              {Object.entries(popularSymbols).map(([category, symbolList]) => (
-                symbolList && symbolList.length > 0 && (
-                  <div key={category}>
-                    <div className="text-xs font-medium text-gray-500 px-2 py-1">
-                      {SYMBOL_CATEGORIES[category] || category.toUpperCase()}
-                    </div>
-                    <div className="grid grid-cols-2 gap-2 mb-4">
-                      {symbolList.map(sym => (
-                        <button
-                          key={sym.symbol}
-                          onClick={() => onSelect(sym.symbol)}
-                          className={`bg-[#222] hover:bg-[#333] border border-[#444] rounded px-3 py-2 text-left transition-colors ${
-                            sym.available ? 'text-white' : 'text-gray-500'
-                          }`}
-                          disabled={!sym.available}
-                        >
-                          {sym.symbol}
-                          {sym.description && (
-                            <span className="text-xs text-gray-400 block">{sym.description}</span>
-                          )}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )
-              ))}
-              
-              {Object.keys(popularSymbols).length === 0 && !loading && (
-                <div className="flex flex-col items-center justify-center h-32 text-gray-400">
-                  <p>Type to search for symbols</p>
-                </div>
-              )}
-            </>
-          )}
-          
-          {!loading && searchTerm.length >= 2 && (
-            <>
-              {symbols.length > 0 ? (
-                <div className="grid grid-cols-2 gap-2">
-                  {symbols.map(symbol => (
-                    <button
-                      key={symbol.symbol}
-                      onClick={() => onSelect(symbol.symbol)}
-                      className="bg-[#222] hover:bg-[#333] border border-[#444] rounded px-3 py-2 text-white text-left transition-colors"
-                    >
-                      {symbol.symbol}
-                      {symbol.description && (
-                        <span className="text-xs text-gray-400 block">{symbol.description}</span>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center h-32 text-gray-400">
-                  <p>No symbols found</p>
-                  <p className="text-sm">Try a different search term</p>
-                </div>
-              )}
-            </>
-          )}
-        </div>
-        
-        <div className="p-4 border-t border-[#2A2A2A]">
-          <button
-            onClick={onClose}
-            className="w-full py-2 px-4 bg-[#333] hover:bg-[#444] text-white rounded-lg transition-colors"
-          >
-            Cancel
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 export default TradeModal;

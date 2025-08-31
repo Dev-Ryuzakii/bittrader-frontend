@@ -1,9 +1,10 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Routes, Route, useLocation } from 'react-router-dom'
 import { useAuth } from './contexts/AuthContext.jsx'
 import { ToastProvider } from './contexts/ToastContext.jsx'
 import { ConfirmProvider } from './contexts/ConfirmContext.jsx'
 import { TradingSymbolProvider } from './contexts/TradingSymbolContext.jsx'
+import { eaWebSocket } from './api/ea'
 import ProtectedRoute from './components/ProtectedRoute.jsx'
 import Hero from './components/pages/Hero'
 import SignIn from './components/auth/SignIn'
@@ -27,8 +28,54 @@ import Search from './components/pages/Search.jsx'
 
 const App = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
   const location = useLocation();
+  
+  // Setup EA WebSocket connection when user is authenticated
+  useEffect(() => {
+    if (isAuthenticated && user?.id) {
+      console.log('Connecting to EA WebSocket for user:', user.id);
+      
+      // Connect to EA WebSocket for real-time updates
+      eaWebSocket.connect(user.id);
+      
+      // Set up event listeners
+      eaWebSocket.on('connected', () => {
+        console.log('EA WebSocket connected successfully');
+      });
+      
+      eaWebSocket.on('trade_result', (data) => {
+        console.log('Trade executed via EA:', data);
+        // You can add toast notifications here for trade results
+      });
+      
+      eaWebSocket.on('account_update', (data) => {
+        console.log('EA account update:', data);
+      });
+      
+      eaWebSocket.on('position_update', (data) => {
+        console.log('EA position update:', data);
+      });
+      
+      eaWebSocket.on('price_update', (data) => {
+        console.log('EA price update:', data);
+      });
+      
+      eaWebSocket.on('error', (error) => {
+        console.error('EA WebSocket error:', error);
+      });
+      
+      eaWebSocket.on('disconnected', () => {
+        console.log('EA WebSocket disconnected');
+      });
+      
+      // Cleanup on unmount or authentication change
+      return () => {
+        console.log('Disconnecting EA WebSocket');
+        eaWebSocket.disconnect();
+      };
+    }
+  }, [isAuthenticated, user?.id]);
   
   // Check if we're on a public route
   const isPublicRoute = ['/', '/signin', '/signup'].includes(location.pathname);
