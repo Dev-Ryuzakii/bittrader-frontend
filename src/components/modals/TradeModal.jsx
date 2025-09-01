@@ -23,6 +23,7 @@ import {
   getEASymbolPrice as getSymbolPrice,
   getEALivePrices as getLivePrices,
   getEASymbols as getSymbols,
+  searchEASymbols,
   EA_ORDER_TYPES as ORDER_TYPES,
   executeEAOrder as executeOrder,
   getEAOrderTypesForDropdown as getOrderTypesForDropdown
@@ -43,11 +44,6 @@ import SymbolBrowser from './SymbolBrowser';
 const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelect, onPlaceTrade }) => {
   const [activeTab, setActiveTab] = useState('order');
   const [submitting, setSubmitting] = useState(false);
-  const commonSymbols = [
-    'EURUSD', 'GBPUSD', 'USDJPY', 'USDCAD', 'AUDUSD', 'NZDUSD', 'USDCHF',
-    'EURGBP', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'BTCUSD', 'ETHUSD',
-    'US30', 'SPX500', 'NAS100', 'UK100', 'GER30', 'JPN225', 'AUS200'
-  ];
 
   const [livePrice, setLivePrice] = useState(null);
   const [priceLoading, setPriceLoading] = useState(false);
@@ -159,10 +155,10 @@ const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelec
       return;
     }
     
-    // Basic symbol format validation - allow letters, numbers, and common suffixes
-    const symbolPattern = /^[A-Za-z0-9]{3,12}$/;
+    // Basic symbol format validation - allow letters, numbers, dots, underscores, hyphens
+    const symbolPattern = /^[A-Za-z0-9._-]{2,20}$/;
     if (!symbolPattern.test(symbol)) {
-      setPriceError('Invalid symbol format. Use letters and numbers only (e.g., EURUSDm, GBPUSDm)');
+      setPriceError('Invalid symbol format. Use letters, numbers, dots, underscores only (e.g., USDJPY.s, EUR_USD)');
       setLivePrice(null);
       return;
     }
@@ -213,7 +209,7 @@ const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelec
       // Enhanced error message for symbol not found
       const errorMsg = response.error || detailedResponse.error || 'Symbol not found';
       if (errorMsg.includes('not found')) {
-        setPriceError(`Symbol "${symbol}" not available. Try symbols like EURUSDm, GBPUSDm, BTCUSDm`);
+        setPriceError(`Symbol "${symbol}" not available. Try symbols like EURUSD, USDJPY.s, GBP_USD, or check available symbols`);
       } else {
         setPriceError(`Failed to fetch price: ${errorMsg}`);
       }
@@ -812,27 +808,45 @@ const UnifiedOrderPanel = ({
     setShowSymbolModal(false);
   };
 
-  // Get symbol suggestions from available symbols or common symbols
-  const getSymbolSuggestions = (input) => {
+  // Get symbol suggestions from available symbols using EA API
+  const getSymbolSuggestions = async (input) => {
+    if (!input || input.length < 2) return [];
+    
+    // First try to use cached available symbols if they exist
+    if (availableSymbols && availableSymbols.length > 0) {
+      const symbolList = availableSymbols.map(s => s.symbol || s);
+      return symbolList
+        .filter(symbol => symbol.toLowerCase().includes(input.toLowerCase()))
+        .slice(0, 8);
+    }
+    
+    // If no cached symbols or selected account, try to fetch suggestions from EA API
+    if (selectedAccount) {
+      try {
+        const accountId = selectedAccount.account_id || selectedAccount.id;
+        const response = await searchEASymbols(accountId, input);
+        
+        if (response.success && response.data) {
+          return response.data.slice(0, 8);
+        }
+      } catch (error) {
+        console.warn('Failed to fetch symbol suggestions:', error);
+      }
+    }
+    
+    // Fallback to common symbols for basic functionality
     const commonSymbols = [
-      'EURUSDm', 'GBPUSDm', 'BTCUSDm', 'XAUUSDm', 'XAGUSDm', // EA format with 'm' suffix
-      'EURUSD', 'GBPUSD', 'USDJPY', 'USDCHF', 'AUDUSD', 'USDCAD', 'NZDUSD', // Standard format
+      'EURUSDm', 'GBPUSDm', 'BTCUSDm', 'XAUUSDm', 'XAGUSDm',
+      'EURUSD', 'GBPUSD', 'USDJPY', 'USDCHF', 'AUDUSD', 'USDCAD', 'NZDUSD',
       'EURGBP', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'BTCUSD', 'ETHUSD'
     ];
     
-    if (!input || input.length < 2) return [];
-    
-    // Use available symbols from EA if available, otherwise use common symbols
-    const symbolList = (availableSymbols && availableSymbols.length > 0) 
-      ? availableSymbols.map(s => s.symbol || s) 
-      : commonSymbols;
-    
-    return symbolList
+    return commonSymbols
       .filter(symbol => symbol.toLowerCase().includes(input.toLowerCase()))
-      .slice(0, 8); // Show up to 8 suggestions
+      .slice(0, 8);
   };
 
-  const handleSymbolInputChange = (value) => {
+  const handleSymbolInputChange = async (value) => {
     // Keep the user's original case preference
     updateData('symbol', value);
     
@@ -844,9 +858,15 @@ const UnifiedOrderPanel = ({
     
     // Show suggestions for partial matches (use case-insensitive search)
     if (value.length >= 2) {
-      const suggestions = getSymbolSuggestions(value);
-      setSymbolSuggestions(suggestions);
-      setShowSuggestions(suggestions.length > 0);
+      try {
+        const suggestions = await getSymbolSuggestions(value);
+        setSymbolSuggestions(suggestions);
+        setShowSuggestions(suggestions.length > 0);
+      } catch (error) {
+        console.warn('Failed to get symbol suggestions:', error);
+        setSymbolSuggestions([]);
+        setShowSuggestions(false);
+      }
     } else {
       setSymbolSuggestions([]);
       setShowSuggestions(false);
@@ -1006,7 +1026,7 @@ const UnifiedOrderPanel = ({
                   <div className="text-sm">
                     <div>{priceError}</div>
                     <div className="text-xs text-orange-200 mt-1">
-                      Tip: Try symbols like EURUSDm, GBPUSDm, or check available symbols for this broker
+                      Tip: Try symbols like EURUSD, USDJPY.s, GBP_USD, or check available symbols for this broker
                     </div>
                   </div>
                 </div>

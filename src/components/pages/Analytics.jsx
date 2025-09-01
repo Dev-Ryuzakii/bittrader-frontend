@@ -18,7 +18,7 @@ import {
   Filter,
   Search
 } from 'lucide-react';
-import { getEAAnalysisData, exportAnalysisToExcel, generateMarketOutlook } from '../../api/ea';
+import { getEAAnalysisData, exportAnalysisToExcel, generateMarketOutlook, exportMarketOutlookToExcel } from '../../api/ea';
 import { useToast } from '../../contexts/ToastContext';
 
 const Analytics = () => {
@@ -39,6 +39,7 @@ const Analytics = () => {
       
       // Fetch open positions analysis using the correct endpoint
       const openPositions = await getEAAnalysisData('open-positions/all');
+      console.log('📊 Raw open positions response:', openPositions);
       setAnalysisData(openPositions.data || openPositions);
 
       // Fetch closed trades analysis with date range
@@ -50,6 +51,7 @@ const Analytics = () => {
         start_date: startDate,
         end_date: endDate
       });
+      console.log('📈 Raw closed trades response:', closedTrades);
       setClosedTradesData(closedTrades.data || closedTrades);
 
       // Generate market outlook report
@@ -71,30 +73,100 @@ const Analytics = () => {
     fetchAnalyticsData();
   }, [fetchAnalyticsData]);
 
+  // Temporary client-side export function as workaround for backend issues
+  const exportToCSV = (data, filename) => {
+    if (!data || data.length === 0) {
+      addToast('No data to export', 'warning');
+      return;
+    }
+
+    // Convert data to CSV format
+    const headers = Object.keys(data[0]);
+    const csvContent = [
+      headers.join(','),
+      ...data.map(row => 
+        headers.map(header => {
+          const value = row[header];
+          // Escape commas and quotes in CSV
+          if (typeof value === 'string' && (value.includes(',') || value.includes('"'))) {
+            return `"${value.replace(/"/g, '""')}"`;
+          }
+          return value || '';
+        }).join(',')
+      )
+    ].join('\n');
+
+    // Create and download the CSV file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(link.href);
+  };
+
   // Handle data export
   const handleExport = async (type) => {
     try {
       setExportLoading(true);
       
+      // Since backend export is failing, use client-side CSV export as fallback
       if (type === 'positions') {
-        // Export open positions using the correct endpoint
-        await exportAnalysisToExcel('all', {});
-      } else if (type === 'trades') {
-        // Export closed trades with date range
-        const currentYear = new Date().getFullYear();
-        const startDate = new Date(currentYear, 0, 1).toISOString();
-        const endDate = new Date().toISOString();
+        console.log('Backend export failed, using client-side CSV export...');
+        const positions = getAllPositions();
         
-        await exportAnalysisToExcel('closed-trades/all', {
-          start_date: startDate,
-          end_date: endDate
-        });
+        if (positions.length === 0) {
+          addToast('No position data to export', 'warning');
+          return;
+        }
+
+        // Format data for export
+        const exportData = positions.map(pos => ({
+          'Instrument': pos.instrument,
+          'Category': pos.category,
+          'Type': pos.position_type,
+          'Volume': pos.volume?.toFixed(2) || '0.00',
+          'Average Price': pos.average_price?.toFixed(4) || '0.0000',
+          'Spot Price': pos.spot_price?.toFixed(4) || '0.0000',
+          'Profit': pos.profit?.toFixed(2) || '0.00',
+          'MTM P&L': pos.mtm_pnl?.toFixed(2) || '0.00'
+        }));
+
+        const timestamp = new Date().toISOString().slice(0, 19).replace(/[:-]/g, '');
+        exportToCSV(exportData, `open_positions_${timestamp}.csv`);
+        addToast('Positions data exported to CSV successfully', 'success');
+        
+      } else if (type === 'trades') {
+        console.log('Backend export failed, using client-side CSV export...');
+        const trades = getAllClosedTrades();
+        
+        if (trades.length === 0) {
+          addToast('No trade data to export', 'warning');
+          return;
+        }
+
+        // Format data for export
+        const exportData = trades.map(trade => ({
+          'Instrument': trade.instrument,
+          'Category': trade.category,
+          'Platform': trade.platform,
+          'Type': trade.trade_type,
+          'Volume': trade.volume?.toFixed(2) || '0.00',
+          'Open Price': trade.avg_open?.toFixed(4) || '0.0000',
+          'Close Price': trade.avg_close?.toFixed(4) || '0.0000',
+          'Realized P&L': trade.realized_pl?.toFixed(2) || '0.00',
+          'Duration (Hours)': trade.duration_hours?.toFixed(1) || '0.0'
+        }));
+
+        const timestamp = new Date().toISOString().slice(0, 19).replace(/[:-]/g, '');
+        exportToCSV(exportData, `closed_trades_YTD_${timestamp}.csv`);
+        addToast('Trades data exported to CSV successfully', 'success');
       }
-      
-      addToast(`${type} data exported successfully`, 'success');
     } catch (error) {
       console.error('Export error:', error);
-      addToast('Export failed', 'error');
+      addToast(`Export failed: ${error.message}`, 'error');
     } finally {
       setExportLoading(false);
     }
@@ -222,7 +294,7 @@ const Analytics = () => {
       <div className="p-6 flex items-center justify-center min-h-[400px]">
         <div className="flex items-center space-x-2">
           <RefreshCw className="w-6 h-6 animate-spin text-blue-500" />
-          <span className="text-lg">Loading analytics data...</span>
+          <span className="text-lg text-white">Loading analytics data...</span>
         </div>
       </div>
     );
@@ -233,8 +305,8 @@ const Analytics = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8">
         <div>
-          <h1 className="text-3xl font-bold mb-2">Trading Analytics</h1>
-          <p className="text-gray-600">Comprehensive analysis across all EA accounts</p>
+          <h1 className="text-3xl text-white font-bold mb-2">Trading Analytics</h1>
+          <p className="text-white">Comprehensive analysis across all EA accounts</p>
         </div>
         
         <div className="flex flex-col sm:flex-row gap-3 mt-4 sm:mt-0">
@@ -251,9 +323,10 @@ const Analytics = () => {
             onClick={() => handleExport(activeTab === 'positions' ? 'positions' : 'trades')}
             disabled={exportLoading}
             className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors"
+            title="Export data as CSV file (Excel export temporarily unavailable)"
           >
             <Download className="w-4 h-4" />
-            <span>{exportLoading ? 'Exporting...' : 'Export'}</span>
+            <span>{exportLoading ? 'Exporting...' : 'Export CSV'}</span>
           </button>
         </div>
       </div>
