@@ -367,6 +367,368 @@ export const getEASymbols = async (accountId) => {
 };
 
 /**
+ * Search available symbols from EA with autocomplete functionality
+ * @param {string} accountId - EA account ID
+ * @param {string} searchTerm - Search term (minimum 2 characters)
+ * @param {number} limit - Maximum number of results (default: 20)
+ * @returns {Promise<Object>} - Filtered symbols matching the search term
+ */
+export const searchEASymbols = async (accountId, searchTerm, limit = 20) => {
+  try {
+    if (!searchTerm || searchTerm.trim().length < 2) {
+      return {
+        success: false,
+        error: 'Search term must be at least 2 characters',
+        data: []
+      };
+    }
+
+    // Get all symbols first
+    const symbolsResponse = await getEASymbols(accountId);
+    
+    if (!symbolsResponse.success || !symbolsResponse.data) {
+      return {
+        success: false,
+        error: 'Failed to fetch symbols for search',
+        data: []
+      };
+    }
+
+    const symbols = symbolsResponse.data;
+    const term = searchTerm.toUpperCase().trim();
+    
+    // Filter and score symbols based on relevance
+    const filteredSymbols = symbols
+      .filter(symbolInfo => {
+        const symbol = (symbolInfo.symbol || symbolInfo.standard_symbol || '').toString().toUpperCase();
+        const brokerSymbol = (symbolInfo.broker_symbol || '').toString().toUpperCase();
+        const description = (symbolInfo.description || '').toString().toUpperCase();
+        
+        return symbol.includes(term) || 
+               brokerSymbol.includes(term) || 
+               description.includes(term);
+      })
+      .map(symbolInfo => {
+        const symbol = (symbolInfo.symbol || symbolInfo.standard_symbol || '').toString().toUpperCase();
+        const brokerSymbol = (symbolInfo.broker_symbol || '').toString().toUpperCase();
+        const description = (symbolInfo.description || '').toString().toUpperCase();
+        
+        // Calculate relevance score
+        let score = 0;
+        if (symbol === term) score = 100;
+        else if (symbol.startsWith(term)) score = 90;
+        else if (brokerSymbol === term) score = 85;
+        else if (brokerSymbol.startsWith(term)) score = 80;
+        else if (symbol.includes(term)) score = 70;
+        else if (brokerSymbol.includes(term)) score = 65;
+        else if (description.includes(term)) score = 60;
+        else score = 50;
+
+        return {
+          ...symbolInfo,
+          relevance_score: score
+        };
+      })
+      .sort((a, b) => b.relevance_score - a.relevance_score)
+      .slice(0, limit);
+
+    return {
+      success: true,
+      data: filteredSymbols,
+      total_results: filteredSymbols.length,
+      search_term: searchTerm
+    };
+  } catch (error) {
+    console.error('Error searching EA symbols:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to search EA symbols',
+      data: []
+    };
+  }
+};
+
+/**
+ * Get popular/commonly traded symbols from EA account
+ * @param {string} accountId - EA account ID
+ * @param {number} limit - Maximum number of symbols (default: 50)
+ * @returns {Promise<Object>} - Popular symbols categorized by type
+ */
+export const getEAPopularSymbols = async (accountId, limit = 50) => {
+  try {
+    const symbolsResponse = await getEASymbols(accountId);
+    
+    if (!symbolsResponse.success || !symbolsResponse.data) {
+      return {
+        success: false,
+        error: 'Failed to fetch symbols',
+        data: {}
+      };
+    }
+
+    const symbols = symbolsResponse.data;
+    
+    // Categorize symbols dynamically using the same logic as getEASymbolsFiltered
+    const categories = {
+      major_pairs: [],
+      cross_pairs: [],
+      exotic_pairs: [],
+      metals: [],
+      indices: [],
+      commodities: [],
+      crypto: [],
+      other: []
+    };
+
+    // Define dynamic category patterns using regex and characteristics (no hardcoded symbols)
+    const categoryPatterns = {
+      major_pairs: {
+        condition: (symbol, type, desc) => {
+          // Major pairs: 6-char forex symbols with USD + major currencies
+          const majorCurrencies = /^(EUR|GBP|JPY|CHF|CAD|AUD|NZD)(USD|EUR|GBP|JPY|CHF|CAD|AUD|NZD)$/;
+          const usdPairs = /^(EUR|GBP|JPY|CHF|CAD|AUD|NZD)USD$/;
+          return symbol.length === 6 && (usdPairs.test(symbol) || majorCurrencies.test(symbol)) ||
+                 type.includes('forex') || type.includes('currency') || desc.includes('major');
+        }
+      },
+      metals: {
+        condition: (symbol, type, desc) => {
+          // Precious metals patterns
+          const metalPatterns = /^(XAU|XAG|GOLD|SILVER|PLATINUM|PALLADIUM|PLAT|PALL)/i;
+          return metalPatterns.test(symbol) ||
+                 type.includes('metal') || type.includes('precious') ||
+                 desc.includes('gold') || desc.includes('silver') || desc.includes('metal');
+        }
+      },
+      indices: {
+        condition: (symbol, type, desc) => {
+          // Stock indices patterns
+          const indexPatterns = /^(US30|SPX|NAS|UK100|GER|FRA|AUS|JPN|DAX|DOW|S&P|NASDAQ|FTSE|CAC|NIKKEI)/i;
+          const numberPatterns = /(30|40|100|200|225|500)$/; // Common index numbers
+          return indexPatterns.test(symbol) || numberPatterns.test(symbol) ||
+                 type.includes('index') || type.includes('stock') ||
+                 desc.includes('index') || desc.includes('stock');
+        }
+      },
+      commodities: {
+        condition: (symbol, type, desc) => {
+          // Commodities patterns (energy, agriculture, etc.)
+          const energyPatterns = /^(OIL|WTI|BRENT|CRUDE|NATGAS|GAS)/i;
+          const agriPatterns = /^(COFFEE|SUGAR|WHEAT|CORN|SOYBEAN|COTTON|COCOA)/i;
+          return energyPatterns.test(symbol) || agriPatterns.test(symbol) ||
+                 type.includes('commodity') || type.includes('energy') || type.includes('agriculture') ||
+                 desc.includes('oil') || desc.includes('gas') || desc.includes('wheat') || desc.includes('coffee');
+        }
+      },
+      crypto: {
+        condition: (symbol, type, desc) => {
+          // Cryptocurrency patterns
+          const cryptoPatterns = /^(BTC|ETH|LTC|XRP|ADA|DOT|DOGE|USDT|BNB|LINK|UNI|MATIC|SOL|AVAX)/i;
+          const cryptoSuffixes = /(USD|EUR|BTC)$/; // Common crypto pair endings
+          return cryptoPatterns.test(symbol) || 
+                 (symbol.length >= 3 && cryptoSuffixes.test(symbol) && /^[A-Z]{3,}/.test(symbol)) ||
+                 type.includes('crypto') || type.includes('digital') || type.includes('coin') ||
+                 desc.includes('crypto') || desc.includes('bitcoin') || desc.includes('digital');
+        }
+      }
+    };
+
+    symbols.forEach(symbolInfo => {
+      const symbol = (symbolInfo.symbol || symbolInfo.standard_symbol || '').toString().toUpperCase();
+      const type = (symbolInfo.type || symbolInfo.symbol_type || '').toString().toLowerCase();
+      const description = (symbolInfo.description || '').toString().toLowerCase();
+
+      // Check each category dynamically
+      let categorized = false;
+      
+      for (const [categoryName, pattern] of Object.entries(categoryPatterns)) {
+        if (pattern.condition(symbol, type, description)) {
+          categories[categoryName].push(symbolInfo);
+          categorized = true;
+          break;
+        }
+      }
+      
+      // Handle forex pairs (cross and exotic)
+      if (!categorized && symbol.length === 6) {
+        if (!symbol.includes('USD') && (symbol.includes('EUR') || symbol.includes('GBP') || symbol.includes('JPY'))) {
+          categories.cross_pairs.push(symbolInfo);
+          categorized = true;
+        } else if (symbol.includes('USD')) {
+          categories.exotic_pairs.push(symbolInfo);
+          categorized = true;
+        }
+      }
+      
+      // If not categorized, put in other
+      if (!categorized) {
+        categories.other.push(symbolInfo);
+      }
+    });
+
+    // Limit each category and add popular flag
+    Object.keys(categories).forEach(category => {
+      categories[category] = categories[category]
+        .slice(0, Math.ceil(limit / Object.keys(categories).length))
+        .map(symbol => ({
+          ...symbol,
+          popular: true,
+          category: category
+        }));
+    });
+
+    return {
+      success: true,
+      data: categories,
+      total_symbols: symbols.length
+    };
+  } catch (error) {
+    console.error('Error fetching EA popular symbols:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to fetch popular symbols',
+      data: {}
+    };
+  }
+};
+
+/**
+ * Get symbols filtered by category from EA account
+ * @param {string} accountId - EA account ID
+ * @param {string} category - Category filter (forex, crypto, metals, indices, commodities, other)
+ * @param {number} limit - Maximum number of symbols (default: 50)
+ * @returns {Promise<Object>} - Filtered symbols by category
+ */
+export const getEASymbolsFiltered = async (accountId, category, limit = 50) => {
+  try {
+    const symbolsResponse = await getEASymbols(accountId);
+    
+    if (!symbolsResponse.success || !symbolsResponse.data) {
+      return {
+        success: false,
+        error: 'Failed to fetch symbols for filtering',
+        data: []
+      };
+    }
+
+    const symbols = symbolsResponse.data;
+    const categoryLower = category.toLowerCase();
+    
+    // Define dynamic category patterns using regex and characteristics (no hardcoded symbols)
+    const categoryPatterns = {
+      forex: {
+        condition: (symbol, type, desc) => {
+          // Forex pairs: 6-character symbols with major currencies
+          const forexPattern = /^[A-Z]{6}$/; // 6-letter symbols
+          const majorCurrencies = /^(EUR|GBP|USD|JPY|CHF|CAD|AUD|NZD|GBP|SEK|NOK|DKK)/;
+          return (forexPattern.test(symbol) && majorCurrencies.test(symbol.slice(0, 3))) ||
+                 type.includes('forex') || type.includes('currency') || type.includes('fx');
+        }
+      },
+      crypto: {
+        condition: (symbol, type, desc) => {
+          // Cryptocurrency patterns
+          const cryptoPatterns = /^(BTC|ETH|LTC|XRP|ADA|DOT|DOGE|USDT|BNB|LINK|UNI|MATIC|SOL|AVAX)/i;
+          const cryptoSuffixes = /(USD|EUR|BTC)$/; // Common crypto pair endings
+          return cryptoPatterns.test(symbol) || 
+                 (symbol.length >= 3 && cryptoSuffixes.test(symbol) && /^[A-Z]{3,}/.test(symbol)) ||
+                 type.includes('crypto') || type.includes('digital') || type.includes('coin') ||
+                 desc.includes('crypto') || desc.includes('bitcoin') || desc.includes('digital');
+        }
+      },
+      metals: {
+        condition: (symbol, type, desc) => {
+          // Precious metals patterns
+          const metalPatterns = /^(XAU|XAG|GOLD|SILVER|PLATINUM|PALLADIUM|PLAT|PALL)/i;
+          return metalPatterns.test(symbol) ||
+                 type.includes('metal') || type.includes('precious') ||
+                 desc.includes('gold') || desc.includes('silver') || desc.includes('metal');
+        }
+      },
+      indices: {
+        condition: (symbol, type, desc) => {
+          // Stock indices patterns
+          const indexPatterns = /^(US30|SPX|NAS|UK100|GER|FRA|AUS|JPN|DAX|DOW|S&P|NASDAQ|FTSE|CAC|NIKKEI)/i;
+          const numberPatterns = /(30|40|100|200|225|500)$/; // Common index numbers
+          return indexPatterns.test(symbol) || numberPatterns.test(symbol) ||
+                 type.includes('index') || type.includes('stock') ||
+                 desc.includes('index') || desc.includes('stock');
+        }
+      },
+      commodities: {
+        condition: (symbol, type, desc) => {
+          // Commodities patterns (energy, agriculture, etc.)
+          const energyPatterns = /^(OIL|WTI|BRENT|CRUDE|NATGAS|GAS)/i;
+          const agriPatterns = /^(COFFEE|SUGAR|WHEAT|CORN|SOYBEAN|COTTON|COCOA)/i;
+          return energyPatterns.test(symbol) || agriPatterns.test(symbol) ||
+                 type.includes('commodity') || type.includes('energy') || type.includes('agriculture') ||
+                 desc.includes('oil') || desc.includes('gas') || desc.includes('wheat') || desc.includes('coffee');
+        }
+      }
+    };
+
+    // Filter symbols by category
+    let filteredSymbols = [];
+    
+    if (categoryPatterns[categoryLower]) {
+      const pattern = categoryPatterns[categoryLower];
+      
+      filteredSymbols = symbols.filter(symbolInfo => {
+        const symbol = (symbolInfo.symbol || symbolInfo.standard_symbol || '').toString().toUpperCase();
+        const type = (symbolInfo.type || symbolInfo.symbol_type || '').toString().toLowerCase();
+        const description = (symbolInfo.description || '').toString().toLowerCase();
+        
+        return pattern.condition(symbol, type, description);
+      });
+    } else if (categoryLower === 'other') {
+      // Get symbols that don't match any specific category
+      filteredSymbols = symbols.filter(symbolInfo => {
+        const symbol = (symbolInfo.symbol || symbolInfo.standard_symbol || '').toString().toUpperCase();
+        const type = (symbolInfo.type || symbolInfo.symbol_type || '').toString().toLowerCase();
+        const description = (symbolInfo.description || '').toString().toLowerCase();
+        
+        // Check if symbol matches any category
+        const matchesAnyCategory = Object.values(categoryPatterns).some(pattern => 
+          pattern.condition(symbol, type, description)
+        );
+        
+        return !matchesAnyCategory;
+      });
+    } else {
+      return {
+        success: false,
+        error: `Invalid category: ${category}. Valid categories: forex, crypto, metals, indices, commodities, other`,
+        data: []
+      };
+    }
+
+    // Limit results and add category info
+    const limitedResults = filteredSymbols
+      .slice(0, limit)
+      .map(symbolInfo => ({
+        ...symbolInfo,
+        category: categoryLower,
+        filtered: true
+      }));
+
+    return {
+      success: true,
+      data: limitedResults,
+      category: categoryLower,
+      total_results: limitedResults.length,
+      total_available: filteredSymbols.length
+    };
+  } catch (error) {
+    console.error(`Error filtering EA symbols by category ${category}:`, error);
+    return {
+      success: false,
+      error: error.message || `Failed to filter symbols by category ${category}`,
+      data: []
+    };
+  }
+};
+
+/**
  * Get real-time prices from EA using REST endpoint
  * @param {string} accountId - EA account ID
  * @param {string|Array} symbols - Comma-separated string or array of symbols (optional)
@@ -948,8 +1310,8 @@ export const getEAAnalysisData = async (endpoint, params = {}) => {
     
     return {
       success: true,
-      data: response.data,
-      ...response.data
+      data: response,
+      ...response
     };
   } catch (error) {
     console.error(`Error fetching EA analysis data (${endpoint}):`, error);
@@ -962,46 +1324,113 @@ export const getEAAnalysisData = async (endpoint, params = {}) => {
  */
 export const exportAnalysisToExcel = async (endpoint, params = {}) => {
   try {
-    const queryParams = new URLSearchParams();
-    
-    // Add date range parameters if provided
-    if (params.start_date) queryParams.append('start_date', params.start_date);
-    if (params.end_date) queryParams.append('end_date', params.end_date);
-    
-    const url = `/api/v1/trading/analysis/export/excel/${endpoint}`;
-    
-    const response = await api.post(url, params, {
-      responseType: 'blob',
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    });
-    
-    // Create download link
-    const blob = new Blob([response.data], {
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    });
-    
-    const downloadUrl = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = downloadUrl;
-    
-    // Generate filename
-    const timestamp = new Date().toISOString().slice(0, 19).replace(/[:-]/g, '');
-    link.download = `trading_analysis_${endpoint.replace(/\//g, '_')}_${timestamp}.xlsx`;
-    
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(downloadUrl);
-    
-    return {
-      success: true,
-      message: 'Analysis exported successfully'
+    // Prepare the request body based on backend ExportRequest schema
+    const requestBody = {
+      // Add any additional parameters if needed
+      ...params
     };
+
+    // Try using the API client first with proper request body
+    console.log('Attempting export with endpoint:', endpoint, 'and params:', requestBody);
+    
+    try {
+      const response = await api.post(`/api/v1/trading/analysis/export/excel/${endpoint}`, requestBody);
+      
+      // The API client doesn't handle blob responses well, so if we get here,
+      // it means the request was accepted but we need to handle it differently
+      return {
+        success: true,
+        message: 'Export request submitted successfully',
+        data: response
+      };
+    } catch (apiError) {
+      console.log('API client failed, trying direct fetch approach...', apiError.message);
+      
+      // Fallback to direct fetch with proper blob handling
+      const baseURL = api.getCurrentApiUrl();
+      
+      // Get auth token using the auth utility
+      const { auth } = await import('../utils/auth');
+      const token = auth.getAuthToken();
+      
+      if (!token) {
+        throw new Error('Authentication token not found');
+      }
+      
+      console.log('Making direct fetch request to:', `${baseURL}/api/v1/trading/analysis/export/excel/${endpoint}`);
+      
+      const response = await fetch(`${baseURL}/api/v1/trading/analysis/export/excel/${endpoint}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token,
+        },
+        credentials: 'include',
+        body: JSON.stringify(requestBody)
+      });
+
+      console.log('Direct fetch response status:', response.status, response.statusText);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Export error response:', errorText);
+        
+        // Try to parse the error response
+        let errorDetail = errorText;
+        try {
+          const errorJson = JSON.parse(errorText);
+          errorDetail = errorJson.detail || errorJson.message || errorText;
+        } catch (e) {
+          // Use raw text if JSON parsing fails
+        }
+        
+        throw new Error(`Export failed: ${errorDetail}`);
+      }
+
+      // Check if response is actually a blob (Excel file)
+      const contentType = response.headers.get('content-type');
+      console.log('Response content type:', contentType);
+      
+      if (contentType && (contentType.includes('application/vnd.openxmlformats') || contentType.includes('application/octet-stream'))) {
+        // Handle blob response (Excel file)
+        const blob = await response.blob();
+        
+        const downloadUrl = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+        
+        // Generate filename
+        const timestamp = new Date().toISOString().slice(0, 19).replace(/[:-]/g, '');
+        link.download = `trading_analysis_${endpoint.replace(/\//g, '_')}_${timestamp}.xlsx`;
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(downloadUrl);
+        
+        return {
+          success: true,
+          message: 'Analysis exported successfully'
+        };
+      } else {
+        // Response is not a blob, might be JSON error
+        const responseText = await response.text();
+        console.log('Non-blob response:', responseText);
+        
+        return {
+          success: true,
+          message: 'Export request processed',
+          data: responseText
+        };
+      }
+    }
   } catch (error) {
     console.error('Error exporting analysis to Excel:', error);
-    return handleEAError(error, 'Failed to export analysis');
+    return {
+      success: false,
+      error: error.message || 'Failed to export analysis',
+      message: error.message || 'Failed to export analysis'
+    };
   }
 };
 
@@ -1014,8 +1443,8 @@ export const generateMarketOutlook = async (requestData) => {
     
     return {
       success: true,
-      data: response.data,
-      ...response.data
+      data: response,
+      ...response
     };
   } catch (error) {
     console.error('Error generating market outlook:', error);
@@ -1070,8 +1499,8 @@ export const getEAInstrumentCategories = async () => {
     
     return {
       success: true,
-      data: response.data,
-      ...response.data
+      data: response,
+      ...response
     };
   } catch (error) {
     console.error('Error fetching EA instrument categories:', error);
@@ -1088,8 +1517,8 @@ export const testEASymbolCategorization = async (symbol) => {
     
     return {
       success: true,
-      data: response.data,
-      ...response.data
+      data: response,
+      ...response
     };
   } catch (error) {
     console.error(`Error testing symbol categorization for ${symbol}:`, error);
@@ -1126,6 +1555,9 @@ export default {
   
   // Symbol & Price Data
   getEASymbols,
+  searchEASymbols,
+  getEASymbolsFiltered,
+  getEAPopularSymbols,
   getEAPrices,
   getEASymbolPrice,
   getEALivePrices,

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, RefreshCw, Info, TrendingUp } from 'lucide-react';
 import { getAccountSymbols, searchAccountSymbols } from '../../api/livePrices';
-import { getEASymbols } from '../../api/ea';
+import { getEASymbols, searchEASymbols, getEASymbolsFiltered } from '../../api/ea';
 
 /**
  * Symbol Browser Component
@@ -100,12 +100,34 @@ const SymbolBrowser = ({ onSymbolSelect, onClose, selectedAccount }) => {
     setCategories(categorized);
   };
 
-  const filterSymbols = () => {
+  const filterSymbols = async () => {
     if (!searchTerm.trim()) {
       setFilteredSymbols(symbols);
       return;
     }
 
+    // If we have an EA account, try to use the enhanced search
+    if (selectedAccount?.account_id && searchTerm.length >= 2) {
+      try {
+        const accountId = selectedAccount.account_id || selectedAccount.id;
+        const response = await searchEASymbols(accountId, searchTerm);
+        
+        if (response.success && response.data) {
+          // Convert search results to the same format as symbols
+          const searchResults = response.data.map(symbol => ({
+            symbol: symbol,
+            broker_symbol: symbol,
+            description: `${symbol} - Available symbol`
+          }));
+          setFilteredSymbols(searchResults);
+          return;
+        }
+      } catch (error) {
+        console.warn('EA search failed, falling back to local search:', error);
+      }
+    }
+
+    // Fallback to local filtering
     const term = searchTerm.toLowerCase();
     const filtered = symbols.filter(symbolInfo => {
       // Handle both EA and broker symbol formats

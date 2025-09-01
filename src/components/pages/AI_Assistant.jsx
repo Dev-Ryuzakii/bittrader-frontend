@@ -30,7 +30,119 @@ import {
   Settings
 } from 'lucide-react';
 
-// Tabs for different AI features
+// Component to format AI responses with rich text formatting
+const FormattedAIResponse = ({ content }) => {
+  const formatText = (text) => {
+    if (!text) return '';
+    
+    // Split content into lines for processing
+    const lines = text.split('\n');
+    const formattedElements = [];
+    
+    lines.forEach((line, index) => {
+      const trimmedLine = line.trim();
+      
+      if (!trimmedLine) {
+        // Empty line - add spacing
+        formattedElements.push(<br key={`br-${index}`} />);
+        return;
+      }
+      
+      // Handle numbered lists (e.g., "1. **Title**: Content")
+      const numberedListMatch = trimmedLine.match(/^(\d+)\.\s*\*\*(.*?)\*\*:\s*(.*)/);
+      if (numberedListMatch) {
+        const [, number, title, content] = numberedListMatch;
+        formattedElements.push(
+          <div key={index} className="mb-4">
+            <div className="flex items-start space-x-2">
+              <span className="inline-flex items-center justify-center w-6 h-6 bg-blue-600 text-white text-xs font-bold rounded-full mt-0.5 flex-shrink-0">
+                {number}
+              </span>
+              <div>
+                <span className="font-bold text-blue-200">{title}</span>
+                <span className="text-gray-200">: {content}</span>
+              </div>
+            </div>
+          </div>
+        );
+        return;
+      }
+      
+      // Handle bullet points with bold titles (e.g., "- **Title**: Content")
+      const bulletBoldMatch = trimmedLine.match(/^[-•]\s*\*\*(.*?)\*\*:\s*(.*)/);
+      if (bulletBoldMatch) {
+        const [, title, content] = bulletBoldMatch;
+        formattedElements.push(
+          <div key={index} className="mb-2 ml-4">
+            <div className="flex items-start space-x-2">
+              <span className="text-green-400 mt-1">•</span>
+              <div>
+                <span className="font-semibold text-green-200">{title}</span>
+                <span className="text-gray-200">: {content}</span>
+              </div>
+            </div>
+          </div>
+        );
+        return;
+      }
+      
+      // Handle regular bullet points
+      const bulletMatch = trimmedLine.match(/^[-•]\s*(.*)/);
+      if (bulletMatch) {
+        const [, content] = bulletMatch;
+        formattedElements.push(
+          <div key={index} className="mb-1 ml-4">
+            <div className="flex items-start space-x-2">
+              <span className="text-yellow-400 mt-1">•</span>
+              <span className="text-gray-200">{formatInlineText(content)}</span>
+            </div>
+          </div>
+        );
+        return;
+      }
+      
+      // Handle headers (lines with just bold text)
+      const headerMatch = trimmedLine.match(/^\*\*(.*?)\*\*$/);
+      if (headerMatch) {
+        const [, headerText] = headerMatch;
+        formattedElements.push(
+          <h4 key={index} className="font-bold text-lg text-blue-300 mb-2 mt-4">
+            {headerText}
+          </h4>
+        );
+        return;
+      }
+      
+      // Regular paragraphs
+      formattedElements.push(
+        <p key={index} className="mb-2 text-gray-200 leading-relaxed">
+          {formatInlineText(trimmedLine)}
+        </p>
+      );
+    });
+    
+    return formattedElements;
+  };
+  
+  const formatInlineText = (text) => {
+    // Handle inline bold text (**text**)
+    const parts = text.split(/(\*\*.*?\*\*)/);
+    return parts.map((part, index) => {
+      if (part.startsWith('**') && part.endsWith('**')) {
+        const boldText = part.slice(2, -2);
+        return <strong key={index} className="font-semibold text-white">{boldText}</strong>;
+      }
+      return part;
+    });
+  };
+  
+  return (
+    <div className="space-y-1">
+      {formatText(content)}
+    </div>
+  );
+};
+
 const TABS = {
   CHAT: 'chat',
   SENTIMENT: 'sentiment',
@@ -367,8 +479,12 @@ function AI_Assistant({
                     <div className="text-white font-medium text-sm mb-1">
                       {message.sender === 'user' ? 'You' : 'AI Trading Assistant'}
                     </div>
-                    <div className="text-gray-200 whitespace-pre-wrap leading-relaxed">
-                      {message.content}
+                    <div className="text-gray-200 leading-relaxed">
+                      {message.sender === 'user' ? (
+                        <div className="whitespace-pre-wrap">{message.content}</div>
+                      ) : (
+                        <FormattedAIResponse content={message.content} />
+                      )}
                     </div>
                   </div>
                 </div>
