@@ -11,13 +11,26 @@ import {
   Activity
 } from 'lucide-react';
 import { 
-  getPositions, 
-  getOrders, 
-  closePosition, 
-  cancelOrder, 
-  modifyPosition, 
-  modifyOrder 
-} from '../../api/broker';
+  getEAPositions as getPositions, 
+  getEAOrders as getOrders
+} from '../../api/ea';
+
+// EA position and order management stubs - these would need to be implemented
+const closePosition = async (accountId, positionId) => {
+  return { success: false, error: 'Position closing via EA not yet implemented' };
+};
+
+const cancelOrder = async (accountId, orderId) => {
+  return { success: false, error: 'Order cancellation via EA not yet implemented' };
+};
+
+const modifyPosition = async (accountId, positionId, modifications) => {
+  return { success: false, error: 'Position modification via EA not yet implemented' };
+};
+
+const modifyOrder = async (accountId, orderId, modifications) => {
+  return { success: false, error: 'Order modification via EA not yet implemented' };
+};
 
 const OrderManagementPanel = ({ selectedAccount, shouldRefresh, onRefreshComplete }) => {
   const [positions, setPositions] = useState([]);

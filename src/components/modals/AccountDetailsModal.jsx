@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Activity, DollarSign, TrendingUp, TrendingDown, Loader2 } from 'lucide-react';
-import { getAccountDetails } from '../../api/broker';
+import { getEAAccountBalance as getAccountDetails } from '../../api/ea';
 
 const AccountDetailsModal = ({ isOpen, onClose, account }) => {
   const [details, setDetails] = useState(null);

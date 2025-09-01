@@ -8,7 +8,24 @@ import SymbolMappingModal from '../modals/SymbolMappingModal';
 import CrossBrokerAnalysis from '../UI/CrossBrokerAnalysis';
 import SymbolPicker from '../UI/SymbolPicker';
 import Loader from '../UI/Loader';
-import { getAccounts, connectAccount, deleteAccount, updateAccount, toggleAccountStatus } from '../../api/broker';
+import { getEAAccounts as getAccounts } from '../../api/ea';
+
+// EA account management stubs - EA accounts are auto-connected when EA runs
+const connectAccount = async (formData) => {
+  return { success: false, error: 'EA accounts are automatically connected when EA is deployed' };
+};
+
+const deleteAccount = async (accountId) => {
+  return { success: false, error: 'EA accounts cannot be deleted from frontend. Stop EA to disconnect.' };
+};
+
+const updateAccount = async (accountId, updateData) => {
+  return { success: false, error: 'EA account settings are managed by the EA configuration' };
+};
+
+const toggleAccountStatus = async (accountId) => {
+  return { success: false, error: 'EA account status is managed by EA connection state' };
+};
 import { symbolMappingService } from '../../api/symbolMapping';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
@@ -67,12 +84,42 @@ const AccountAggregation = () => {
     try {
       const result = await getAccounts();
       if (result.success) {
-        // Assign color variants to accounts
-        const accountsWithColors = result.data.map((account, index) => ({
+        // Transform EA accounts with broker names and real data
+        const transformedAccounts = result.data.map((account, index) => ({
           ...account,
-          colorVariant: index % colorVariants.length
+          // Use broker name as the primary account name
+          accountName: account.broker || `Account ${account.account_id}`,
+          account_name: account.broker || `Account ${account.account_id}`,
+          broker_name: account.broker,
+          name: account.broker || `Account ${account.account_id}`,
+          // Real EA account data
+          balance: account.balance || 0,
+          equity: account.equity || account.balance || 0,
+          margin: account.margin || 0,
+          free_margin: account.free_margin || 0,
+          margin_level: account.margin_level || 0,
+          profit: account.profit || 0,
+          leverage: account.leverage || 1,
+          currency: account.currency || 'USD',
+          server: account.server || account.broker || 'EA Server',
+          platform: account.platform || 'MT5',
+          // Connection status
+          is_connected: account.status === 'connected',
+          connection_status: account.status,
+          connected_at: account.connected_at,
+          last_heartbeat: account.last_heartbeat,
+          // Trading statistics
+          positions_count: account.positions_count || 0,
+          orders_count: account.orders_count || 0,
+          // Visual
+          colorVariant: index % colorVariants.length,
+          // Additional metadata for display
+          type: 'EA', // Mark as EA account
+          is_demo: account.server?.includes('Demo') || account.server?.includes('Trial'),
+          is_active: account.status === 'connected'
         }));
-        setAccounts(accountsWithColors);
+        
+        setAccounts(transformedAccounts);
       } else {
         //console.error('Failed to fetch accounts:', result.error);
         setAccounts([]);
@@ -664,7 +711,7 @@ const AccountAggregation = () => {
                               return (
                                 <div key={accountId} className="bg-[#333] rounded p-3">
                                   <div className="text-sm text-gray-400 mb-1">
-                                    {account?.platform || 'Unknown'} ({account?.login || accountId})
+                                    {account?.broker || account?.platform || 'EA Account'} ({account?.login || accountId})
                                   </div>
                                   <div className="text-white font-medium">{brokerSymbol}</div>
                                 </div>
