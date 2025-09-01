@@ -741,7 +741,7 @@ const EnhancedAccountAggregation = () => {
                               return (
                                 <div key={`${standardSymbol}-${accountId}`} className="bg-[#333] rounded p-3">
                                   <div className="text-sm text-gray-400 mb-1">
-                                    {account?.platform || 'Unknown'} ({account?.account_id || account?.id || accountId})
+                                    {account?.broker || account?.platform || 'EA Account'} ({account?.account_id || account?.id || accountId})
                                   </div>
                                   <div className="text-white font-medium">{brokerSymbol}</div>
                                 </div>

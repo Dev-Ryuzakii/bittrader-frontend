@@ -131,7 +131,7 @@ const Dashboard = () => {
       leverage: account.leverage || 1,
       currency: account.currency || 'USD',
       platform: account.platform || 'MT5',
-      server: account.server || 'Unknown',
+      server: account.server || account.broker || 'EA Server',
       positions_count: account.positions_count || 0,
       orders_count: account.orders_count || 0,
       // Additional EA-specific data

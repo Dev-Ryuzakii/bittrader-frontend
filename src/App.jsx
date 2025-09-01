@@ -56,7 +56,7 @@ const App = () => {
     const account = eaAccounts.find(acc => acc.account_id === accountId);
     return {
       brokerName: account?.broker || `Account ${accountId}`,
-      server: account?.server || 'Unknown',
+      server: account?.server || account?.broker || 'EA Server',
       platform: account?.platform || 'MT5'
     };
   };
@@ -207,7 +207,7 @@ const App = () => {
         // Show notification for position open/close events
         if (data.data && (data.data.event === 'position_opened' || data.data.event === 'position_closed')) {
           const isOpen = data.data.event === 'position_opened';
-          const symbol = data.data.symbol || 'Unknown';
+          const symbol = data.data.symbol || 'Symbol';
           const volume = data.data.volume || 0;
           const profit = data.data.profit || 0;
           

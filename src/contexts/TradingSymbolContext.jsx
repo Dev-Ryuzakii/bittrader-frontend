@@ -148,7 +148,7 @@ export const TradingSymbolProvider = ({ children }) => {
       mapped: !!accountData,
       total_symbols: accountData?.total_symbols || 0,
       total_available: accountData?.total_available || 0,
-      broker_name: accountData?.broker_name || 'Unknown'
+      broker_name: accountData?.broker || accountData?.broker_name || accountData?.platform || 'EA Account'
     };
   };
 

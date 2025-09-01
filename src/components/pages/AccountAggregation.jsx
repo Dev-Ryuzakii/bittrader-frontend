@@ -101,7 +101,7 @@ const AccountAggregation = () => {
           profit: account.profit || 0,
           leverage: account.leverage || 1,
           currency: account.currency || 'USD',
-          server: account.server || 'Unknown',
+          server: account.server || account.broker || 'EA Server',
           platform: account.platform || 'MT5',
           // Connection status
           is_connected: account.status === 'connected',
@@ -711,7 +711,7 @@ const AccountAggregation = () => {
                               return (
                                 <div key={accountId} className="bg-[#333] rounded p-3">
                                   <div className="text-sm text-gray-400 mb-1">
-                                    {account?.platform || 'Unknown'} ({account?.login || accountId})
+                                    {account?.broker || account?.platform || 'EA Account'} ({account?.login || accountId})
                                   </div>
                                   <div className="text-white font-medium">{brokerSymbol}</div>
                                 </div>
