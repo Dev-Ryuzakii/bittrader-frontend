@@ -4,7 +4,8 @@ import { useAuth } from './contexts/AuthContext.jsx'
 import { ToastProvider } from './contexts/ToastContext.jsx'
 import { ConfirmProvider } from './contexts/ConfirmContext.jsx'
 import { TradingSymbolProvider } from './contexts/TradingSymbolContext.jsx'
-import { eaWebSocket } from './api/ea'
+import { eaWebSocket, getEAAccounts } from './api/ea'
+import { toast } from 'react-hot-toast'
 import ProtectedRoute from './components/ProtectedRoute.jsx'
 import Hero from './components/pages/Hero'
 import SignIn from './components/auth/SignIn'
@@ -28,8 +29,37 @@ import Search from './components/pages/Search.jsx'
 
 const App = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [eaAccounts, setEaAccounts] = useState([]); // Store EA accounts for broker name lookup
   const { isAuthenticated, isLoading, user } = useAuth();
   const location = useLocation();
+  
+  // Fetch EA accounts for broker name lookup
+  useEffect(() => {
+    if (isAuthenticated && user?.id) {
+      const fetchEAAccounts = async () => {
+        try {
+          const result = await getEAAccounts();
+          if (result.success) {
+            setEaAccounts(result.data);
+          }
+        } catch (error) {
+          console.error('Failed to fetch EA accounts for notifications:', error);
+        }
+      };
+      
+      fetchEAAccounts();
+    }
+  }, [isAuthenticated, user?.id]);
+  
+  // Helper function to get account info by ID
+  const getAccountInfo = (accountId) => {
+    const account = eaAccounts.find(acc => acc.account_id === accountId);
+    return {
+      brokerName: account?.broker || `Account ${accountId}`,
+      server: account?.server || 'Unknown',
+      platform: account?.platform || 'MT5'
+    };
+  };
   
   // Setup EA WebSocket connection when user is authenticated
   useEffect(() => {
@@ -46,15 +76,168 @@ const App = () => {
       
       eaWebSocket.on('trade_result', (data) => {
         console.log('Trade executed via EA:', data);
-        // You can add toast notifications here for trade results
+        
+        // Get account info for notification
+        const accountInfo = getAccountInfo(data.account_id);
+        
+        // Show toast notification for EA trade execution
+        if (data.data && data.data.status) {
+          const status = data.data.status.toLowerCase();
+          const message = data.data.message || 'Trade processed by EA';
+          
+          if (status.includes('success') || status.includes('executed') || status.includes('filled')) {
+            // Success notification with broker name
+            toast.success(
+              <div className="flex items-center gap-3">
+                <div className="text-2xl">🤖</div>
+                <div>
+                  <div className="font-semibold text-white">
+                    EA Trade Executed!
+                  </div>
+                  <div className="text-sm text-gray-300">
+                    {accountInfo.brokerName} • {message}
+                  </div>
+                  {data.data.request_id && (
+                    <div className="text-xs text-gray-400 mt-1">
+                      Request: {data.data.request_id}
+                    </div>
+                  )}
+                </div>
+              </div>,
+              { 
+                duration: 5000,
+                style: {
+                  background: 'linear-gradient(135deg, #065f46 0%, #047857 100%)',
+                  border: '1px solid #10b981',
+                  color: 'white',
+                },
+              }
+            );
+          } else if (status.includes('error') || status.includes('failed')) {
+            // Error notification with broker name
+            toast.error(
+              <div className="flex items-center gap-3">
+                <div className="text-2xl">🤖</div>
+                <div>
+                  <div className="font-semibold text-white">
+                    EA Trade Failed
+                  </div>
+                  <div className="text-sm text-gray-300">
+                    {accountInfo.brokerName} • {message}
+                  </div>
+                </div>
+              </div>,
+              { 
+                duration: 6000,
+                style: {
+                  background: 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%)',
+                  border: '1px solid #ef4444',
+                  color: 'white',
+                },
+              }
+            );
+          } else {
+            // Info notification for other statuses (queued, pending, etc.) with broker name
+            toast(
+              <div className="flex items-center gap-3">
+                <div className="text-2xl">🤖</div>
+                <div>
+                  <div className="font-semibold text-white">
+                    EA Processing Trade
+                  </div>
+                  <div className="text-sm text-gray-300">
+                    {accountInfo.brokerName} • {message}
+                  </div>
+                </div>
+              </div>,
+              { 
+                duration: 4000,
+                style: {
+                  background: 'linear-gradient(135deg, #1e3a8a 0%, #3730a3 100%)',
+                  border: '1px solid #3b82f6',
+                  color: 'white',
+                },
+              }
+            );
+          }
+        }
       });
       
       eaWebSocket.on('account_update', (data) => {
         console.log('EA account update:', data);
+        
+        // Get account info for notification
+        const accountInfo = getAccountInfo(data.account_id);
+        
+        // Optional: Show subtle notification for significant account changes
+        if (data.data && data.data.balance_change && Math.abs(data.data.balance_change) > 10) {
+          const change = data.data.balance_change;
+          const isProfit = change > 0;
+          
+          toast(
+            <div className="flex items-center gap-3">
+              <div className="text-lg">{isProfit ? '💰' : '📊'}</div>
+              <div>
+                <div className="font-semibold text-white">
+                  Account Update
+                </div>
+                <div className={`text-sm ${isProfit ? 'text-green-400' : 'text-yellow-400'}`}>
+                  {accountInfo.brokerName} • Balance {isProfit ? '+' : ''}{change.toFixed(2)}
+                </div>
+              </div>
+            </div>,
+            { 
+              duration: 3000,
+              style: {
+                background: 'linear-gradient(135deg, #374151 0%, #4b5563 100%)',
+                border: `1px solid ${isProfit ? '#10b981' : '#f59e0b'}`,
+                color: 'white',
+              },
+            }
+          );
+        }
       });
       
       eaWebSocket.on('position_update', (data) => {
         console.log('EA position update:', data);
+        
+        // Get account info for notification
+        const accountInfo = getAccountInfo(data.account_id);
+        
+        // Show notification for position open/close events
+        if (data.data && (data.data.event === 'position_opened' || data.data.event === 'position_closed')) {
+          const isOpen = data.data.event === 'position_opened';
+          const symbol = data.data.symbol || 'Unknown';
+          const volume = data.data.volume || 0;
+          const profit = data.data.profit || 0;
+          
+          toast(
+            <div className="flex items-center gap-3">
+              <div className="text-lg">{isOpen ? '🎯' : (profit >= 0 ? '✅' : '❌')}</div>
+              <div>
+                <div className="font-semibold text-white">
+                  Position {isOpen ? 'Opened' : 'Closed'}
+                </div>
+                <div className="text-sm text-gray-300">
+                  {accountInfo.brokerName} • {symbol} • {volume} lots
+                  {!isOpen && profit !== 0 && (
+                    <span className={`ml-2 ${profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                      {profit >= 0 ? '+' : ''}{profit.toFixed(2)}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>,
+            { 
+              duration: 4000,
+              style: {
+                background: 'linear-gradient(135deg, #374151 0%, #4b5563 100%)',
+                border: `1px solid ${isOpen ? '#3b82f6' : (profit >= 0 ? '#10b981' : '#ef4444')}`,
+                color: 'white',
+              },
+            }
+          );
+        }
       });
       
       eaWebSocket.on('price_update', (data) => {

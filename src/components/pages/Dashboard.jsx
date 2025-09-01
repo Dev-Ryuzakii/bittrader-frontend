@@ -116,22 +116,39 @@ const Dashboard = () => {
 
   // Filter only active accounts and transform to match the expected format for AccountSlider
   const formattedAccounts = displayAccounts
-    .filter(account => account.is_active !== false) // Show demo accounts (no is_active property) and active broker accounts
+    .filter(account => account.status === 'connected') // Only show connected EA accounts
     .map(account => ({
       ...account,
-      accountName: account.account_name || account.broker_name || account.accountName || 'Unnamed Account',
-      balance: account.is_active !== false ? (account.balance || 0) : 0, // Show balance only for active accounts
-      pnl: account.is_active !== false ? (account.pnl || 0) : 0,
-      equity: account.is_active !== false ? (account.equity || account.balance || 0) : 0,
+      // Use broker name as the primary account name for EA accounts
+      accountName: account.broker || account.account_name || account.broker_name || `Account ${account.account_id}`,
+      account_name: account.broker || account.account_name || account.broker_name || `Account ${account.account_id}`,
+      broker_name: account.broker || account.broker_name,
+      balance: account.balance || 0,
+      pnl: account.profit || account.pnl || 0, // Use profit from EA data
+      equity: account.equity || account.balance || 0,
+      margin: account.margin || 0,
+      free_margin: account.free_margin || 0,
+      leverage: account.leverage || 1,
+      currency: account.currency || 'USD',
+      platform: account.platform || 'MT5',
+      server: account.server || 'Unknown',
+      positions_count: account.positions_count || 0,
+      orders_count: account.orders_count || 0,
+      // Additional EA-specific data
+      last_heartbeat: account.last_heartbeat,
+      connected_at: account.connected_at,
+      margin_level: account.margin_level,
       // Use colorVariant + 2 to skip the first two variants (1 is for total, 2 starts individual accounts)
       colorVariant: (account.colorVariant || 0) + 2
     }));
 
-  // Calculate totals (only from active accounts)
-  const activeAccounts = displayAccounts.filter(account => account.is_active !== false);
-  const totalBalance = activeAccounts.reduce((sum, account) => sum + (account.balance || 0), 0);
-  const totalPnl = activeAccounts.reduce((sum, account) => sum + (account.pnl || 0), 0);
-  const totalEquity = activeAccounts.reduce((sum, account) => sum + (account.equity || 0), 0);
+  // Calculate totals (only from connected EA accounts)
+  const connectedAccounts = displayAccounts.filter(account => account.status === 'connected');
+  const totalBalance = connectedAccounts.reduce((sum, account) => sum + (account.balance || 0), 0);
+  const totalPnl = connectedAccounts.reduce((sum, account) => sum + (account.profit || account.pnl || 0), 0);
+  const totalEquity = connectedAccounts.reduce((sum, account) => sum + (account.equity || 0), 0);
+  const totalMargin = connectedAccounts.reduce((sum, account) => sum + (account.margin || 0), 0);
+  const totalFreeMargin = connectedAccounts.reduce((sum, account) => sum + (account.free_margin || 0), 0);
 
   
 
@@ -290,16 +307,16 @@ const Dashboard = () => {
                 className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg text-sm text-white px-3 py-2 w-full sm:w-auto max-w-[200px] focus:outline-none focus:border-blue-600/70 focus:ring-1 focus:ring-blue-600/30"
                 onChange={(e) => {
                   const accountId = e.target.value;
-                  const account = formattedAccounts.find(a => a.id.toString() === accountId);
+                  const account = formattedAccounts.find(a => (a.account_id || a.id)?.toString() === accountId);
                   if (account) {
                     setSelectedAccount(account);
                   }
                 }}
-                value={selectedAccount?.id?.toString() || ''}
+                value={(selectedAccount?.account_id || selectedAccount?.id)?.toString() || ''}
               >
                 <option value="" disabled>Select account</option>
                 {formattedAccounts.map((account) => (
-                  <option key={account.id} value={account.id}>
+                  <option key={account.account_id || account.id} value={(account.account_id || account.id)?.toString()}>
                     {account.account_name || account.broker_name || account.accountName}
                     {account.is_demo ? ' (Demo)' : ''}
                   </option>

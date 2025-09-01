@@ -252,7 +252,7 @@ const EnhancedAccountAggregation = () => {
 
   // Symbol mapping functions
   const fetchSymbolMappings = async () => {
-    const activeAccounts = accounts.filter(acc => acc.is_active);
+    const activeAccounts = accounts.filter(acc => acc.status === 'connected');
     if (activeAccounts.length === 0) {
       toast.info('Connect at least one account to view symbol mappings');
       return;
@@ -260,49 +260,22 @@ const EnhancedAccountAggregation = () => {
 
     setLoadingMappings(true);
     try {
-      // Debug: Log account structure to identify correct field
-      //console.log('Active accounts for symbol mapping:', activeAccounts);
-      activeAccounts.forEach((account, index) => {
-        //console.log(`Account ${index} structure:`, {
-        //   id: account.id,
-        //   account_id: account.account_id,
-        //   metaapi_account_id: account.metaapi_account_id,
-        //   login: account.login,
-        //   platform: account.platform,
-        //   allKeys: Object.keys(account)
-        // });
-      });
+      // For EA accounts, use account_id directly
+      const accountIds = activeAccounts.map(acc => acc.account_id).filter(id => id);
 
-      // Try multiple possible field names for MetaAPI account ID
-      const accountIds = activeAccounts.map(acc => {
-        return acc.metaapi_account_id || 
-               acc.metaapiAccountId || 
-               acc.meta_api_account_id ||
-               acc.account_id ||
-               acc.login; // Sometimes login is used as account ID
-      }).filter(id => id && id !== undefined && id !== null && id !== '');
-
-      //console.log('Extracted account IDs:', accountIds);
+      console.log('EA Account IDs for symbol mapping:', accountIds);
 
       if (accountIds.length === 0) {
-        toast.error('No valid MetaAPI account IDs found. Please check account configuration.');
+        toast.error('No valid EA account IDs found. Please check account configuration.');
         return;
       }
       
-      // Debug the symbol mapping service
-      symbolMappingService.debugInfo();
+      // For EA accounts, we don't need cross-broker mappings as they handle symbols directly
+      // Instead, show available symbols for each account
+      toast.info('EA accounts handle symbols directly - no cross-broker mapping needed');
       
-      const result = await symbolMappingService.getCrossBrokerMappings(accountIds);
-      
-      if (result.success) {
-        setSymbolMappings(result.cross_mappings);
-        setShowSymbolView(true);
-        toast.success(`Loaded mappings for ${result.total_symbols} symbols`);
-      } else {
-        toast.error(`Failed to fetch symbol mappings: ${result.error || 'Unknown error'}`);
-      }
     } catch (error) {
-      //console.error('Error fetching symbol mappings:', error);
+      console.error('Error fetching symbol mappings:', error);
       toast.error(`Failed to fetch symbol mappings: ${error.message}`);
     } finally {
       setLoadingMappings(false);
@@ -311,68 +284,47 @@ const EnhancedAccountAggregation = () => {
 
   const refreshAccountMappings = async (account) => {
     try {
-      // Extract the MetaAPI account ID using the same logic
-      const accountId = account.metaapi_account_id || 
-                       account.metaapiAccountId || 
-                       account.meta_api_account_id ||
-                       account.account_id ||
-                       account.login;
+      const accountId = account.account_id;
       
       if (!accountId) {
-        toast.error('No valid MetaAPI account ID found for this account');
+        toast.error('No valid EA account ID found for this account');
         return;
       }
 
-      //console.log('Refreshing mappings for account ID:', accountId);
-      const result = await symbolMappingService.refreshAccountMappings(accountId);
-      if (result.success) {
-        toast.success(`Refreshed mappings for account ${accountId}`);
-        // Refresh symbol mappings if view is open
-        if (showSymbolView) {
-          await fetchSymbolMappings();
-        }
-      } else {
-        toast.error('Failed to refresh account mappings');
-      }
+      console.log('Refreshing data for EA account ID:', accountId);
+      // For EA accounts, we can refresh the account data directly
+      await fetchAccounts(); // Refresh all account data
+      toast.success(`Refreshed data for account ${accountId}`);
+      
     } catch (error) {
-      //console.error('Error refreshing mappings:', error);
-      toast.error('Failed to refresh account mappings');
+      console.error('Error refreshing account data:', error);
+      toast.error('Failed to refresh account data');
     }
   };
 
   const getSymbolStatistics = async () => {
-    const activeAccounts = accounts.filter(acc => acc.is_active);
+    const activeAccounts = accounts.filter(acc => acc.status === 'connected');
     if (activeAccounts.length === 0) {
       toast.info('Connect at least one account to view statistics');
       return;
     }
 
     try {
-      // Use the same logic as fetchSymbolMappings to extract account IDs
-      const accountIds = activeAccounts.map(acc => {
-        return acc.metaapi_account_id || 
-               acc.metaapiAccountId || 
-               acc.meta_api_account_id ||
-               acc.account_id ||
-               acc.login;
-      }).filter(id => id && id !== undefined && id !== null && id !== '');
+      const accountIds = activeAccounts.map(acc => acc.account_id).filter(id => id);
 
-      //console.log('Getting symbol statistics for account IDs:', accountIds);
+      console.log('Getting symbol statistics for EA account IDs:', accountIds);
 
       if (accountIds.length === 0) {
-        toast.error('No valid MetaAPI account IDs found for statistics.');
+        toast.error('No valid EA account IDs found for statistics.');
         return;
       }
 
-      const result = await symbolMappingService.getSymbolStatistics(accountIds);
+      // For EA accounts, show cross-broker analysis with available data
+      setShowCrossBrokerAnalysis(true);
+      toast.success('Cross-broker analysis opened for EA accounts');
       
-      if (result.success) {
-        // Display statistics in cross-broker analysis
-        setShowCrossBrokerAnalysis(true);
-        toast.success('Symbol statistics loaded');
-      }
     } catch (error) {
-      //console.error('Error getting statistics:', error);
+      console.error('Error getting statistics:', error);
       toast.error('Failed to get symbol statistics');
     }
   };
@@ -425,7 +377,7 @@ const EnhancedAccountAggregation = () => {
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 space-y-4 sm:space-y-0">
               <h1 className="text-2xl sm:text-3xl font-bold text-white">Accounts</h1>
               <div className="flex flex-col sm:flex-row gap-2">
-                {accounts.filter(acc => acc.is_active).length > 0 && (
+                {accounts.filter(acc => acc.status === 'connected').length > 0 && (
                   <>
                     <button
                       onClick={fetchSymbolMappings}
@@ -433,21 +385,21 @@ const EnhancedAccountAggregation = () => {
                       className="flex items-center justify-center space-x-2 bg-gradient-to-r from-[#2F00FF] to-[#1C0099] text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
                     >
                       <Shuffle size={20} />
-                      <span>{loadingMappings ? 'Loading...' : 'Symbol Mappings'}</span>
+                      <span>{loadingMappings ? 'Loading...' : 'EA Symbols'}</span>
                     </button>
                     <button
                       onClick={getSymbolStatistics}
                       className="flex items-center justify-center space-x-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors"
                     >
                       <BarChart3 size={20} />
-                      <span>Cross-Broker Analysis</span>
+                      <span>Account Analysis</span>
                     </button>
                     <button
                       onClick={handleRefreshAllSymbols}
                       className="flex items-center justify-center space-x-2 bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-[#222222] transition-colors"
                     >
                       <Settings size={20} />
-                      <span>Refresh Symbols</span>
+                      <span>Refresh Data</span>
                     </button>
                   </>
                 )}
@@ -492,12 +444,12 @@ const EnhancedAccountAggregation = () => {
             )}
 
             {/* Symbol Picker for testing - only show in symbols view */}
-            {activeView === 'symbols' && accounts.filter(acc => acc.is_active).length > 0 && (
+            {activeView === 'symbols' && accounts.filter(acc => acc.status === 'connected').length > 0 && (
               <div className="mb-6">
                 <SymbolPicker
                   selectedSymbol={selectedSymbol}
                   onSymbolSelect={setSelectedSymbol}
-                  accounts={accounts.filter(acc => acc.is_active)}
+                  accounts={accounts.filter(acc => acc.status === 'connected')}
                   showFavorites={true}
                   showAvailability={true}
                 />
@@ -505,16 +457,10 @@ const EnhancedAccountAggregation = () => {
             )}
 
             {/* Cross-Broker Analysis */}
-            {(activeView === 'analysis' || showCrossBrokerAnalysis) && accounts.filter(acc => acc.is_active).length > 1 && (
+            {(activeView === 'analysis' || showCrossBrokerAnalysis) && accounts.filter(acc => acc.status === 'connected').length > 1 && (
               <div className="mb-6">
                 <CrossBrokerAnalysis
-                  accountIds={accounts.filter(acc => acc.is_active).map(acc => {
-                    return acc.metaapi_account_id || 
-                           acc.metaapiAccountId || 
-                           acc.meta_api_account_id ||
-                           acc.account_id ||
-                           acc.login;
-                  }).filter(id => id && id !== undefined)}
+                  accountIds={accounts.filter(acc => acc.status === 'connected').map(acc => acc.account_id).filter(id => id)}
                   accounts={accounts}
                 />
               </div>
@@ -547,82 +493,87 @@ const EnhancedAccountAggregation = () => {
                       <tbody>
                         {accounts.map((account) => {
                           const colors = colorVariants[account.colorVariant];
+                          const accountKey = account.account_id || account.id;
+                          const accountName = account.broker || account.account_name || account.name || `${account.platform} Account`;
+                          const isConnected = account.status === 'connected';
+                          
                           return (
-                            <tr key={account.id} className="border-b border-[#2A2A2A]">
+                            <tr key={accountKey} className="border-b border-[#2A2A2A]">
                               <td className="p-4">
                                 <span className={`px-3 py-1 rounded-full text-sm ${
-                                  account.is_active ? 'bg-green-600/20 text-green-500' : 'bg-red-600/20 text-red-500'
+                                  isConnected ? 'bg-green-600/20 text-green-500' : 'bg-red-600/20 text-red-500'
                                 }`}>
-                                  {account.is_active ? 'Connected' : 'Disconnected'}
+                                  {isConnected ? 'Connected' : 'Disconnected'}
                                 </span>
                               </td>
                               <td className="p-4">
                                 <div className={`px-3 py-2 rounded-lg ${colors.bg} ${colors.border} border`}>
-                                  <span className={`font-medium ${colors.text}`}>{account.login}</span>
+                                  <span className={`font-medium ${colors.text}`}>{accountKey}</span>
                                 </div>
                               </td>
                               <td className="p-4 text-white">{account.platform}</td>
-                              <td className="p-4 text-white">{account.account_name || account.name || `${account.platform} Account`}</td>
+                              <td className="p-4 text-white">{accountName}</td>
                               <td className="p-4 text-white">
-                                {account.is_active ? `$${account.balance?.toFixed(2) || '0.00'}` : '----'}
+                                {isConnected ? (
+                                  <div>
+                                    <div className="text-white font-medium">
+                                      ${account.balance?.toFixed(2) || '0.00'}
+                                    </div>
+                                    <div className="text-xs text-gray-400">
+                                      Equity: ${account.equity?.toFixed(2) || '0.00'}
+                                    </div>
+                                  </div>
+                                ) : '----'}
                               </td>
                               <td className="p-4">
-                                <SymbolMappingIndicator account={account} className="max-w-xs" />
+                                <div className="text-xs text-gray-400">
+                                  {isConnected ? (
+                                    <div>
+                                      <div>Positions: {account.positions_count || 0}</div>
+                                      <div>Orders: {account.orders_count || 0}</div>
+                                    </div>
+                                  ) : '----'}
+                                </div>
                               </td>
                               <td className="p-4">
-                                <label className="relative inline-flex items-center cursor-pointer">
-                                  <input 
-                                    type="checkbox" 
-                                    className="sr-only peer" 
-                                    checked={account.is_active}
-                                    onChange={() => handleToggleConnection(account)}
-                                  />
-                                  <div className="w-11 h-6 bg-[#222222] peer-focus:outline-none rounded-full peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:border-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gradient-to-r from-[#2F00FF] to-[#1C0099]"></div>
-                                </label>
+                                <div className="flex items-center">
+                                  <div className={`w-2 h-2 rounded-full mr-2 ${
+                                    isConnected ? 'bg-green-500' : 'bg-red-500'
+                                  }`}></div>
+                                  <span className="text-xs text-gray-400">
+                                    {isConnected ? 'Live' : 'Offline'}
+                                  </span>
+                                </div>
                               </td>
                               <td className="p-4">
                                 <div className="flex space-x-2">
                                   <button 
                                     onClick={() => handleViewAccount(account)}
                                     className={`p-2 text-gray-400 rounded-lg transition-colors ${
-                                      account.is_active 
+                                      isConnected 
                                         ? 'hover:text-white hover:bg-[#2A2A2A] cursor-pointer' 
                                         : 'opacity-50 cursor-not-allowed'
                                     }`}
-                                    disabled={!account.is_active}
-                                    title={!account.is_active ? 'Connect account to view details' : 'View account details'}
+                                    disabled={!isConnected}
+                                    title={!isConnected ? 'Account offline' : 'View account details'}
                                   >
                                     <Eye size={16} />
                                   </button>
-                                  {account.is_active && (
+                                  {isConnected && (
                                     <button 
                                       onClick={() => refreshAccountMappings(account)}
                                       className="p-2 text-gray-400 hover:text-blue-400 hover:bg-[#2A2A2A] rounded-lg transition-colors"
-                                      title="Refresh symbol mappings"
+                                      title="Refresh account data"
                                     >
                                       <Shuffle size={16} />
-                                    </button>
-                                  )}
-                                  {account.is_active && (
-                                    <button 
-                                      onClick={() => handleOpenSymbolMappings(account)}
-                                      className="p-2 text-gray-400 hover:text-purple-400 hover:bg-[#2A2A2A] rounded-lg transition-colors"
-                                      title="Manage symbol mappings"
-                                    >
-                                      <Settings size={16} />
                                     </button>
                                   )}
                                   <button 
                                     onClick={() => handleEditAccount(account)}
                                     className="p-2 text-gray-400 hover:text-white hover:bg-[#2A2A2A] rounded-lg transition-colors"
+                                    title="Account settings"
                                   >
                                     <PenSquare size={16} />
-                                  </button>
-                                  <button 
-                                    onClick={() => handleDeleteAccount(account.id, account.account_name || account.name || `${account.platform} Account`)}
-                                    className="p-2 text-gray-400 hover:text-red-500 hover:bg-[#2A2A2A] rounded-lg transition-colors"
-                                  >
-                                    <Trash2 size={16} />
                                   </button>
                                 </div>
                               </td>
@@ -637,17 +588,21 @@ const EnhancedAccountAggregation = () => {
                   <div className="lg:hidden space-y-4">
                     {accounts.map((account) => {
                       const colors = colorVariants[account.colorVariant];
+                      const accountKey = account.account_id || account.id;
+                      const accountName = account.broker || account.account_name || account.name || `${account.platform} Account`;
+                      const isConnected = account.status === 'connected';
+                      
                       return (
-                        <div key={account.id} className="bg-[#1A1A1A] rounded-lg p-4 border border-[#2A2A2A]">
+                        <div key={accountKey} className="bg-[#1A1A1A] rounded-lg p-4 border border-[#2A2A2A]">
                           {/* Header */}
                           <div className="flex items-center justify-between mb-4">
                             <div className={`px-3 py-2 rounded-lg ${colors.bg} ${colors.border} border`}>
-                              <span className={`font-medium ${colors.text}`}>{account.login}</span>
+                              <span className={`font-medium ${colors.text}`}>{accountKey}</span>
                             </div>
                             <span className={`px-3 py-1 rounded-full text-sm ${
-                              account.is_active ? 'bg-green-600/20 text-green-500' : 'bg-red-600/20 text-red-500'
+                              isConnected ? 'bg-green-600/20 text-green-500' : 'bg-red-600/20 text-red-500'
                             }`}>
-                              {account.is_active ? 'Connected' : 'Disconnected'}
+                              {isConnected ? 'Connected' : 'Disconnected'}
                             </span>
                           </div>
 
@@ -660,79 +615,86 @@ const EnhancedAccountAggregation = () => {
                             <div>
                               <p className="text-gray-400 text-sm">Balance</p>
                               <p className="text-white font-medium">
-                                {account.is_active ? `$${account.balance?.toFixed(2) || '0.00'}` : '----'}
+                                {isConnected ? `$${account.balance?.toFixed(2) || '0.00'}` : '----'}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-gray-400 text-sm">Equity</p>
+                              <p className="text-white font-medium">
+                                {isConnected ? `$${account.equity?.toFixed(2) || '0.00'}` : '----'}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-gray-400 text-sm">Leverage</p>
+                              <p className="text-white font-medium">
+                                {isConnected ? `1:${account.leverage || 'N/A'}` : '----'}
                               </p>
                             </div>
                           </div>
 
                           <div className="mb-4">
-                            <p className="text-gray-400 text-sm">Account Name</p>
-                            <p className="text-white font-medium">{account.account_name || account.name || `${account.platform} Account`}</p>
+                            <p className="text-gray-400 text-sm">Broker</p>
+                            <p className="text-white font-medium">{accountName}</p>
                           </div>
 
-                          {/* Symbol Status */}
-                          <div className="mb-4">
-                            <p className="text-gray-400 text-sm mb-2">Symbol Status</p>
-                            <SymbolMappingIndicator account={account} />
-                          </div>
+                          {/* Trading Info */}
+                          {isConnected && (
+                            <div className="mb-4">
+                              <p className="text-gray-400 text-sm mb-2">Trading Status</p>
+                              <div className="flex justify-between text-sm">
+                                <span className="text-gray-400">Positions:</span>
+                                <span className="text-white">{account.positions_count || 0}</span>
+                              </div>
+                              <div className="flex justify-between text-sm">
+                                <span className="text-gray-400">Orders:</span>
+                                <span className="text-white">{account.orders_count || 0}</span>
+                              </div>
+                              <div className="flex justify-between text-sm">
+                                <span className="text-gray-400">Server:</span>
+                                <span className="text-white text-xs">{account.server || 'N/A'}</span>
+                              </div>
+                            </div>
+                          )}
 
                           {/* Actions */}
                           <div className="flex items-center justify-between pt-4 border-t border-[#2A2A2A]">
                             <div className="flex items-center space-x-2">
-                              <span className="text-gray-400 text-sm">Connection</span>
-                              <label className="relative inline-flex items-center cursor-pointer">
-                                <input 
-                                  type="checkbox" 
-                                  className="sr-only peer" 
-                                  checked={account.is_active}
-                                  onChange={() => handleToggleConnection(account)}
-                                />
-                                <div className="w-11 h-6 bg-[#222222] peer-focus:outline-none rounded-full peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:border-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gradient-to-r from-[#2F00FF] to-[#1C0099]"></div>
-                              </label>
+                              <div className={`w-2 h-2 rounded-full ${
+                                isConnected ? 'bg-green-500' : 'bg-red-500'
+                              }`}></div>
+                              <span className="text-xs text-gray-400">
+                                {isConnected ? 'Live Connection' : 'Offline'}
+                              </span>
                             </div>
                             
                             <div className="flex space-x-2">
                               <button 
                                 onClick={() => handleViewAccount(account)}
                                 className={`p-2 text-gray-400 rounded-lg transition-colors ${
-                                  account.is_active 
+                                  isConnected 
                                     ? 'hover:text-white hover:bg-[#2A2A2A] cursor-pointer' 
                                     : 'opacity-50 cursor-not-allowed'
                                 }`}
-                                disabled={!account.is_active}
-                                title={!account.is_active ? 'Connect account to view details' : 'View account details'}
+                                disabled={!isConnected}
+                                title={!isConnected ? 'Account offline' : 'View account details'}
                               >
                                 <Eye size={16} />
                               </button>
-                              {account.is_active && (
+                              {isConnected && (
                                 <button 
                                   onClick={() => refreshAccountMappings(account)}
                                   className="p-2 text-gray-400 hover:text-blue-400 hover:bg-[#2A2A2A] rounded-lg transition-colors"
-                                  title="Refresh symbol mappings"
+                                  title="Refresh account data"
                                 >
                                   <Shuffle size={16} />
-                                </button>
-                              )}
-                              {account.is_active && (
-                                <button 
-                                  onClick={() => handleOpenSymbolMappings(account)}
-                                  className="p-2 text-gray-400 hover:text-purple-400 hover:bg-[#2A2A2A] rounded-lg transition-colors"
-                                  title="Manage symbol mappings"
-                                >
-                                  <Settings size={16} />
                                 </button>
                               )}
                               <button 
                                 onClick={() => handleEditAccount(account)}
                                 className="p-2 text-gray-400 hover:text-white hover:bg-[#2A2A2A] rounded-lg transition-colors"
+                                title="Account settings"
                               >
                                 <PenSquare size={16} />
-                              </button>
-                              <button 
-                                onClick={() => handleDeleteAccount(account.id, account.account_name || account.name || `${account.platform} Account`)}
-                                className="p-2 text-gray-400 hover:text-red-500 hover:bg-[#2A2A2A] rounded-lg transition-colors"
-                              >
-                                <Trash2 size={16} />
                               </button>
                             </div>
                           </div>
@@ -775,11 +737,11 @@ const EnhancedAccountAggregation = () => {
                           <h3 className="text-white font-semibold mb-3">{standardSymbol}</h3>
                           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                             {Object.entries(accountMappings).map(([accountId, brokerSymbol]) => {
-                              const account = accounts.find(acc => acc.account_id === accountId);
+                              const account = accounts.find(acc => (acc.account_id || acc.id) === accountId);
                               return (
-                                <div key={accountId} className="bg-[#333] rounded p-3">
+                                <div key={`${standardSymbol}-${accountId}`} className="bg-[#333] rounded p-3">
                                   <div className="text-sm text-gray-400 mb-1">
-                                    {account?.platform || 'Unknown'} ({account?.login || accountId})
+                                    {account?.platform || 'Unknown'} ({account?.account_id || account?.id || accountId})
                                   </div>
                                   <div className="text-white font-medium">{brokerSymbol}</div>
                                 </div>
@@ -838,11 +800,7 @@ const EnhancedAccountAggregation = () => {
               setShowSymbolMappingModal(false);
               setSelectedAccountForMapping(null);
             }}
-            accountId={selectedAccountForMapping?.metaapi_account_id || 
-                      selectedAccountForMapping?.metaapiAccountId || 
-                      selectedAccountForMapping?.meta_api_account_id ||
-                      selectedAccountForMapping?.account_id ||
-                      selectedAccountForMapping?.login}
+            accountId={selectedAccountForMapping?.account_id}
             selectedSymbol={selectedSymbol}
             onMappingUpdate={handleMappingUpdate}
           />

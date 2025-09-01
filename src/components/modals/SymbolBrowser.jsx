@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Search, RefreshCw, Info, TrendingUp } from 'lucide-react';
 import { getAccountSymbols, searchAccountSymbols } from '../../api/livePrices';
+import { getEASymbols } from '../../api/ea';
 
 /**
  * Symbol Browser Component
  * Helps users find available symbols for their broker account
  */
-const SymbolBrowser = ({ accountId, onSymbolSelect, onClose }) => {
+const SymbolBrowser = ({ onSymbolSelect, onClose, selectedAccount }) => {
   const [symbols, setSymbols] = useState([]);
   const [filteredSymbols, setFilteredSymbols] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -15,22 +16,35 @@ const SymbolBrowser = ({ accountId, onSymbolSelect, onClose }) => {
   const [categories, setCategories] = useState({});
 
   useEffect(() => {
-    if (accountId) {
+    if (selectedAccount) {
       loadAccountSymbols();
     }
-  }, [accountId]);
+  }, [selectedAccount]);
 
   useEffect(() => {
     filterSymbols();
   }, [symbols, searchTerm]);
 
   const loadAccountSymbols = async () => {
-    if (!accountId) return;
+    if (!selectedAccount) return;
     
     setLoading(true);
     setError(null);
 
     try {
+      const accountId = selectedAccount.account_id || selectedAccount.id;
+      
+      // Try EA API first for EA accounts
+      if (selectedAccount.account_id) {
+        const eaResponse = await getEASymbols(accountId);
+        if (eaResponse.success && eaResponse.data && eaResponse.data.length > 0) {
+          setSymbols(eaResponse.data);
+          categorizeSymbols(eaResponse.data);
+          return;
+        }
+      }
+      
+      // Fallback to regular API for broker accounts
       const symbolsData = await getAccountSymbols(accountId);
       
       if (symbolsData && symbolsData.length > 0) {
@@ -58,18 +72,25 @@ const SymbolBrowser = ({ accountId, onSymbolSelect, onClose }) => {
     };
 
     symbolsData.forEach(symbolInfo => {
-      const symbol = symbolInfo.standard_symbol || symbolInfo.symbol || '';
-      const type = symbolInfo.symbol_type || symbolInfo.type || '';
+      // Handle both EA and broker symbol formats
+      const symbol = symbolInfo.symbol || symbolInfo.standard_symbol || '';
+      const type = symbolInfo.type || symbolInfo.symbol_type || '';
+      const description = symbolInfo.description || '';
       
-      if (type.toLowerCase().includes('forex') || symbol.length === 6) {
+      // Convert to string if needed
+      const symbolStr = typeof symbol === 'string' ? symbol : String(symbol);
+      const typeStr = typeof type === 'string' ? type.toLowerCase() : '';
+      const descStr = typeof description === 'string' ? description.toLowerCase() : '';
+      
+      if (typeStr.includes('forex') || typeStr.includes('currency') || symbolStr.length === 6) {
         categorized.forex.push(symbolInfo);
-      } else if (type.toLowerCase().includes('crypto') || symbol.includes('BTC') || symbol.includes('ETH')) {
+      } else if (typeStr.includes('crypto') || symbolStr.includes('BTC') || symbolStr.includes('ETH') || descStr.includes('bitcoin') || descStr.includes('crypto')) {
         categorized.crypto.push(symbolInfo);
-      } else if (type.toLowerCase().includes('metal') || symbol.includes('XAU') || symbol.includes('XAG')) {
+      } else if (typeStr.includes('metal') || symbolStr.includes('XAU') || symbolStr.includes('XAG') || symbolStr.includes('GOLD') || symbolStr.includes('SILVER')) {
         categorized.metals.push(symbolInfo);
-      } else if (type.toLowerCase().includes('index') || symbol.includes('US30') || symbol.includes('SPX')) {
+      } else if (typeStr.includes('index') || symbolStr.includes('US30') || symbolStr.includes('SPX') || symbolStr.includes('NAS') || symbolStr.includes('DAX')) {
         categorized.indices.push(symbolInfo);
-      } else if (type.toLowerCase().includes('commodity') || symbol.includes('OIL') || symbol.includes('WTI')) {
+      } else if (typeStr.includes('commodity') || symbolStr.includes('OIL') || symbolStr.includes('WTI') || symbolStr.includes('BRENT')) {
         categorized.commodities.push(symbolInfo);
       } else {
         categorized.other.push(symbolInfo);
@@ -87,9 +108,10 @@ const SymbolBrowser = ({ accountId, onSymbolSelect, onClose }) => {
 
     const term = searchTerm.toLowerCase();
     const filtered = symbols.filter(symbolInfo => {
-      const symbol = (symbolInfo.standard_symbol || symbolInfo.symbol || '').toLowerCase();
-      const brokerSymbol = (symbolInfo.broker_symbol || '').toLowerCase();
-      const description = (symbolInfo.description || '').toLowerCase();
+      // Handle both EA and broker symbol formats
+      const symbol = (symbolInfo.symbol || symbolInfo.standard_symbol || '').toString().toLowerCase();
+      const brokerSymbol = (symbolInfo.broker_symbol || '').toString().toLowerCase();
+      const description = (symbolInfo.description || '').toString().toLowerCase();
       
       return symbol.includes(term) || 
              brokerSymbol.includes(term) || 
@@ -100,7 +122,8 @@ const SymbolBrowser = ({ accountId, onSymbolSelect, onClose }) => {
   };
 
   const handleSymbolSelect = (symbolInfo) => {
-    const symbol = symbolInfo.standard_symbol || symbolInfo.symbol;
+    // Handle both EA and broker symbol formats
+    const symbol = symbolInfo.symbol || symbolInfo.standard_symbol;
     if (onSymbolSelect) {
       onSymbolSelect(symbol);
     }
@@ -257,7 +280,8 @@ const SymbolBrowser = ({ accountId, onSymbolSelect, onClose }) => {
 
 // Symbol Item Component
 const SymbolItem = ({ symbolInfo, onSelect, compact = false }) => {
-  const symbol = symbolInfo.standard_symbol || symbolInfo.symbol;
+  // Handle both EA and broker symbol formats
+  const symbol = symbolInfo.symbol || symbolInfo.standard_symbol;
   const brokerSymbol = symbolInfo.broker_symbol;
   const description = symbolInfo.description;
   const available = symbolInfo.available !== false;

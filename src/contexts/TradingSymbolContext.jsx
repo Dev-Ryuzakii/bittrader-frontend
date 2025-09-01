@@ -53,7 +53,18 @@ export const TradingSymbolProvider = ({ children }) => {
         setStandardSymbols(response.standard_symbols || []);
       }
     } catch (error) {
-      //console.error('Failed to load standard symbols:', error);
+      // Silently handle 404 errors for missing endpoints
+      if (!error.message?.includes('404')) {
+        console.error('Failed to load standard symbols:', error);
+      }
+      // Set fallback standard symbols for EA trading
+      setStandardSymbols([
+        'EURUSD', 'EURUSDm', 'GBPUSD', 'GBPUSDm', 'USDJPY', 'USDJPYm',
+        'USDCAD', 'USDCADm', 'AUDUSD', 'AUDUSDm', 'NZDUSD', 'NZDUSDm',
+        'USDCHF', 'USDCHFm', 'EURGBP', 'EURGBPm', 'EURJPY', 'EURJPYm',
+        'GBPJPY', 'GBPJPYm', 'XAUUSD', 'XAUUSDm', 'XAGUSD', 'XAGUSDm',
+        'BTCUSD', 'BTCUSDm', 'ETHUSD', 'ETHUSDm'
+      ]);
     }
   };
 

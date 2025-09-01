@@ -34,7 +34,7 @@ const AccountSlider = ({ totalBalance, totalPnl, totalEquity, accounts }) => {
           {/* Individual Account Cards */}
           {accounts.map((account) => (
             <AccountCard
-              key={account.id}
+              key={account.account_id || account.id}
               accountName={account.accountName}
               balance={account.balance}
               pnl={account.pnl}

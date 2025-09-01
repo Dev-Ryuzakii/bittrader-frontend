@@ -84,12 +84,42 @@ const AccountAggregation = () => {
     try {
       const result = await getAccounts();
       if (result.success) {
-        // Assign color variants to accounts
-        const accountsWithColors = result.data.map((account, index) => ({
+        // Transform EA accounts with broker names and real data
+        const transformedAccounts = result.data.map((account, index) => ({
           ...account,
-          colorVariant: index % colorVariants.length
+          // Use broker name as the primary account name
+          accountName: account.broker || `Account ${account.account_id}`,
+          account_name: account.broker || `Account ${account.account_id}`,
+          broker_name: account.broker,
+          name: account.broker || `Account ${account.account_id}`,
+          // Real EA account data
+          balance: account.balance || 0,
+          equity: account.equity || account.balance || 0,
+          margin: account.margin || 0,
+          free_margin: account.free_margin || 0,
+          margin_level: account.margin_level || 0,
+          profit: account.profit || 0,
+          leverage: account.leverage || 1,
+          currency: account.currency || 'USD',
+          server: account.server || 'Unknown',
+          platform: account.platform || 'MT5',
+          // Connection status
+          is_connected: account.status === 'connected',
+          connection_status: account.status,
+          connected_at: account.connected_at,
+          last_heartbeat: account.last_heartbeat,
+          // Trading statistics
+          positions_count: account.positions_count || 0,
+          orders_count: account.orders_count || 0,
+          // Visual
+          colorVariant: index % colorVariants.length,
+          // Additional metadata for display
+          type: 'EA', // Mark as EA account
+          is_demo: account.server?.includes('Demo') || account.server?.includes('Trial'),
+          is_active: account.status === 'connected'
         }));
-        setAccounts(accountsWithColors);
+        
+        setAccounts(transformedAccounts);
       } else {
         //console.error('Failed to fetch accounts:', result.error);
         setAccounts([]);

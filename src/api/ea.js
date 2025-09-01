@@ -367,7 +367,7 @@ export const getEASymbols = async (accountId) => {
 };
 
 /**
- * Get real-time prices from EA
+ * Get real-time prices from EA using REST endpoint
  * @param {string} accountId - EA account ID
  * @param {string|Array} symbols - Comma-separated string or array of symbols (optional)
  */
@@ -383,7 +383,7 @@ export const getEAPrices = async (accountId, symbols = null) => {
     const response = await api.get(url);
     return {
       success: true,
-      data: response || []
+      data: response.data || response || []
     };
   } catch (error) {
     console.error('Error fetching EA prices:', error);
@@ -396,15 +396,25 @@ export const getEAPrices = async (accountId, symbols = null) => {
 };
 
 /**
- * Get single symbol price from EA
+ * Get single symbol price from EA using REST endpoint
  */
 export const getEASymbolPrice = async (accountId, symbol) => {
   try {
     const prices = await getEAPrices(accountId, symbol);
     if (prices.success && prices.data.length > 0) {
+      const priceData = prices.data[0];
       return {
         success: true,
-        data: prices.data[0]
+        data: {
+          symbol: priceData.symbol,
+          bid: priceData.bid,
+          ask: priceData.ask,
+          price: (priceData.bid + priceData.ask) / 2, // Mid price
+          spread: priceData.spread,
+          digits: priceData.digits,
+          timestamp: priceData.timestamp,
+          source: priceData.source
+        }
       };
     }
     return {
@@ -418,6 +428,88 @@ export const getEASymbolPrice = async (accountId, symbol) => {
       success: false,
       error: error.message || 'Failed to fetch EA symbol price',
       data: null
+    };
+  }
+};
+
+/**
+ * Get live prices for multiple symbols from EA
+ * @param {string} accountId - EA account ID
+ * @param {Array} symbols - Array of symbols
+ */
+export const getEALivePrices = async (accountId, symbols) => {
+  try {
+    if (!symbols || symbols.length === 0) {
+      return {
+        success: false,
+        error: 'No symbols provided',
+        data: {}
+      };
+    }
+
+    const prices = await getEAPrices(accountId, symbols);
+    if (prices.success) {
+      // Convert array to object keyed by symbol for easier access
+      const pricesMap = {};
+      prices.data.forEach(priceData => {
+        pricesMap[priceData.symbol] = {
+          bid: priceData.bid,
+          ask: priceData.ask,
+          price: (priceData.bid + priceData.ask) / 2,
+          spread: priceData.spread,
+          digits: priceData.digits,
+          timestamp: priceData.timestamp,
+          source: priceData.source
+        };
+      });
+
+      return {
+        success: true,
+        data: pricesMap
+      };
+    }
+
+    return prices;
+  } catch (error) {
+    console.error('Error fetching EA live prices:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to fetch EA live prices',
+      data: {}
+    };
+  }
+};
+
+/**
+ * Get current market price for trading (uses mid price)
+ * @param {string} accountId - EA account ID  
+ * @param {string} symbol - Symbol to get price for
+ */
+export const getEAMarketPrice = async (accountId, symbol) => {
+  try {
+    const result = await getEASymbolPrice(accountId, symbol);
+    if (result.success && result.data) {
+      return {
+        success: true,
+        price: result.data.price,
+        bid: result.data.bid,
+        ask: result.data.ask,
+        spread: result.data.spread,
+        timestamp: result.data.timestamp
+      };
+    }
+    
+    return {
+      success: false,
+      error: result.error || 'Failed to get market price',
+      price: null
+    };
+  } catch (error) {
+    console.error('Error fetching EA market price:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to fetch EA market price',
+      price: null
     };
   }
 };
@@ -493,7 +585,11 @@ export class EAWebSocketManager {
   connect(userId) {
     try {
       this.userId = userId;
-      const wsUrl = `${api.defaults.baseURL.replace('http', 'ws')}/api/v1/ea/ws/${userId}`;
+      const baseURL = api.getCurrentApiUrl();
+      if (!baseURL) {
+        throw new Error('API base URL not available');
+      }
+      const wsUrl = `${baseURL.replace('http', 'ws')}/api/v1/ea/ws/${userId}`;
       
       console.log('Connecting to EA WebSocket:', wsUrl);
       this.ws = new WebSocket(wsUrl);
@@ -797,6 +893,210 @@ export const EA_WEBSOCKET_MESSAGE_TYPES = {
   BALANCE_UPDATE: 'balance_update'
 };
 
+// =============================================================================
+// UTILITY FUNCTIONS
+// =============================================================================
+
+/**
+ * Handle EA API errors consistently
+ */
+const handleEAError = (error, defaultMessage) => {
+  let errorMessage = defaultMessage;
+  let errorDetails = null;
+  
+  if (error.response) {
+    // HTTP error response
+    errorDetails = {
+      status: error.response.status,
+      statusText: error.response.statusText,
+      data: error.response.data
+    };
+    
+    if (error.response.data?.detail) {
+      errorMessage = error.response.data.detail;
+    } else if (error.response.data?.message) {
+      errorMessage = error.response.data.message;
+    }
+  } else if (error.message) {
+    errorMessage = error.message;
+  }
+  
+  return {
+    success: false,
+    error: errorMessage,
+    details: errorDetails
+  };
+};
+
+// =============================================================================
+// TRADING ANALYSIS AND ANALYTICS
+// =============================================================================
+
+/**
+ * Get comprehensive trading analysis data
+ */
+export const getEAAnalysisData = async (endpoint, params = {}) => {
+  try {
+    const queryParams = new URLSearchParams();
+    
+    // Add date range parameters if provided
+    if (params.start_date) queryParams.append('start_date', params.start_date);
+    if (params.end_date) queryParams.append('end_date', params.end_date);
+    
+    const url = `/api/v1/trading/analysis/${endpoint}${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
+    const response = await api.get(url);
+    
+    return {
+      success: true,
+      data: response.data,
+      ...response.data
+    };
+  } catch (error) {
+    console.error(`Error fetching EA analysis data (${endpoint}):`, error);
+    return handleEAError(error, 'Failed to fetch EA analysis data');
+  }
+};
+
+/**
+ * Export trading analysis to Excel
+ */
+export const exportAnalysisToExcel = async (endpoint, params = {}) => {
+  try {
+    const queryParams = new URLSearchParams();
+    
+    // Add date range parameters if provided
+    if (params.start_date) queryParams.append('start_date', params.start_date);
+    if (params.end_date) queryParams.append('end_date', params.end_date);
+    
+    const url = `/api/v1/trading/analysis/export/excel/${endpoint}`;
+    
+    const response = await api.post(url, params, {
+      responseType: 'blob',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    // Create download link
+    const blob = new Blob([response.data], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    });
+    
+    const downloadUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    
+    // Generate filename
+    const timestamp = new Date().toISOString().slice(0, 19).replace(/[:-]/g, '');
+    link.download = `trading_analysis_${endpoint.replace(/\//g, '_')}_${timestamp}.xlsx`;
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(downloadUrl);
+    
+    return {
+      success: true,
+      message: 'Analysis exported successfully'
+    };
+  } catch (error) {
+    console.error('Error exporting analysis to Excel:', error);
+    return handleEAError(error, 'Failed to export analysis');
+  }
+};
+
+/**
+ * Generate market outlook report
+ */
+export const generateMarketOutlook = async (requestData) => {
+  try {
+    const response = await api.post('/api/v1/trading/analysis/market-outlook', requestData);
+    
+    return {
+      success: true,
+      data: response.data,
+      ...response.data
+    };
+  } catch (error) {
+    console.error('Error generating market outlook:', error);
+    return handleEAError(error, 'Failed to generate market outlook');
+  }
+};
+
+/**
+ * Export market outlook to Excel
+ */
+export const exportMarketOutlookToExcel = async (requestData) => {
+  try {
+    const response = await api.post('/api/v1/trading/analysis/export/excel/market-outlook', requestData, {
+      responseType: 'blob'
+    });
+    
+    // Create download link
+    const blob = new Blob([response.data], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    });
+    
+    const downloadUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    
+    // Generate filename
+    const timestamp = new Date().toISOString().slice(0, 19).replace(/[:-]/g, '');
+    const reportName = requestData.report_name ? requestData.report_name.replace(/\s+/g, '_') : 'market_outlook';
+    link.download = `${reportName}_${timestamp}.xlsx`;
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(downloadUrl);
+    
+    return {
+      success: true,
+      message: 'Market outlook exported successfully'
+    };
+  } catch (error) {
+    console.error('Error exporting market outlook to Excel:', error);
+    return handleEAError(error, 'Failed to export market outlook');
+  }
+};
+
+/**
+ * Get instrument categories and symbol information
+ */
+export const getEAInstrumentCategories = async () => {
+  try {
+    const response = await api.get('/api/v1/trading/analysis/categories');
+    
+    return {
+      success: true,
+      data: response.data,
+      ...response.data
+    };
+  } catch (error) {
+    console.error('Error fetching EA instrument categories:', error);
+    return handleEAError(error, 'Failed to fetch instrument categories');
+  }
+};
+
+/**
+ * Test symbol categorization
+ */
+export const testEASymbolCategorization = async (symbol) => {
+  try {
+    const response = await api.get(`/api/v1/trading/analysis/test-categorization/${symbol}`);
+    
+    return {
+      success: true,
+      data: response.data,
+      ...response.data
+    };
+  } catch (error) {
+    console.error(`Error testing symbol categorization for ${symbol}:`, error);
+    return handleEAError(error, 'Failed to test symbol categorization');
+  }
+};
+
 // Default EA configuration values
 export const EA_DEFAULT_CONFIG = {
   RECONNECT_INTERVAL: 1000,
@@ -828,6 +1128,16 @@ export default {
   getEASymbols,
   getEAPrices,
   getEASymbolPrice,
+  getEALivePrices,
+  getEAMarketPrice,
+  
+  // Trading Analysis & Analytics
+  getEAAnalysisData,
+  exportAnalysisToExcel,
+  generateMarketOutlook,
+  exportMarketOutlookToExcel,
+  getEAInstrumentCategories,
+  testEASymbolCategorization,
   
   // Trade Queue Management
   getEATradeQueue,
