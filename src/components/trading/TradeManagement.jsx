@@ -68,12 +68,15 @@ function TradeManagement({ selectedAccount: propSelectedAccount, onTradeSelect, 
     paths: {
       // These paths match the structure in the ea.js module
       eaAccounts: '/api/v1/ea/accounts',
-      eaBalance: (accountId) => `/accounts/${accountId}/balance`,
-      eaPositions: (accountId) => `/accounts/${accountId}/positions`,
-      eaOrders: (accountId) => `/accounts/${accountId}/orders`,
-      eaTradeHistory: (accountId) => `/accounts/${accountId}/trade-history`,
-      eaSymbols: (accountId) => `/accounts/${accountId}/symbols`,
-      eaPrices: (accountId) => `/accounts/${accountId}/prices`,
+      eaBalance: (accountId) => `/api/v1/ea/accounts/${accountId}/balance`,
+      eaPositions: (accountId) => `/api/v1/ea/accounts/${accountId}/positions`,
+      eaOrders: (accountId) => `/api/v1/ea/accounts/${accountId}/orders`,
+      eaTradeHistory: (accountId) => `/api/v1/ea/accounts/${accountId}/trade-history`,
+      eaSymbols: (accountId) => `/api/v1/ea/accounts/${accountId}/symbols`,
+      eaPrices: (accountId) => `/api/v1/ea/accounts/${accountId}/prices`,
+      // Close position or order endpoints
+      eaClosePosition: (accountId, positionId) => `/api/v1/ea/accounts/${accountId}/positions/${positionId}`,
+      eaCloseOrder: (accountId, orderId) => `/api/v1/ea/accounts/${accountId}/orders/${orderId}`,
       // Broker API paths as fallback
       brokerBalance: (accountId) => `/api/v1/broker/${accountId}/balance`,
       brokerPositions: (accountId) => `/api/v1/broker/${accountId}/positions`,
@@ -143,7 +146,8 @@ function TradeManagement({ selectedAccount: propSelectedAccount, onTradeSelect, 
         const processedAccounts = accounts.map(account => ({
           ...account,
           id: account.id || account.account_id,
-          name: account.name || account.account_number || account.id || account.account_id
+          // Use broker name as the display name if available
+          name: account.broker || account.name || account.account_number || account.id || account.account_id
         }));
         
         setAvailableAccounts(processedAccounts);
@@ -153,7 +157,14 @@ function TradeManagement({ selectedAccount: propSelectedAccount, onTradeSelect, 
           const firstAccount = processedAccounts[0];
           console.log('Auto-selecting account:', firstAccount);
           setSelectedAccount(firstAccount);
-          toast.success(`Selected account: ${firstAccount.name}`, { id: 'account-selected' });
+          toast.success(
+            <div>
+              <p className="font-bold">Account Selected</p>
+              <p>{firstAccount.broker || firstAccount.name} • {firstAccount.account_number || firstAccount.id}</p>
+              {firstAccount.platform && <p className="text-xs text-gray-300">Platform: {firstAccount.platform}</p>}
+            </div>,
+            { id: 'account-selected' }
+          );
         }
       } else {
         setError('No trading accounts found. Please connect an account first.');
@@ -705,7 +716,10 @@ function TradeManagement({ selectedAccount: propSelectedAccount, onTradeSelect, 
         
         // Try to close as position first
         try {
-          const positionUrl = `${API_CONFIG.baseUrl}${API_CONFIG.paths.eaPositions(selectedAccount.id)}/${tradeId}`;
+          // Use the correct API endpoint for closing positions
+          const positionUrl = `${API_CONFIG.baseUrl}${API_CONFIG.paths.eaClosePosition(selectedAccount.id, tradeId)}`;
+          
+          console.log('Attempting to close position with URL:', positionUrl);
           
           const response = await fetch(positionUrl, {
             method: 'DELETE',
@@ -714,7 +728,17 @@ function TradeManagement({ selectedAccount: propSelectedAccount, onTradeSelect, 
           
           if (response.ok) {
             const data = await response.json();
-            toast.success(`Position closed successfully. Profit: ${data.profit?.toFixed(2) || 'N/A'}`, { id: 'close-trade' });
+            
+            toast.success(
+              <div>
+                <p className="font-bold">Position Closed Successfully</p>
+                <p>{data.symbol || ''} • {data.volume || ''} lot(s)</p>
+                {data.profit && <p className={data.profit >= 0 ? "text-green-400" : "text-red-400"}>
+                  Profit: {data.profit >= 0 ? '+' : ''}{data.profit?.toFixed(2)}
+                </p>}
+              </div>,
+              { id: 'close-trade', duration: 5000 }
+            );
             fetchTrades();
             return;
           }
@@ -725,7 +749,10 @@ function TradeManagement({ selectedAccount: propSelectedAccount, onTradeSelect, 
           
           // Try cancelling as pending order
           try {
-            const orderUrl = `${API_CONFIG.baseUrl}${API_CONFIG.paths.eaOrders(selectedAccount.id)}/${tradeId}`;
+            // Use the correct API endpoint for closing orders
+            const orderUrl = `${API_CONFIG.baseUrl}${API_CONFIG.paths.eaCloseOrder(selectedAccount.id, tradeId)}`;
+            
+            console.log('Attempting to close order with URL:', orderUrl);
             
             const response = await fetch(orderUrl, {
               method: 'DELETE',
@@ -734,7 +761,15 @@ function TradeManagement({ selectedAccount: propSelectedAccount, onTradeSelect, 
             
             if (response.ok) {
               const data = await response.json();
-              toast.success('Order cancelled successfully', { id: 'close-trade' });
+              
+              toast.success(
+                <div>
+                  <p className="font-bold">Order Cancelled Successfully</p>
+                  <p>{data.symbol || ''} • {data.volume || ''} lot(s)</p>
+                  <p>Order #{tradeId}</p>
+                </div>,
+                { id: 'close-trade', duration: 4000 }
+              );
               fetchTrades();
               return;
             }
@@ -742,7 +777,15 @@ function TradeManagement({ selectedAccount: propSelectedAccount, onTradeSelect, 
             throw new Error(`Failed to cancel order: ${response.status}`);
           } catch (orderError) {
             console.error('Failed to close EA trade:', { positionError, orderError });
-            toast.error(`Error closing trade: ${positionError.message}`, { id: 'close-trade' });
+            toast.error(
+              <div>
+                <p className="font-bold">Failed to Close Trade</p>
+                <p>Trade ID: {tradeId}</p>
+                <p className="text-sm text-red-300">Error: {positionError.message || 'Unknown error'}</p>
+                <p className="text-xs mt-1">Please try again or contact support if this persists.</p>
+              </div>,
+              { id: 'close-trade', duration: 6000 }
+            );
           }
         }
       } else {
@@ -952,14 +995,23 @@ function TradeManagement({ selectedAccount: propSelectedAccount, onTradeSelect, 
                   const account = availableAccounts.find(acc => acc.id === selectedId);
                   if (account) {
                     setSelectedAccount(account);
-                    toast.success(`Selected account: ${account.name || account.id}`, { id: 'account-selected' });
+                    
+                    // Show enhanced toast notification with broker name
+                    toast.success(
+                      <div>
+                        <p className="font-bold">Account Changed</p>
+                        <p>{account.broker || account.name} • {account.account_number || account.id}</p>
+                        {account.platform && <p className="text-xs text-gray-300">Platform: {account.platform}</p>}
+                      </div>,
+                      { id: 'account-selected' }
+                    );
                   }
                 }}
                 className="bg-[#222] border border-[#333] rounded-lg px-2 py-1 text-white text-sm"
               >
                 {availableAccounts.map(account => (
                   <option key={account.id} value={account.id}>
-                    {account.name || account.account_number || account.id} 
+                    {account.broker || account.name || account.account_number || account.id} 
                     {account.platform ? ` (${account.platform})` : ''}
                   </option>
                 ))}
