@@ -5,7 +5,7 @@ import { ToastProvider } from './contexts/ToastContext.jsx'
 import { ConfirmProvider } from './contexts/ConfirmContext.jsx'
 import { TradingSymbolProvider } from './contexts/TradingSymbolContext.jsx'
 import { eaWebSocket, getEAAccounts } from './api/ea'
-import { toast } from 'react-hot-toast'
+import { toast, Toaster } from 'react-hot-toast'
 import ProtectedRoute from './components/ProtectedRoute.jsx'
 import Hero from './components/pages/Hero'
 import SignIn from './components/auth/SignIn'
@@ -26,6 +26,7 @@ import CardShowcase from './components/pages/CardShowcase'
 import Transactions from './components/pages/Transactions'
 import AI_Assistant from './components/pages/AI_Assistant.jsx'
 import Search from './components/pages/Search.jsx'
+import GraphTradeDemoPage from './components/pages/GraphTradeDemoPage.jsx'
 
 const App = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -270,6 +271,46 @@ const App = () => {
     <ToastProvider>
       <ConfirmProvider>
         <TradingSymbolProvider>
+          {/* Add react-hot-toast Toaster component */}
+          <Toaster
+            position="top-center"
+            reverseOrder={false}
+            gutter={8}
+            containerClassName="toast-container"
+            containerStyle={{}}
+            toastOptions={{
+              // Default options for all toasts
+              className: '',
+              duration: 5000,
+              style: {
+                background: '#1A1A1A',
+                color: '#FFFFFF',
+                border: '1px solid #333',
+              },
+              // Default options for specific types of toast
+              success: {
+                duration: 6000,
+                style: {
+                  background: 'linear-gradient(135deg, #1f2937 0%, #374151 100%)',
+                  border: '1px solid #10b981',
+                },
+              },
+              error: {
+                duration: 8000,
+                style: {
+                  background: 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%)',
+                  border: '1px solid #dc2626',
+                },
+              },
+              loading: {
+                duration: Infinity,
+                style: {
+                  background: '#1A1A1A',
+                  border: '1px solid #3b82f6',
+                },
+              },
+            }}
+          />
           <div className="flex h-screen bg-[#0A0A0A]">
             {showNavigation && (
               <Sidebar 
@@ -352,6 +393,11 @@ const App = () => {
                   <Route path='/search' element={
                     <ProtectedRoute>
                       <Search />
+                    </ProtectedRoute>
+                  } />
+                  <Route path='/graph-trade-demo' element={
+                    <ProtectedRoute>
+                      <GraphTradeDemoPage />
                     </ProtectedRoute>
                   } />
                 </Routes>
