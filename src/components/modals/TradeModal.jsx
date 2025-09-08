@@ -307,27 +307,52 @@ const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelec
         const directionColor = tradeDirection === 'BUY' ? 'text-green-400' : 'text-red-400';
         
         // Main success notification
+        // Primary success notification with sound
         toast.success(
-          <div className="flex items-center gap-3">
-            <div className="text-2xl">{directionIcon}</div>
-            <div>
-              <div className="font-semibold text-white">
-                Trade Executed Successfully!
+          (t) => (
+            <div className="flex items-center gap-3">
+              <div className="text-2xl">{directionIcon}</div>
+              <div className="flex-1">
+                <div className="font-semibold text-white">
+                  Trade Executed Successfully!
+                </div>
+                <div className="text-sm text-gray-300">
+                  {orderTypeLabel} • {payload.volume} lots • {payload.symbol}
+                </div>
               </div>
-              <div className="text-sm text-gray-300">
-                {orderTypeLabel} • {payload.volume} lots • {payload.symbol}
-              </div>
+              <button 
+                onClick={() => toast.dismiss(t.id)} 
+                className="text-white opacity-70 hover:opacity-100"
+              >
+                <X size={18} />
+              </button>
             </div>
-          </div>,
+          ),
           { 
             duration: 6000,
+            icon: <Activity className="w-5 h-5 text-green-500" />,
             style: {
               background: 'linear-gradient(135deg, #1f2937 0%, #374151 100%)',
               border: '1px solid #10b981',
               color: 'white',
+              boxShadow: '0 4px 6px rgba(0, 0, 0, 0.3)',
             },
+            position: 'top-center',
+            className: 'animate-pulse-once',
           }
         );
+        
+        // Play sound effect for trade execution
+        try {
+          const audio = new Audio();
+          audio.src = tradeDirection === 'BUY' ? 
+            'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4LjEwLjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAADcQD///////////////////////////////////////////8AAAA8TEFNRTMuMTAwAc0AAAAAAAAAABSAJAKDQgAAQAAAA3EMplERAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//sQZAAP8AAAaQAAAAgAAA0gAAABAAABpAAAACAAADSAAAAETEFNRTMuMTAwVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//sQZB8P8AAAaQAAAAgAAA0gAAABAAABpAAAACAAADSAAAAEVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV' :
+            'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4LjEwLjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAADcQD///////////////////////////////////////////8AAAA8TEFNRTMuMTAwAc0AAAAAAAAAABSAJAKDQgAARgAAAHEMDwGXAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//sQZAAP8AAAaQAAAAgAAA0gAAABAAABpAAAACAAADSAAAAETEFNRTMuMTAwVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//sQZB8P8AAAaQAAAAgAAA0gAAABAAABpAAAACAAADSAAAAEVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV';
+          audio.volume = 0.3;
+          audio.play().catch(e => console.log('Audio play prevented by browser policy'));
+        } catch (e) {
+          // Ignore audio errors
+        }
         
         // Detailed order information toast
         if (response.request_id || response.order_id || response.position_id) {
@@ -405,11 +430,14 @@ const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelec
             </div>,
             { 
               duration: 10000,
+              position: 'top-right',
+              icon: <BarChart3 className="w-5 h-5 text-blue-500" />,
               style: {
                 background: 'linear-gradient(135deg, #1f2937 0%, #374151 100%)',
                 border: '1px solid #3b82f6',
                 color: 'white',
                 maxWidth: '400px',
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.4)',
               },
             }
           );
@@ -453,7 +481,50 @@ const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelec
       }
     } catch (error) {
       setError(error.message || 'Failed to place order. Please try again.');
-      toast.error(error.message);
+      
+      // Enhanced error toast with icon and detailed styling
+      toast.error(
+        (t) => (
+          <div className="flex items-center gap-3">
+            <div className="text-2xl">❌</div>
+            <div className="flex-1">
+              <div className="font-semibold text-white">
+                Trade Failed
+              </div>
+              <div className="text-sm text-red-200">
+                {error.message || 'Failed to place order. Please try again.'}
+              </div>
+            </div>
+            <button 
+              onClick={() => toast.dismiss(t.id)} 
+              className="text-white opacity-70 hover:opacity-100"
+            >
+              <X size={18} />
+            </button>
+          </div>
+        ),
+        { 
+          duration: 8000,
+          position: 'top-center',
+          icon: <AlertTriangle className="w-5 h-5 text-red-500" />,
+          style: {
+            background: 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%)',
+            border: '1px solid #dc2626',
+            color: 'white',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.4)',
+          },
+        }
+      );
+      
+      // Play error sound
+      try {
+        const errorAudio = new Audio();
+        errorAudio.src = 'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4LjIwLjEwMAAAAAAAAAAAAAAA/+M4wAAAAAAAAAAAAEluZm8AAAAPAAAAEAAABVgANTU1NTU1Q0NDQ0NDUFBQUFBQXl5eXl5ebm5ubm5ug4ODg4ODkZGRkZGRnp6enp6erKysrKysubm5ubm5x8fHx8fH1dXV1dXV4uLi4uLi8PDw8PDw//////////8AAAAATGF2YzU4LjM1AAAAAAAAAAAAAAAAJAYqAAAAAAAABVgxS3iVAAAAAAD/4zjEAANIAUcBKAGQgAAjECAALCEDBmB4YogKACAmOQ/Pjzwx3/X7vw7IP/KBj/yj/8fvw7/X/X/X/X70ETEFNRTMuMTAwVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/jOMQcAdZjpFQKMGrgAAAwAABpgUAAAZMGpTcdf+P4/c+KP/P/H8+uf5/jfH9//8QhrQwDGXPllUhCC0oCDf/5BWf/5iCT//8grf//IAhAEP//EIDgt///EIAFbv//gzSaBW///IN3Df//1Sags3//1N4Vb///U3hu///qz6Cp///Vn0FW///4oENT///igQ1P//+KATRP//+KBDf///igQ3///9AgIb////QICG////EIOqt///xCDiq///w6Bo3BAICqv//8ECG////BAhv///wQIb////BAhv///wQIb////BAhv///xChqf///EKGp///8QuTw///8Q1Cf///ENQn///xDUJ///8OAaD///w4CwIAAA/in/+NCkEAAAYB8YP/wszxQDC6GHz/+MQxAgQexjGjidMcgJ0V1EIcrk4Q1bl9/EEvh2//pWJGVa/fwtDr9+SYOFwj+dlMzYYyuRT9/TRRM0yn//0TJp///q0yn///9HiYmf////9EQQJn/////0RPLhOl//////REMS//////0ZGmL//////LiFM///////ELgn///////q2mK////////SYxmZmZgAAAAAP/4xDE8g2J8MY0TGDMAMzMzMzMzMzAAYMECBAgQJnMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMz/+MQxO0AAANIAAAAADMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMz/+MQxPcAAANIAAAAADMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMz';
+        errorAudio.volume = 0.3;
+        errorAudio.play().catch(e => console.log('Audio play prevented by browser policy'));
+      } catch (e) {
+        // Ignore audio errors
+      }
     } finally {
       setSubmitting(false);
     }
@@ -533,7 +604,53 @@ const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelec
           successMessage = `Statistical pair trade executed: ${response.spread_symbol || `${payload.symbol1}-${payload.symbol2}`}`;
         }
         
-        toast.success(successMessage);
+        // Enhanced primary success notification with icon
+        toast.success(
+          (t) => (
+            <div className="flex items-center gap-3">
+              <div className="text-2xl">⚖️</div>
+              <div className="flex-1">
+                <div className="font-semibold text-white">
+                  Pair Trade Executed!
+                </div>
+                <div className="text-sm text-gray-300">
+                  {payload.symbol1}/{payload.symbol2} • {payload.volume} lots
+                </div>
+                <div className="text-xs text-blue-300 mt-1">
+                  {successMessage}
+                </div>
+              </div>
+              <button 
+                onClick={() => toast.dismiss(t.id)} 
+                className="text-white opacity-70 hover:opacity-100"
+              >
+                <X size={18} />
+              </button>
+            </div>
+          ),
+          { 
+            duration: 6000,
+            position: 'top-center',
+            icon: <Scale className="w-5 h-5 text-purple-500" />,
+            style: {
+              background: 'linear-gradient(135deg, #1f2937 0%, #374151 100%)',
+              border: '1px solid #8b5cf6',
+              color: 'white',
+              boxShadow: '0 4px 6px rgba(0, 0, 0, 0.3)',
+            },
+            className: 'animate-pulse-once',
+          }
+        );
+        
+        // Play sound effect for pair trade execution
+        try {
+          const audio = new Audio();
+          audio.src = 'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4LjEwLjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAADcQD///////////////////////////////////////////8AAAA8TEFNRTMuMTAwAc0AAAAAAAAAABSAJAKDQgAAQAAAA3EMplERAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//sQZAAP8AAAaQAAAAgAAA0gAAABAAABpAAAACAAADSAAAAETEFNRTMuMTAwVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//sQZB8P8AAAaQAAAAgAAA0gAAABAAABpAAAACAAADSAAAAEVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV';
+          audio.volume = 0.3;
+          audio.play().catch(e => console.log('Audio play prevented by browser policy'));
+        } catch (e) {
+          // Ignore audio errors
+        }
         
         // Display spread analysis if available
         if (response.spread_analysis) {
@@ -542,59 +659,183 @@ const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelec
           if (analysis.correlation_coefficient || analysis.z_score) {
             // Show detailed statistical analysis
             toast.success(
-              <div className="text-sm">
-                <p><strong>Statistical Analysis:</strong></p>
-                {analysis.correlation_coefficient && (
-                  <p>Correlation: {analysis.correlation_coefficient.toFixed(3)}</p>
-                )}
-                {analysis.z_score && (
-                  <p>Z-Score: {analysis.z_score.toFixed(2)}</p>
-                )}
-                {analysis.signal_strength && (
-                  <p>Signal: {analysis.signal_strength}</p>
-                )}
-                {analysis.hedge_ratio && (
-                  <p>Hedge Ratio: {analysis.hedge_ratio.toFixed(3)}</p>
-                )}
-                {response.current_spread && (
-                  <p>Current Spread: {response.current_spread.toFixed(5)}</p>
-                )}
+              <div className="text-sm space-y-1">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse"></div>
+                  <strong className="text-white">Statistical Analysis</strong>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                  {analysis.correlation_coefficient && (
+                    <>
+                      <div className="text-gray-400">Correlation:</div>
+                      <div className="text-white font-mono">{analysis.correlation_coefficient.toFixed(3)}</div>
+                    </>
+                  )}
+                  {analysis.z_score && (
+                    <>
+                      <div className="text-gray-400">Z-Score:</div>
+                      <div className="text-white font-mono">{analysis.z_score.toFixed(2)}</div>
+                    </>
+                  )}
+                  {analysis.signal_strength && (
+                    <>
+                      <div className="text-gray-400">Signal:</div>
+                      <div className="text-blue-400">{analysis.signal_strength}</div>
+                    </>
+                  )}
+                  {analysis.hedge_ratio && (
+                    <>
+                      <div className="text-gray-400">Hedge Ratio:</div>
+                      <div className="text-white font-mono">{analysis.hedge_ratio.toFixed(3)}</div>
+                    </>
+                  )}
+                  {response.current_spread && (
+                    <>
+                      <div className="text-gray-400">Current Spread:</div>
+                      <div className="text-white font-mono">{response.current_spread.toFixed(5)}</div>
+                    </>
+                  )}
+                </div>
               </div>,
-              { duration: 8000 }
+              { 
+                duration: 8000,
+                position: 'top-right',
+                icon: <Link2 className="w-5 h-5 text-purple-500" />,
+                style: {
+                  background: 'linear-gradient(135deg, #1f2937 0%, #374151 100%)',
+                  border: '1px solid #8b5cf6',
+                  color: 'white',
+                  maxWidth: '400px',
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.4)',
+                },
+              }
             );
           } else if (pairData.order_type === 'PENDING') {
             // Show pending order details
-            toast.info(
-              <div className="text-sm">
-                <p><strong>Pending Order Details:</strong></p>
-                <p>Entry Spread: {payload.entry_spread}</p>
-                <p>Direction: {payload.spread_direction}</p>
-                {response.current_spread && (
-                  <p>Current Spread: {response.current_spread.toFixed(5)}</p>
-                )}
+            toast.success(
+              <div className="text-sm space-y-1">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                  <strong className="text-white">Pending Order Details</strong>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                  <div className="text-gray-400">Entry Spread:</div>
+                  <div className="text-white font-mono">{payload.entry_spread}</div>
+                  
+                  <div className="text-gray-400">Direction:</div>
+                  <div className="text-white font-mono">{payload.spread_direction}</div>
+                  
+                  {response.current_spread && (
+                    <>
+                      <div className="text-gray-400">Current Spread:</div>
+                      <div className="text-white font-mono">{response.current_spread.toFixed(5)}</div>
+                    </>
+                  )}
+                </div>
               </div>,
-              { duration: 6000 }
+              { 
+                duration: 6000,
+                position: 'top-right',
+                icon: <Clock className="w-5 h-5 text-blue-500" />,
+                style: {
+                  background: 'linear-gradient(135deg, #1f2937 0%, #374151 100%)',
+                  border: '1px solid #3b82f6',
+                  color: 'white',
+                  maxWidth: '400px',
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.4)',
+                },
+              }
             );
           }
         }
 
-        // Show individual trade results
+        // Show individual trade results with enhanced styling
         if (response.symbol1_result && response.symbol2_result) {
           const sym1Result = response.symbol1_result;
           const sym2Result = response.symbol2_result;
           
           if (sym1Result.success && sym2Result.success) {
+            const sym1Direction = sym1Result.details?.direction || 
+              (sym1Result.details?.cmd === 0 ? 'BUY' : 'SELL');
+            const sym2Direction = sym2Result.details?.direction || 
+              (sym2Result.details?.cmd === 0 ? 'BUY' : 'SELL');
+              
+            const sym1Color = sym1Direction === 'BUY' ? 'text-green-400' : 'text-red-400';
+            const sym2Color = sym2Direction === 'BUY' ? 'text-green-400' : 'text-red-400';
+            
             toast.success(
-              <div className="text-sm">
-                <p><strong>Trade Results:</strong></p>
+              <div className="text-sm space-y-1">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                  <strong className="text-white">Pair Trade Positions</strong>
+                </div>
+                
+                <div className="flex items-center gap-2 mb-2 border-b border-gray-700 pb-2">
+                  <div className={`font-medium ${sym1Color}`}>
+                    {sym1Direction === 'BUY' ? '📈 LONG' : '📉 SHORT'}
+                  </div>
+                  <div className="text-white">
+                    {payload.symbol1}
+                  </div>
+                </div>
+                
                 {sym1Result.details && (
-                  <p>{payload.symbol1}: {sym1Result.details.volume} lots @ {sym1Result.details.open_price}</p>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs mb-3">
+                    <div className="text-gray-400">Volume:</div>
+                    <div className="text-white">{sym1Result.details.volume} lots</div>
+                    
+                    <div className="text-gray-400">Entry Price:</div>
+                    <div className="text-white font-mono">{sym1Result.details.open_price}</div>
+                    
+                    {sym1Result.details.ticket && (
+                      <>
+                        <div className="text-gray-400">Ticket:</div>
+                        <div className="text-blue-400 font-mono">{sym1Result.details.ticket}</div>
+                      </>
+                    )}
+                  </div>
                 )}
+                
+                <div className="flex items-center gap-2 mb-2 border-b border-gray-700 pb-2">
+                  <div className={`font-medium ${sym2Color}`}>
+                    {sym2Direction === 'BUY' ? '📈 LONG' : '📉 SHORT'}
+                  </div>
+                  <div className="text-white">
+                    {payload.symbol2}
+                  </div>
+                </div>
+                
                 {sym2Result.details && (
-                  <p>{payload.symbol2}: {sym2Result.details.volume} lots @ {sym2Result.details.open_price}</p>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                    <div className="text-gray-400">Volume:</div>
+                    <div className="text-white">{sym2Result.details.volume} lots</div>
+                    
+                    <div className="text-gray-400">Entry Price:</div>
+                    <div className="text-white font-mono">{sym2Result.details.open_price}</div>
+                    
+                    {sym2Result.details.ticket && (
+                      <>
+                        <div className="text-gray-400">Ticket:</div>
+                        <div className="text-blue-400 font-mono">{sym2Result.details.ticket}</div>
+                      </>
+                    )}
+                  </div>
                 )}
               </div>,
-              { duration: 6000 }
+              { 
+                duration: 8000,
+                position: 'bottom-right',
+                icon: <Target className="w-5 h-5 text-green-500" />,
+                style: {
+                  background: 'linear-gradient(135deg, #1f2937 0%, #374151 100%)',
+                  border: '1px solid #10b981',
+                  color: 'white',
+                  maxWidth: '400px',
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.4)',
+                },
+              }
             );
           }
         }
@@ -620,7 +861,55 @@ const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelec
       }
     } catch (error) {
       setError(error.message || 'Failed to place pair trade. Please try again.');
-      toast.error(error.message);
+      
+      // Enhanced error toast for pair trading with icon and detailed styling
+      toast.error(
+        (t) => (
+          <div className="flex items-center gap-3">
+            <div className="text-2xl">⚠️</div>
+            <div className="flex-1">
+              <div className="font-semibold text-white">
+                Pair Trade Failed
+              </div>
+              <div className="text-sm text-red-200">
+                {error.message || 'Failed to place pair trade. Please try again.'}
+              </div>
+              {payload.symbol1 && payload.symbol2 && (
+                <div className="text-xs text-red-300 mt-1">
+                  Failed pair: {payload.symbol1}/{payload.symbol2}
+                </div>
+              )}
+            </div>
+            <button 
+              onClick={() => toast.dismiss(t.id)} 
+              className="text-white opacity-70 hover:opacity-100"
+            >
+              <X size={18} />
+            </button>
+          </div>
+        ),
+        { 
+          duration: 8000,
+          position: 'top-center',
+          icon: <Scale className="w-5 h-5 text-red-500" />,
+          style: {
+            background: 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%)',
+            border: '1px solid #dc2626',
+            color: 'white',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.4)',
+          },
+        }
+      );
+      
+      // Play error sound
+      try {
+        const errorAudio = new Audio();
+        errorAudio.src = 'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4LjIwLjEwMAAAAAAAAAAAAAAA/+M4wAAAAAAAAAAAAEluZm8AAAAPAAAAEAAABVgANTU1NTU1Q0NDQ0NDUFBQUFBQXl5eXl5ebm5ubm5ug4ODg4ODkZGRkZGRnp6enp6erKysrKysubm5ubm5x8fHx8fH1dXV1dXV4uLi4uLi8PDw8PDw//////////8AAAAATGF2YzU4LjM1AAAAAAAAAAAAAAAAJAYqAAAAAAAABVgxS3iVAAAAAAD/4zjEAANIAUcBKAGQgAAjECAALCEDBmB4YogKACAmOQ/Pjzwx3/X7vw7IP/KBj/yj/8fvw7/X/X/X/X70ETEFNRTMuMTAwVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/jOMQcAdZjpFQKMGrgAAAwAABpgUAAAZMGpTcdf+P4/c+KP/P/H8+uf5/jfH9//8QhrQwDGXPllUhCC0oCDf/5BWf/5iCT//8grf//IAhAEP//EIDgt///EIAFbv//gzSaBW///IN3Df//1Sags3//1N4Vb///U3hu///qz6Cp///Vn0FW///4oENT///igQ1P//+KATRP//+KBDf///igQ3///9AgIb////QICG////EIOqt///xCDiq///w6Bo3BAICqv//8ECG////BAhv///wQIb////BAhv///wQIb////BAhv///xChqf///EKGp///8QuTw///8Q1Cf///ENQn///xDUJ///8OAaD///w4CwIAAA/in/+NCkEAAAYB8YP/wszxQDC6GHz/+MQxAgQexjGjidMcgJ0V1EIcrk4Q1bl9/EEvh2//pWJGVa/fwtDr9+SYOFwj+dlMzYYyuRT9/TRRM0yn//0TJp///q0yn///9HiYmf////9EQQJn/////0RPLhOl//////REMS//////0ZGmL//////LiFM///////ELgn///////q2mK////////SYxmZmZgAAAAAP/4xDE8g2J8MY0TGDMAMzMzMzMzMzAAYMECBAgQJnMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMz/+MQxO0AAANIAAAAADMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMz/+MQxPcAAANIAAAAADMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMz';
+        errorAudio.volume = 0.3;
+        errorAudio.play().catch(e => console.log('Audio play prevented by browser policy'));
+      } catch (e) {
+        // Ignore audio errors
+      }
     } finally {
       setSubmitting(false);
     }

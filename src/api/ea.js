@@ -63,16 +63,31 @@ export const getEAAccountStatus = async (accountId) => {
  */
 export const getEAAccountBalance = async (accountId) => {
   try {
-    const response = await api.get(`/api/v1/ea/accounts/${accountId}/balance`);
+    // Try both endpoint formats to ensure compatibility with backend
+    let response;
+    try {
+      response = await api.get(`/ea/account/${accountId}`);
+      console.log('Balance response from /ea/account endpoint:', response);
+    } catch (firstError) {
+      console.warn('First EA balance endpoint failed, trying alternative:', firstError);
+      response = await api.get(`/api/v1/ea/accounts/${accountId}/balance`);
+      console.log('Balance response from /api/v1/ea/accounts endpoint:', response);
+    }
+    
+    // Normalize the response structure
+    const balanceData = response?.balance || response?.data?.balance || response || {};
+    
     return {
       success: true,
-      data: response
+      data: balanceData,
+      message: `Retrieved balance for EA account ${accountId}`
     };
   } catch (error) {
     console.error('Error fetching EA account balance:', error);
     return {
       success: false,
-      error: error.message || 'Failed to fetch EA account balance'
+      error: error.message || 'Failed to fetch EA account balance',
+      data: {}
     };
   }
 };
@@ -125,10 +140,24 @@ export const linkEAAccountToUser = async (accountNumber) => {
  */
 export const getEAPositions = async (accountId) => {
   try {
-    const response = await api.get(`/api/v1/ea/accounts/${accountId}/positions`);
+    // Try both endpoint formats to ensure compatibility with backend
+    let response;
+    try {
+      response = await api.get(`/ea/positions/${accountId}`);
+      console.log('Positions response from /ea/positions endpoint:', response);
+    } catch (firstError) {
+      console.warn('First EA positions endpoint failed, trying alternative:', firstError);
+      response = await api.get(`/api/v1/ea/accounts/${accountId}/positions`);
+      console.log('Positions response from /api/v1/ea/accounts endpoint:', response);
+    }
+    
+    // Normalize the response structure
+    const positions = response?.positions || response?.data || response || [];
+    
     return {
       success: true,
-      data: response || []
+      data: positions,
+      message: `Retrieved ${positions.length} positions from EA account ${accountId}`
     };
   } catch (error) {
     console.error('Error fetching EA positions:', error);
@@ -149,10 +178,24 @@ export const getEAPositions = async (accountId) => {
  */
 export const getEAOrders = async (accountId) => {
   try {
-    const response = await api.get(`/api/v1/ea/accounts/${accountId}/orders`);
+    // Try both endpoint formats to ensure compatibility with backend
+    let response;
+    try {
+      response = await api.get(`/ea/orders/${accountId}`);
+      console.log('Orders response from /ea/orders endpoint:', response);
+    } catch (firstError) {
+      console.warn('First EA orders endpoint failed, trying alternative:', firstError);
+      response = await api.get(`/api/v1/ea/accounts/${accountId}/orders`);
+      console.log('Orders response from /api/v1/ea/accounts endpoint:', response);
+    }
+    
+    // Normalize the response structure
+    const orders = response?.orders || response?.data || response || [];
+    
     return {
       success: true,
-      data: response || []
+      data: orders,
+      message: `Retrieved ${orders.length} orders from EA account ${accountId}`
     };
   } catch (error) {
     console.error('Error fetching EA orders:', error);
@@ -943,15 +986,25 @@ export class EAWebSocketManager {
 
   /**
    * Connect to EA WebSocket endpoint
+   * @param {string} userId - User ID to connect with
+   * @param {string} customUrl - Optional custom WebSocket URL
    */
-  connect(userId) {
+  connect(userId, customUrl = null) {
     try {
       this.userId = userId;
-      const baseURL = api.getCurrentApiUrl();
-      if (!baseURL) {
-        throw new Error('API base URL not available');
+      let wsUrl;
+      
+      if (customUrl) {
+        // Use the provided custom WebSocket URL
+        wsUrl = customUrl;
+      } else {
+        // Generate URL from API base URL
+        const baseURL = api.getCurrentApiUrl();
+        if (!baseURL) {
+          throw new Error('API base URL not available');
+        }
+        wsUrl = `${baseURL.replace('http', 'ws')}/api/v1/ea/ws/${userId}`;
       }
-      const wsUrl = `${baseURL.replace('http', 'ws')}/api/v1/ea/ws/${userId}`;
       
       console.log('Connecting to EA WebSocket:', wsUrl);
       this.ws = new WebSocket(wsUrl);

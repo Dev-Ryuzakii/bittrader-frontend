@@ -1,6 +1,15 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { toast } from 'react-hot-toast';
 import { 
+  getEAPositions, 
+  getEAOrders, 
+  getEAAccountBalance, 
+  getEAAccounts,
+  isEAAccount,
+  eaWebSocket,
+  EA_WEBSOCKET_MESSAGE_TYPES
+} from '../../api/ea';
+import { 
   TrendingUp, 
   TrendingDown,
   Activity,
@@ -13,27 +22,22 @@ import {
   X,
   Edit3,
   RefreshCw,
-  ChevronDown
+  ChevronDown,
+  Download
 } from 'lucide-react';
-import {
-  getEAAccounts,
-  getEAAccountBalance,
-  getEAPositions,
-  getEAOrders,
-  eaWebSocket,
-  EA_WEBSOCKET_MESSAGE_TYPES,
-  isEAAccount
-} from '../../api/ea';
 
 // Helper function for className concatenation
 const cn = (...classes) => classes.filter(Boolean).join(' ');
 
-function TradeManagement({ selectedAccount, onTradeSelect, shouldRefresh, onRefreshComplete }) {
+function TradeManagement({ selectedAccount: propSelectedAccount, onTradeSelect, shouldRefresh, onRefreshComplete }) {
   const [trades, setTrades] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [selectedTradeId, setSelectedTradeId] = useState(null);
   const [sortConfig, setSortConfig] = useState({ key: 'date', direction: 'desc' });
+  const [availableAccounts, setAvailableAccounts] = useState([]);
+  const [selectedAccount, setSelectedAccount] = useState(propSelectedAccount);
+  const [accountsLoading, setAccountsLoading] = useState(false);
   const [filters, setFilters] = useState({
     status: 'all',
     type: 'all',
@@ -53,35 +57,256 @@ function TradeManagement({ selectedAccount, onTradeSelect, shouldRefresh, onRefr
     currency: 'USD',
     leverage: 0
   });
+  
+  // Debug mode - set to false for production
+  const debugMode = false;
+  
+  // We'll use the functions from ea.js instead of direct API calls
+  // These paths are included for reference but we'll use the imported functions
+  const API_CONFIG = {
+    baseUrl: 'http://api.tradexas.com',
+    paths: {
+      // These paths match the structure in the ea.js module
+      eaAccounts: '/api/v1/ea/accounts',
+      eaBalance: (accountId) => `/api/v1/ea/accounts/${accountId}/balance`,
+      eaPositions: (accountId) => `/api/v1/ea/accounts/${accountId}/positions`,
+      eaOrders: (accountId) => `/api/v1/ea/accounts/${accountId}/orders`,
+      eaTradeHistory: (accountId) => `/api/v1/ea/accounts/${accountId}/trade-history`,
+      eaSymbols: (accountId) => `/api/v1/ea/accounts/${accountId}/symbols`,
+      eaPrices: (accountId) => `/api/v1/ea/accounts/${accountId}/prices`,
+      // Close position or order endpoints
+      eaClosePosition: (accountId, positionId) => `/api/v1/ea/accounts/${accountId}/positions/${positionId}`,
+      eaCloseOrder: (accountId, orderId) => `/api/v1/ea/accounts/${accountId}/orders/${orderId}`,
+      // Broker API paths as fallback
+      brokerBalance: (accountId) => `/api/v1/broker/${accountId}/balance`,
+      brokerPositions: (accountId) => `/api/v1/broker/${accountId}/positions`,
+      brokerOrders: (accountId) => `/api/v1/broker/${accountId}/orders`
+    },
+    websocket: {
+      url: (userId) => `ws://api.tradexas.com/api/v1/ea/ws/${userId}`
+    }
+  };
+  
+  // Fetch the auth token
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem('access_token');
+    return {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    };
+  };
+  
+  // Function to fetch available accounts
+  const fetchAvailableAccounts = useCallback(async () => {
+    if (availableAccounts.length > 0 || accountsLoading) {
+      console.log('Skip account fetch: already have accounts or fetching in progress');
+      return;
+    }
+    
+    setAccountsLoading(true);
+    console.log('Fetching available accounts...');
+    
+    try {
+      const token = localStorage.getItem('access_token');
+      
+      if (!token) {
+        throw new Error('Authentication token not found');
+      }
+      
+      // Use getEAAccounts from ea.js instead of direct fetch
+      console.log('Fetching accounts using getEAAccounts from ea.js');
+      const eaAccountsResponse = await getEAAccounts();
+      console.log('EA accounts response:', eaAccountsResponse);
+      
+      let accounts = [];
+      
+      if (eaAccountsResponse.success && Array.isArray(eaAccountsResponse.data)) {
+        accounts = eaAccountsResponse.data;
+        console.log('EA accounts API response:', accounts);
+      } else {
+        // Fallback to the broker API
+        console.log('EA accounts API failed, trying broker API...');
+        const brokerResponse = await fetch(`${API_CONFIG.baseUrl}/api/v1/accounts`, {
+          headers: getAuthHeaders()
+        });
+        
+        if (brokerResponse.ok) {
+          const brokerData = await brokerResponse.json();
+          accounts = Array.isArray(brokerData) ? brokerData : (brokerData.accounts || []);
+          console.log('Broker accounts API response:', brokerData);
+        } else {
+          throw new Error(`Accounts API returned ${brokerResponse.status}: ${brokerResponse.statusText}`);
+        }
+      }
+      
+      console.log('Available accounts:', accounts);
+      
+      if (accounts.length > 0) {
+        // Process accounts to ensure they have all required fields
+        const processedAccounts = accounts.map(account => ({
+          ...account,
+          id: account.id || account.account_id,
+          // Use broker name as the display name if available
+          name: account.broker || account.name || account.account_number || account.id || account.account_id
+        }));
+        
+        setAvailableAccounts(processedAccounts);
+        
+        // Auto-select the first account if none was provided
+        if (!propSelectedAccount) {
+          const firstAccount = processedAccounts[0];
+          console.log('Auto-selecting account:', firstAccount);
+          setSelectedAccount(firstAccount);
+          toast.success(
+            <div>
+              <p className="font-bold">Account Selected</p>
+              <p>{firstAccount.broker || firstAccount.name} • {firstAccount.account_number || firstAccount.id}</p>
+              {firstAccount.platform && <p className="text-xs text-gray-300">Platform: {firstAccount.platform}</p>}
+            </div>,
+            { id: 'account-selected' }
+          );
+        }
+      } else {
+        setError('No trading accounts found. Please connect an account first.');
+        toast.error('No trading accounts available', { id: 'no-accounts' });
+      }
+    } catch (error) {
+      console.error('Error fetching accounts:', error);
+      setError(`Failed to fetch accounts: ${error.message}`);
+      toast.error(`Error loading accounts: ${error.message}`, { id: 'accounts-error' });
+    } finally {
+      setAccountsLoading(false);
+    }
+  }, [availableAccounts.length, accountsLoading, propSelectedAccount]);
+  
+  // Enhanced API fetch function with retry and error handling
+  const apiCall = useCallback(async (url, options = {}) => {
+    const maxRetries = options.maxRetries || 2;
+    const headers = options.headers || getAuthHeaders();
+    let attempt = 0;
+    
+    while (attempt < maxRetries) {
+      try {
+        const response = await fetch(url, {
+          ...options,
+          headers
+        });
+        
+        console.log(`API call to ${url} - status: ${response.status}`);
+        
+        if (response.ok) {
+          const data = await response.json();
+          return { success: true, data };
+        } else if (response.status === 404) {
+          // For 404s, return empty data instead of throwing
+          console.warn(`API endpoint not found: ${url}`);
+          return { 
+            success: false, 
+            data: url.includes('positions') ? [] : 
+                  url.includes('orders') ? [] : 
+                  url.includes('balance') ? {} : {},
+            status: 404,
+            message: 'Endpoint not found'
+          };
+        } else if (response.status === 401 && attempt < maxRetries - 1) {
+          // Handle potential token refresh for 401s
+          console.warn('Authentication error, attempting to refresh token...');
+          // You would implement token refresh logic here
+          attempt++;
+          continue;
+        } else {
+          // Other error
+          const errorText = await response.text();
+          return { 
+            success: false, 
+            status: response.status, 
+            message: `API error: ${response.status} ${response.statusText}`,
+            details: errorText
+          };
+        }
+      } catch (error) {
+        console.error(`Network error on attempt ${attempt + 1}:`, error);
+        if (attempt === maxRetries - 1) {
+          return { 
+            success: false, 
+            message: `Network error: ${error.message}`, 
+            isNetworkError: true
+          };
+        }
+        attempt++;
+        // Exponential backoff
+        await new Promise(r => setTimeout(r, 1000 * Math.pow(2, attempt)));
+      }
+    }
+  }, []);
 
-  // Fetch trades and positions using EA API
+  // Fetch trades and positions
   const fetchTrades = useCallback(async () => {
+    // If no account is selected yet
     if (!selectedAccount?.id) {
+      console.log('No selected account, checking if we need to fetch accounts');
+      
+      if (accountsLoading) {
+        console.log('Accounts are being loaded, waiting...');
+        return;
+      }
+      
+      if (availableAccounts.length > 0 && !selectedAccount) {
+        const firstAccount = availableAccounts[0];
+        console.log('Auto-selecting first available account:', firstAccount);
+        setSelectedAccount(firstAccount);
+        return;
+      }
+      
+      if (availableAccounts.length === 0 && !accountsLoading) {
+        console.log('No accounts available, attempting to fetch accounts');
+        fetchAvailableAccounts();
+        return;
+      }
+      
       console.log('No selected account, skipping fetch');
+      toast.error('Please select an account to view trades', { id: 'no-account' });
+      setError('No trading account selected. Please select an account from the dropdown.');
       return;
     }
     
     console.log('=== FETCHING TRADES FOR ACCOUNT ===');
-    console.log('Selected Account:', selectedAccount);
+    console.log('Using Account:', selectedAccount);
+    
+    toast.loading('Fetching trading data...', { id: 'fetch-trades' });
     
     setLoading(true);
     setError(null);
     
     try {
-      // Check if this is an EA account for optimized API calls
-      const isEA = selectedAccount?.platform === 'EA' || selectedAccount?.connection_type === 'EA' || selectedAccount?.status === 'connected';
+      const isEA = isEAAccount(selectedAccount);
       console.log('Is EA Account:', isEA);
       
       if (isEA) {
         // Use EA API endpoints for real-time data
         console.log('Fetching data from EA API for account:', selectedAccount.id);
         
-        const [balanceResult, positionsResult, ordersResult] = await Promise.allSettled([
-          getEAAccountBalance(selectedAccount.id),
-          getEAPositions(selectedAccount.id),
-          getEAOrders(selectedAccount.id)
+        // Using imported functions from ea.js instead of direct API calls
+        console.log('Using EA API functions from ea.js');
+        
+        // Make API calls in parallel using the imported functions
+        const [balanceResult, positionsResult, ordersResult] = await Promise.all([
+          getEAAccountBalance(selectedAccount.id).catch(error => ({
+            success: false,
+            error: error.message || 'Failed to fetch balance'
+          })),
+          getEAPositions(selectedAccount.id).catch(error => ({
+            success: false,
+            data: [],
+            error: error.message || 'Failed to fetch positions'
+          })),
+          getEAOrders(selectedAccount.id).catch(error => ({
+            success: false,
+            data: [],
+            error: error.message || 'Failed to fetch orders'
+          }))
         ]);
-
+        
         console.log('EA API Results:', {
           balance: balanceResult,
           positions: positionsResult,
@@ -89,208 +314,240 @@ function TradeManagement({ selectedAccount, onTradeSelect, shouldRefresh, onRefr
         });
 
         // Process balance data
-        const balanceData = balanceResult.status === 'fulfilled' && balanceResult.value?.success 
-          ? balanceResult.value.data 
-          : {};
+        const balanceData = balanceResult.success ? balanceResult.data : {};
         
         // Process positions data
-        const positionsArray = positionsResult.status === 'fulfilled' && positionsResult.value?.success 
-          ? (positionsResult.value.data || []) 
-          : [];
+        const positionsArray = positionsResult.success ? (positionsResult.data || []) : [];
         
         // Process orders data
-        const ordersArray = ordersResult.status === 'fulfilled' && ordersResult.value?.success 
-          ? (ordersResult.value.data || []) 
-          : [];
+        const ordersArray = ordersResult.success ? (ordersResult.data || []) : [];
 
         console.log('Processed Data:', {
           balanceData,
-          positionsArray,
-          ordersArray
+          positionsArray: positionsArray.length,
+          ordersArray: ordersArray.length
         });
 
         // Transform EA positions to unified format
         const positions = positionsArray.map((pos, index) => {
-          console.log('Processing position:', pos);
+          // For type conversion handling different formats (number or string)
+          let tradeType = pos.type;
+          if (typeof pos.type === 'number') {
+            tradeType = pos.type === 0 ? 'Buy' : 'Sell';
+          } else if (typeof pos.type === 'string') {
+            // Convert from possible enum values
+            tradeType = pos.type.toLowerCase().includes('buy') ? 'Buy' : 'Sell';
+          }
+          
           return {
             id: pos.id || pos.ticket || `pos_${index}`,
             order_number: pos.ticket || pos.id || `POS_${index}`,
             symbol: pos.symbol || 'Unknown',
             asset: pos.symbol || 'Unknown', // For table display
-            type: pos.type === 0 ? 'Buy' : pos.type === 1 ? 'Sell' : pos.type || 'Buy',
-            volume: pos.volume || 0,
-            quantity: pos.volume || 0, // Alias for consistency
-            opening: pos.open_price || pos.price_open || 0,
-            current_price: pos.price_current || pos.current_price || pos.opening || 0,
-            trade_pl: pos.profit || 0,
-            swap: pos.swap || 0,
-            commission: pos.commission || 0,
-            date: pos.time_open || pos.open_time || new Date().toISOString(),
+            type: tradeType,
+            volume: parseFloat(pos.volume || 0),
+            quantity: parseFloat(pos.volume || 0),
+            opening: parseFloat(pos.open_price || pos.price_open || 0),
+            current_price: parseFloat(pos.current_price || pos.price_current || pos.opening || 0),
+            trade_pl: parseFloat(pos.profit || 0),
+            swap: parseFloat(pos.swap || 0),
+            commission: parseFloat(pos.commission || 0),
+            date: pos.open_time || pos.time_open || new Date().toISOString(),
             status: 'Executed',
-            stop_loss: pos.sl || pos.stop_loss || null,
-            sl: pos.sl || pos.stop_loss || null, // Alias
-            take_profit: pos.tp || pos.take_profit || null,
-            tp: pos.tp || pos.take_profit || null, // Alias
-            source: 'EA'
+            stop_loss: parseFloat(pos.stop_loss || pos.sl || 0) || null,
+            sl: parseFloat(pos.stop_loss || pos.sl || 0) || null,
+            take_profit: parseFloat(pos.take_profit || pos.tp || 0) || null,
+            tp: parseFloat(pos.take_profit || pos.tp || 0) || null,
+            source: 'EA',
+            comment: pos.comment || ''
           };
         });
 
         // Transform EA orders to unified format
         const orders = ordersArray.map((order, index) => {
-          console.log('Processing order:', order);
+          // Map order types from different possible formats
+          let orderType = order.type;
+          if (typeof order.type === 'number') {
+            // MT5 order types: 2=BUY_LIMIT, 3=SELL_LIMIT, 4=BUY_STOP, 5=SELL_STOP
+            const orderTypeMap = {
+              2: 'Buy Limit',
+              3: 'Sell Limit',
+              4: 'Buy Stop', 
+              5: 'Sell Stop'
+            };
+            orderType = orderTypeMap[order.type] || 'Pending';
+          } else if (typeof order.type === 'string') {
+            // Convert from string types
+            const typeStr = order.type.toLowerCase();
+            if (typeStr.includes('buy') && typeStr.includes('limit')) orderType = 'Buy Limit';
+            else if (typeStr.includes('sell') && typeStr.includes('limit')) orderType = 'Sell Limit';
+            else if (typeStr.includes('buy') && typeStr.includes('stop')) orderType = 'Buy Stop';
+            else if (typeStr.includes('sell') && typeStr.includes('stop')) orderType = 'Sell Stop';
+            else orderType = 'Pending';
+          }
+          
           return {
             id: order.id || order.ticket || `order_${index}`,
             order_number: order.ticket || order.id || `ORD_${index}`,
             symbol: order.symbol || 'Unknown',
-            asset: order.symbol || 'Unknown', // For table display
-            type: order.type === 2 ? 'Buy Limit' : order.type === 3 ? 'Sell Limit' : order.type === 4 ? 'Buy Stop' : order.type === 5 ? 'Sell Stop' : order.type || 'Pending',
-            volume: order.volume || 0,
-            quantity: order.volume || 0, // Alias for consistency
-            opening: order.price_open || order.open_price || 0,
-            stop_loss: order.sl || order.stop_loss || null,
-            sl: order.sl || order.stop_loss || null, // Alias
-            take_profit: order.tp || order.take_profit || null,
-            tp: order.tp || order.take_profit || null, // Alias
-            date: order.time_setup || order.created_time || new Date().toISOString(),
+            asset: order.symbol || 'Unknown',
+            type: orderType,
+            volume: parseFloat(order.volume || 0),
+            quantity: parseFloat(order.volume || 0),
+            opening: parseFloat(order.open_price || order.price_open || 0),
+            stop_loss: parseFloat(order.stop_loss || order.sl || 0) || null,
+            sl: parseFloat(order.stop_loss || order.sl || 0) || null,
+            take_profit: parseFloat(order.take_profit || order.tp || 0) || null,
+            tp: parseFloat(order.take_profit || order.tp || 0) || null,
+            date: order.created_time || order.time_setup || new Date().toISOString(),
             status: 'Pending',
-            trade_pl: 0, // Orders don't have P&L yet
-            source: 'EA'
+            trade_pl: 0,
+            source: 'EA',
+            comment: order.comment || ''
           };
         });
 
         // Combine all trades
         const allTrades = [...positions, ...orders];
-        console.log('Final combined trades:', allTrades);
+        console.log('Final combined trades:', allTrades.length);
         
         setTrades(allTrades);
         calculateStats(allTrades, balanceData);
         
-        // Show success message for EA accounts
+        // Show success message
         if (allTrades.length > 0) {
           console.log(`✅ Loaded ${positions.length} positions and ${orders.length} orders from EA`);
+          toast.success(`Loaded ${positions.length} positions and ${orders.length} orders`, { id: 'fetch-trades' });
         } else {
           console.log('⚠️ No trades found for EA account');
+          toast.success('No trades found for this account', { id: 'fetch-trades' });
         }
         
       } else {
-        // Fallback to original broker API for non-EA accounts
-        console.log('Using fallback broker API for account:', selectedAccount.id);
+        // Fallback to broker API for non-EA accounts
+        console.log('Using broker API for account:', selectedAccount.id);
         
-        const token = localStorage.getItem('access_token');
-        if (!token) {
-          throw new Error('No authentication token found');
-        }
+        // Broker API URLs
+        const balanceUrl = `${API_CONFIG.baseUrl}${API_CONFIG.paths.brokerBalance(selectedAccount.id)}`;
+        const positionsUrl = `${API_CONFIG.baseUrl}${API_CONFIG.paths.brokerPositions(selectedAccount.id)}`;
+        const ordersUrl = `${API_CONFIG.baseUrl}${API_CONFIG.paths.brokerOrders(selectedAccount.id)}`;
         
-        const headers = {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        };
-
-        const [balanceResponse, positionsResponse, ordersResponse] = await Promise.allSettled([
-          fetch(`http://api.tradexas.com/api/v1/broker/${selectedAccount.id}/balance`, { headers }),
-          fetch(`http://api.tradexas.com/api/v1/broker/${selectedAccount.id}/positions`, { headers }),
-          fetch(`http://api.tradexas.com/api/v1/broker/${selectedAccount.id}/orders`, { headers })
+        // Make API calls
+        const [balanceResult, positionsResult, ordersResult] = await Promise.all([
+          apiCall(balanceUrl),
+          apiCall(positionsUrl),
+          apiCall(ordersUrl)
         ]);
-
-        console.log('Broker API Responses:', {
-          balance: balanceResponse,
-          positions: positionsResponse,
-          orders: ordersResponse
-        });
-
-        // Process broker responses
-        const balanceData = balanceResponse.status === 'fulfilled' && balanceResponse.value.ok 
-          ? await balanceResponse.value.json() 
-          : {};
-        const positionsData = positionsResponse.status === 'fulfilled' && positionsResponse.value.ok 
-          ? await positionsResponse.value.json() 
-          : {};
-        const ordersData = ordersResponse.status === 'fulfilled' && ordersResponse.value.ok 
-          ? await ordersResponse.value.json() 
-          : {};
-
+        
         console.log('Broker API Results:', {
-          balance: balanceData,
-          positions: positionsData,
-          orders: ordersData
+          balance: balanceResult,
+          positions: positionsResult,
+          orders: ordersResult
         });
-
-        // Process broker API data (existing logic)
+        
+        // Process broker API data
+        const balanceData = balanceResult.success ? balanceResult.data : {};
+        
+        // Process positions data
+        const positionsData = positionsResult.data || {};
         const positionsArray = Array.isArray(positionsData)
           ? positionsData
-          : Array.isArray(positionsData?.positions)
+          : Array.isArray(positionsData.positions)
             ? positionsData.positions
-            : positionsData?.data && Array.isArray(positionsData.data) 
+            : positionsData.data && Array.isArray(positionsData.data) 
             ? positionsData.data
             : [];
-
+            
+        // Process orders data
+        const ordersData = ordersResult.data || {};
         const ordersArray = Array.isArray(ordersData)
           ? ordersData
-          : Array.isArray(ordersData?.orders)
+          : Array.isArray(ordersData.orders)
             ? ordersData.orders
-            : ordersData?.data && Array.isArray(ordersData.data)
+            : ordersData.data && Array.isArray(ordersData.data)
             ? ordersData.data
             : [];
 
-        console.log('Processed broker arrays:', { positionsArray, ordersArray });
+        console.log('Processed broker arrays:', { 
+          positionsArray: positionsArray.length, 
+          ordersArray: ordersArray.length 
+        });
 
+        // Transform broker positions to unified format
         const positions = positionsArray.map((pos, index) => ({
           id: pos.id || `broker_pos_${index}`,
           order_number: pos.id || `BROKER_POS_${index}`,
           symbol: pos.symbol || 'Unknown',
           asset: pos.symbol || 'Unknown',
           type: pos.type || 'Buy',
-          volume: pos.volume || 0,
-          quantity: pos.volume || 0,
-          opening: pos.open_price || 0,
-          current_price: pos.current_price || pos.opening || 0,
-          trade_pl: pos.profit || 0,
-          swap: pos.swap || 0,
-          commission: pos.commission || 0,
+          volume: parseFloat(pos.volume || 0),
+          quantity: parseFloat(pos.volume || 0),
+          opening: parseFloat(pos.open_price || 0),
+          current_price: parseFloat(pos.current_price || pos.opening || 0),
+          trade_pl: parseFloat(pos.profit || 0),
+          swap: parseFloat(pos.swap || 0),
+          commission: parseFloat(pos.commission || 0),
           date: pos.open_time || new Date().toISOString(),
           status: 'Executed',
-          stop_loss: pos.stop_loss || null,
-          sl: pos.stop_loss || null,
-          take_profit: pos.take_profit || null,
-          tp: pos.take_profit || null,
-          source: 'Broker'
+          stop_loss: parseFloat(pos.stop_loss || 0) || null,
+          sl: parseFloat(pos.stop_loss || 0) || null,
+          take_profit: parseFloat(pos.take_profit || 0) || null,
+          tp: parseFloat(pos.take_profit || 0) || null,
+          source: 'Broker',
+          comment: pos.comment || ''
         }));
 
+        // Transform broker orders to unified format
         const orders = ordersArray.map((order, index) => ({
           id: order.id || `broker_order_${index}`,
           order_number: order.id || `BROKER_ORD_${index}`,
           symbol: order.symbol || 'Unknown',
           asset: order.symbol || 'Unknown',
           type: order.type || 'Pending',
-          volume: order.volume || 0,
-          quantity: order.volume || 0,
-          opening: order.open_price || 0,
-          stop_loss: order.stop_loss || null,
-          sl: order.stop_loss || null,
-          take_profit: order.take_profit || null,
-          tp: order.take_profit || null,
+          volume: parseFloat(order.volume || 0),
+          quantity: parseFloat(order.volume || 0),
+          opening: parseFloat(order.open_price || 0),
+          stop_loss: parseFloat(order.stop_loss || 0) || null,
+          sl: parseFloat(order.stop_loss || 0) || null,
+          take_profit: parseFloat(order.take_profit || 0) || null,
+          tp: parseFloat(order.take_profit || 0) || null,
           date: order.created_time || new Date().toISOString(),
           status: 'Pending',
           trade_pl: 0,
-          source: 'Broker'
+          source: 'Broker',
+          comment: order.comment || ''
         }));
 
         // Combine all trades
         const allTrades = [...positions, ...orders];
-        console.log('Final broker trades:', allTrades);
+        console.log('Final broker trades:', allTrades.length);
         
         setTrades(allTrades);
         calculateStats(allTrades, balanceData);
+        
+        // Show success message
+        if (allTrades.length > 0) {
+          toast.success(`Loaded ${allTrades.length} trades from broker account`, { id: 'fetch-trades' });
+        } else {
+          toast.success('No trades found for this account', { id: 'fetch-trades' });
+        }
       }
       
     } catch (error) {
       console.error('❌ Error fetching trades:', error);
-      setError(error.message);
-      toast.error(`Error fetching trades: ${error.message}`);
+      const errorMessage = error.message || 'Unknown error';
+      setError(`Error fetching trades: ${errorMessage}`);
+      toast.error(`Error: ${errorMessage}`, { id: 'fetch-trades' });
     } finally {
       setLoading(false);
     }
-  }, [selectedAccount]);
+  }, [
+    selectedAccount, 
+    accountsLoading, 
+    availableAccounts, 
+    fetchAvailableAccounts, 
+    apiCall
+  ]);
 
   // Enhanced WebSocket setup for EA accounts
   useEffect(() => {
@@ -299,14 +556,12 @@ function TradeManagement({ selectedAccount, onTradeSelect, shouldRefresh, onRefr
     const isEA = isEAAccount(selectedAccount);
     
     if (isEA) {
-      // Use EA WebSocket for real-time updates
       console.log('Setting up EA WebSocket for account:', selectedAccount.id);
       
       // Set up event listeners for real-time updates
       const handleTradeUpdate = (data) => {
         console.log('EA trade update received:', data);
         if (data.account_id === selectedAccount.id) {
-          // Refresh data when trade updates occur
           fetchTrades();
         }
       };
@@ -321,7 +576,7 @@ function TradeManagement({ selectedAccount, onTradeSelect, shouldRefresh, onRefr
               // Update existing position
               newTrades[index] = {
                 ...newTrades[index],
-                current_price: data.price_current,
+                current_price: data.price_current || data.current_price,
                 trade_pl: data.profit,
                 swap: data.swap,
                 commission: data.commission
@@ -349,7 +604,6 @@ function TradeManagement({ selectedAccount, onTradeSelect, shouldRefresh, onRefr
       const handleOrderUpdate = (data) => {
         console.log('EA order update received:', data);
         if (data.account_id === selectedAccount.id) {
-          // Refresh trades to get latest order status
           fetchTrades();
         }
       };
@@ -361,10 +615,50 @@ function TradeManagement({ selectedAccount, onTradeSelect, shouldRefresh, onRefr
       eaWebSocket.on(EA_WEBSOCKET_MESSAGE_TYPES.ORDER_UPDATE, handleOrderUpdate);
 
       // Connect WebSocket if not already connected
-      if (!eaWebSocket.ws || eaWebSocket.ws.readyState !== WebSocket.OPEN) {
-        // Get user ID from auth token or storage for WebSocket connection
-        const userId = localStorage.getItem('user_id') || 'default_user';
-        eaWebSocket.connect(userId);
+      try {
+        // Check WebSocket status
+        const wsNotConnected = !eaWebSocket.ws || 
+          (typeof WebSocket !== 'undefined' && 
+           eaWebSocket.ws.readyState !== WebSocket.OPEN && 
+           eaWebSocket.ws.readyState !== WebSocket.CONNECTING);
+        
+        if (wsNotConnected) {
+          const userId = localStorage.getItem('user_id') || 
+                         localStorage.getItem('userId') || 
+                         sessionStorage.getItem('userId') ||
+                         '23202c3b-411e-492e-8fbd-87fd5383ac58';
+                         
+          console.log(`Attempting to connect WebSocket with user ID: ${userId}`);
+          
+          // Get the proper WebSocket URL
+          const wsUrl = API_CONFIG.websocket.url(userId);
+          console.log('WebSocket URL:', wsUrl);
+          
+          eaWebSocket.connect(userId);
+          console.log('✅ EA WebSocket connection initiated');
+          
+          // Send a test message after connection
+          setTimeout(() => {
+            try {
+              if (eaWebSocket.ws && eaWebSocket.ws.readyState === WebSocket.OPEN) {
+                eaWebSocket.ws.send(JSON.stringify({ 
+                  type: 'subscribe', 
+                  account_id: selectedAccount.id,
+                  channels: ['positions', 'orders', 'balance']
+                }));
+                console.log('Sent subscription request to WebSocket');
+              } else {
+                console.warn('WebSocket not in OPEN state after timeout');
+              }
+            } catch (e) {
+              console.error('Error sending subscription message:', e);
+            }
+          }, 1000);
+        } else {
+          console.log('✅ EA WebSocket already connected or connecting');
+        }
+      } catch (wsError) {
+        console.error('❌ Failed to connect to EA WebSocket:', wsError);
       }
 
       // Cleanup on unmount
@@ -374,10 +668,6 @@ function TradeManagement({ selectedAccount, onTradeSelect, shouldRefresh, onRefr
         eaWebSocket.off(EA_WEBSOCKET_MESSAGE_TYPES.BALANCE_UPDATE, handleBalanceUpdate);
         eaWebSocket.off(EA_WEBSOCKET_MESSAGE_TYPES.ORDER_UPDATE, handleOrderUpdate);
       };
-    } else {
-      // Legacy WebSocket fallback for non-EA accounts
-      console.log('Using legacy WebSocket for non-EA account:', selectedAccount.id);
-      // Keep existing placeholder WebSocket logic if needed
     }
   }, [selectedAccount, fetchTrades]);
 
@@ -387,7 +677,7 @@ function TradeManagement({ selectedAccount, onTradeSelect, shouldRefresh, onRefr
       totalTrades: tradeData.length,
       winningTrades: tradeData.filter(t => (t.trade_pl || 0) > 0).length,
       totalPL: tradeData.reduce((sum, t) => sum + (t.trade_pl || 0), 0),
-      volume: tradeData.reduce((sum, t) => sum + (t.quantity || 0), 0),
+      volume: tradeData.reduce((sum, t) => sum + (t.quantity || t.volume || 0), 0),
       bestTrade: tradeData.reduce((best, t) => (!best || (t.trade_pl || 0) > (best.trade_pl || 0) ? t : best), null),
       worstTrade: tradeData.reduce((worst, t) => (!worst || (t.trade_pl || 0) < (worst.trade_pl || 0) ? t : worst), null),
     };
@@ -402,118 +692,146 @@ function TradeManagement({ selectedAccount, onTradeSelect, shouldRefresh, onRefr
       volume: stats.volume.toFixed(2),
       // Update balance data if provided
       ...(balanceData ? {
-        balance: balanceData.balance,
-        equity: balanceData.equity,
-        margin: balanceData.margin,
-        freeMargin: balanceData.free_margin,
-        currency: balanceData.currency,
-        leverage: balanceData.leverage
+        balance: parseFloat(balanceData.balance || 0),
+        equity: parseFloat(balanceData.equity || 0),
+        margin: parseFloat(balanceData.margin || 0),
+        freeMargin: parseFloat(balanceData.free_margin || 0),
+        currency: balanceData.currency || 'USD',
+        leverage: parseInt(balanceData.leverage || 1, 10)
       } : {})
     }));
   }, []);
 
-  // Handle trade closure with EA API support
+  // Handle trade closure
   const handleCloseTrade = async (tradeId) => {
     if (!selectedAccount?.id || !tradeId) return;
+    
+    toast.loading(`Closing trade ${tradeId}...`, { id: 'close-trade' });
     
     try {
       const isEA = isEAAccount(selectedAccount);
       
       if (isEA) {
-        // Use EA API for closing positions/orders
         console.log('Closing EA trade:', tradeId);
         
-        // Try to close as position first, then as order if it fails
+        // Try to close as position first
         try {
-          // For EA accounts, we need to use the appropriate EA endpoints
-          // Note: EA API might need specific close position/order endpoints
-          // For now, we'll use the existing broker API as fallback
-          const response = await fetch(`http://api.tradexas.com/api/v1/broker/${selectedAccount.id}/positions/${tradeId}`, {
+          // Use the correct API endpoint for closing positions
+          const positionUrl = `${API_CONFIG.baseUrl}${API_CONFIG.paths.eaClosePosition(selectedAccount.id, tradeId)}`;
+          
+          console.log('Attempting to close position with URL:', positionUrl);
+          
+          const response = await fetch(positionUrl, {
             method: 'DELETE',
-            headers: {
-              'Authorization': localStorage.getItem('access_token'),
-              'Content-Type': 'application/json'
-            }
+            headers: getAuthHeaders()
           });
           
-          const data = await response.json();
-          
-          if (data.success) {
-            toast.success(`EA position closed successfully. Profit: ${data.profit || 'N/A'}`);
+          if (response.ok) {
+            const data = await response.json();
+            
+            toast.success(
+              <div>
+                <p className="font-bold">Position Closed Successfully</p>
+                <p>{data.symbol || ''} • {data.volume || ''} lot(s)</p>
+                {data.profit && <p className={data.profit >= 0 ? "text-green-400" : "text-red-400"}>
+                  Profit: {data.profit >= 0 ? '+' : ''}{data.profit?.toFixed(2)}
+                </p>}
+              </div>,
+              { id: 'close-trade', duration: 5000 }
+            );
             fetchTrades();
-          } else {
-            throw new Error(data.message || 'Failed to close EA position');
+            return;
           }
+          
+          throw new Error(`Failed to close position: ${response.status}`);
         } catch (positionError) {
+          console.log('Not a position or error closing position, trying as order...');
+          
           // Try cancelling as pending order
           try {
-            const orderResponse = await fetch(`http://api.tradexas.com/api/v1/broker/${selectedAccount.id}/orders/${tradeId}`, {
+            // Use the correct API endpoint for closing orders
+            const orderUrl = `${API_CONFIG.baseUrl}${API_CONFIG.paths.eaCloseOrder(selectedAccount.id, tradeId)}`;
+            
+            console.log('Attempting to close order with URL:', orderUrl);
+            
+            const response = await fetch(orderUrl, {
               method: 'DELETE',
-              headers: {
-                'Authorization': localStorage.getItem('access_token'),
-                'Content-Type': 'application/json'
-              }
+              headers: getAuthHeaders()
             });
             
-            const orderData = await orderResponse.json();
-            
-            if (orderData.success) {
-              toast.success('EA order cancelled successfully');
+            if (response.ok) {
+              const data = await response.json();
+              
+              toast.success(
+                <div>
+                  <p className="font-bold">Order Cancelled Successfully</p>
+                  <p>{data.symbol || ''} • {data.volume || ''} lot(s)</p>
+                  <p>Order #{tradeId}</p>
+                </div>,
+                { id: 'close-trade', duration: 4000 }
+              );
               fetchTrades();
-            } else {
-              throw new Error(orderData.message || 'Failed to cancel EA order');
+              return;
             }
+            
+            throw new Error(`Failed to cancel order: ${response.status}`);
           } catch (orderError) {
-            console.error('Failed to close EA trade:', positionError, orderError);
-            toast.error(`Error closing EA trade: ${positionError.message}`);
+            console.error('Failed to close EA trade:', { positionError, orderError });
+            toast.error(
+              <div>
+                <p className="font-bold">Failed to Close Trade</p>
+                <p>Trade ID: {tradeId}</p>
+                <p className="text-sm text-red-300">Error: {positionError.message || 'Unknown error'}</p>
+                <p className="text-xs mt-1">Please try again or contact support if this persists.</p>
+              </div>,
+              { id: 'close-trade', duration: 6000 }
+            );
           }
         }
       } else {
-        // Original logic for non-EA accounts
+        // Logic for non-EA accounts
         try {
-          const response = await fetch(`http://api.tradexas.com/api/v1/broker/${selectedAccount.id}/positions/${tradeId}`, {
+          const positionUrl = `${API_CONFIG.baseUrl}${API_CONFIG.paths.brokerPositions(selectedAccount.id)}/${tradeId}`;
+          
+          const response = await fetch(positionUrl, {
             method: 'DELETE',
-            headers: {
-              'Authorization': localStorage.getItem('access_token'),
-              'Content-Type': 'application/json'
-            }
+            headers: getAuthHeaders()
           });
           
-          const data = await response.json();
-          
-          if (data.success) {
-            toast.success(`Position closed successfully. Profit: ${data.profit || 'N/A'}`);
+          if (response.ok) {
+            const data = await response.json();
+            toast.success(`Position closed successfully. Profit: ${data.profit?.toFixed(2) || 'N/A'}`, { id: 'close-trade' });
             fetchTrades();
-          } else {
-            throw new Error(data.message || 'Failed to close trade');
+            return;
           }
+          
+          throw new Error(`Failed to close position: ${response.status}`);
         } catch (error) {
-          // Check if it's a pending order that needs to be cancelled instead
+          // Try cancelling as pending order
           try {
-            const orderResponse = await fetch(`http://api.tradexas.com/api/v1/broker/${selectedAccount.id}/orders/${tradeId}`, {
+            const orderUrl = `${API_CONFIG.baseUrl}${API_CONFIG.paths.brokerOrders(selectedAccount.id)}/${tradeId}`;
+            
+            const response = await fetch(orderUrl, {
               method: 'DELETE',
-              headers: {
-                'Authorization': localStorage.getItem('access_token'),
-                'Content-Type': 'application/json'
-              }
+              headers: getAuthHeaders()
             });
             
-            const orderData = await orderResponse.json();
-            
-            if (orderData.success) {
-              toast.success('Order cancelled successfully');
+            if (response.ok) {
+              const data = await response.json();
+              toast.success('Order cancelled successfully', { id: 'close-trade' });
               fetchTrades();
-            } else {
-              throw new Error(orderData.message);
+              return;
             }
+            
+            throw new Error(`Failed to cancel order: ${response.status}`);
           } catch (orderError) {
-            toast.error(`Error closing trade: ${error.message}`);
+            toast.error(`Error closing trade: ${error.message}`, { id: 'close-trade' });
           }
         }
       }
     } catch (error) {
       console.error('Error in handleCloseTrade:', error);
-      toast.error(`Error closing trade: ${error.message}`);
+      toast.error(`Error closing trade: ${error.message}`, { id: 'close-trade' });
     }
   };
 
@@ -522,20 +840,112 @@ function TradeManagement({ selectedAccount, onTradeSelect, shouldRefresh, onRefr
     return trades
       .filter(trade => {
         if (filters.status !== 'all' && trade.status !== filters.status) return false;
-        if (filters.type !== 'all' && trade.type !== filters.type) return false;
-        if (filters.source !== 'all' && trade.strat_source !== filters.source) return false;
+        if (filters.type !== 'all' && !trade.type?.includes(filters.type)) return false;
+        if (filters.source !== 'all' && trade.source !== filters.source) return false;
         return true;
       })
       .sort((a, b) => {
         const direction = sortConfig.direction === 'asc' ? 1 : -1;
-        return a[sortConfig.key] > b[sortConfig.key] ? direction : -direction;
+        
+        // Handle different data types or missing values
+        const valA = a[sortConfig.key];
+        const valB = b[sortConfig.key];
+        
+        // Handle dates specially
+        if (sortConfig.key === 'date') {
+          return direction * (new Date(valA).getTime() - new Date(valB).getTime());
+        }
+        
+        // Handle numeric values
+        if (typeof valA === 'number' && typeof valB === 'number') {
+          return direction * (valA - valB);
+        }
+        
+        // Handle strings
+        if (valA > valB) return direction;
+        if (valA < valB) return -direction;
+        return 0;
       });
   }, [trades, filters, sortConfig]);
+  
+  // Export trades to CSV
+  const exportToCsv = () => {
+    if (filteredAndSortedTrades.length === 0) {
+      toast.error('No trades to export');
+      return;
+    }
+    
+    const headers = ['Date', 'Order #', 'Symbol', 'Type', 'Volume', 'Entry', 'Current', 'SL', 'TP', 'P/L', 'Status', 'Source', 'Comment'];
+    
+    const csvRows = [
+      headers.join(','),
+      ...filteredAndSortedTrades.map(trade => {
+        return [
+          new Date(trade.date).toISOString(),
+          trade.order_number,
+          trade.symbol || trade.asset,
+          trade.type,
+          trade.volume || trade.quantity,
+          trade.opening,
+          trade.current_price || '',
+          trade.sl || trade.stop_loss || '',
+          trade.tp || trade.take_profit || '',
+          trade.trade_pl || 0,
+          trade.status,
+          trade.source,
+          trade.comment || ''
+        ].map(value => {
+          // Escape values that might contain commas
+          if (typeof value === 'string' && (value.includes(',') || value.includes('"'))) {
+            return `"${value.replace(/"/g, '""')}"`;
+          }
+          return value;
+        }).join(',');
+      })
+    ];
+    
+    const csvContent = csvRows.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `trades_export_${new Date().toISOString().slice(0,10)}.csv`);
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast.success('Trades exported successfully');
+  };
 
-  // Request initial data and handle refresh requests
+  // Handle changes to the propSelectedAccount
   useEffect(() => {
-    fetchTrades();
-  }, [fetchTrades]);
+    if (propSelectedAccount?.id) {
+      if (!selectedAccount || propSelectedAccount.id !== selectedAccount.id) {
+        console.log('Updating selected account from props:', propSelectedAccount);
+        setSelectedAccount(propSelectedAccount);
+      }
+    }
+  }, [propSelectedAccount, selectedAccount]);
+  
+  // Fetch available accounts on mount
+  useEffect(() => {
+    if (availableAccounts.length === 0 && !accountsLoading) {
+      console.log('Initial account fetch triggered');
+      fetchAvailableAccounts();
+    }
+  }, [fetchAvailableAccounts, availableAccounts.length, accountsLoading]);
+
+  // Request initial data when selectedAccount changes
+  useEffect(() => {
+    if (selectedAccount?.id) {
+      console.log('Selected account available, fetching trades:', selectedAccount);
+      fetchTrades();
+    } else {
+      console.log('Initial load: No selected account available or still loading');
+    }
+  }, [selectedAccount, fetchTrades]);
 
   // Handle refresh requests from parent
   useEffect(() => {
@@ -551,24 +961,82 @@ function TradeManagement({ selectedAccount, onTradeSelect, shouldRefresh, onRefr
   return (
     <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <h3 className="text-xl font-bold text-white flex items-center gap-2">
-          <Activity className="w-5 h-5" />
-          Trade Management
-          {selectedAccount && isEAAccount(selectedAccount) && (
-            <span className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded-full border border-green-500/30">
-              EA Connected
-            </span>
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="flex flex-col gap-2">
+          <h3 className="text-xl font-bold text-white flex items-center gap-2">
+            <Activity className="w-5 h-5" />
+            Trade Management
+            {selectedAccount && (
+              <div className="flex items-center gap-2">
+                <span className={`text-xs px-2 py-1 rounded-full border ${
+                  isEAAccount(selectedAccount) 
+                    ? 'bg-green-500/20 text-green-400 border-green-500/30' 
+                    : 'bg-blue-500/20 text-blue-400 border-blue-500/30'
+                }`}>
+                  {isEAAccount(selectedAccount) ? 'EA Connected' : 'Broker Account'}
+                </span>
+                {debugMode && (
+                  <span className="text-xs bg-amber-500/20 text-amber-400 px-2 py-1 rounded-full border border-amber-500/30">
+                    Debug Mode
+                  </span>
+                )}
+              </div>
+            )}
+          </h3>
+          
+          {/* Account selector dropdown */}
+          {availableAccounts.length > 0 && (
+            <div className="flex items-center gap-2">
+              <label className="text-gray-400 text-sm">Account:</label>
+              <select
+                value={selectedAccount?.id || ''}
+                onChange={(e) => {
+                  const selectedId = e.target.value;
+                  const account = availableAccounts.find(acc => acc.id === selectedId);
+                  if (account) {
+                    setSelectedAccount(account);
+                    
+                    // Show enhanced toast notification with broker name
+                    toast.success(
+                      <div>
+                        <p className="font-bold">Account Changed</p>
+                        <p>{account.broker || account.name} • {account.account_number || account.id}</p>
+                        {account.platform && <p className="text-xs text-gray-300">Platform: {account.platform}</p>}
+                      </div>,
+                      { id: 'account-selected' }
+                    );
+                  }
+                }}
+                className="bg-[#222] border border-[#333] rounded-lg px-2 py-1 text-white text-sm"
+              >
+                {availableAccounts.map(account => (
+                  <option key={account.id} value={account.id}>
+                    {account.broker || account.name || account.account_number || account.id} 
+                    {account.platform ? ` (${account.platform})` : ''}
+                  </option>
+                ))}
+              </select>
+              {accountsLoading && <RefreshCw className="w-4 h-4 text-blue-400 animate-spin" />}
+            </div>
           )}
-        </h3>
-        <button 
-          onClick={fetchTrades}
-          disabled={loading}
-          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#2F00FF] to-[#1C0099] hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
-        >
-          <RefreshCw className={cn("w-4 h-4", loading && "animate-spin")} />
-          Refresh
-        </button>
+        </div>
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={exportToCsv}
+            className="flex items-center gap-2 px-4 py-2 bg-[#2A2A2A] hover:bg-[#333] text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={filteredAndSortedTrades.length === 0}
+          >
+            <Download className="w-4 h-4" /> Export CSV
+          </button>
+          <button 
+            onClick={fetchTrades}
+            disabled={loading}
+            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#2F00FF] to-[#1C0099] hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+          >
+            <RefreshCw className={cn("w-4 h-4", loading && "animate-spin")} />
+            Refresh
+          </button>
+        </div>
       </div>
 
       {/* Statistics Grid */}
@@ -656,6 +1124,10 @@ function TradeManagement({ selectedAccount, onTradeSelect, shouldRefresh, onRefr
           <option value="all">All Types</option>
           <option value="Buy">Buy</option>
           <option value="Sell">Sell</option>
+          <option value="Buy Limit">Buy Limit</option>
+          <option value="Sell Limit">Sell Limit</option>
+          <option value="Buy Stop">Buy Stop</option>
+          <option value="Sell Stop">Sell Stop</option>
         </select>
 
         <select
@@ -664,10 +1136,8 @@ function TradeManagement({ selectedAccount, onTradeSelect, shouldRefresh, onRefr
           className="bg-[#222] border border-[#333] rounded-lg px-3 py-2 text-white text-sm"
         >
           <option value="all">All Sources</option>
-          <option value="Manual">Manual</option>
-          <option value="AI Bot">AI Bot</option>
-          <option value="Copy Trade">Copy Trade</option>
-          <option value="Pair Trade">Pair Trade</option>
+          <option value="EA">EA</option>
+          <option value="Broker">Broker</option>
         </select>
       </div>
 
@@ -700,6 +1170,17 @@ function TradeManagement({ selectedAccount, onTradeSelect, shouldRefresh, onRefr
                   </div>
                 </td>
               </tr>
+            ) : error ? (
+              <tr>
+                <td colSpan="12" className="text-center py-8">
+                  <div className="flex flex-col items-center justify-center space-y-3">
+                    <div className="flex items-center text-red-400">
+                      <AlertTriangle className="w-6 h-6 mr-2" />
+                      <span>{error}</span>
+                    </div>
+                  </div>
+                </td>
+              </tr>
             ) : filteredAndSortedTrades.length === 0 ? (
               <tr>
                 <td colSpan="12" className="text-center py-8">
@@ -712,7 +1193,7 @@ function TradeManagement({ selectedAccount, onTradeSelect, shouldRefresh, onRefr
             ) : (
               filteredAndSortedTrades.map((trade) => (
                 <tr 
-                  key={trade.order_number}
+                  key={trade.id || trade.order_number}
                   className={cn(
                     "border-b border-[#333] hover:bg-[#2A2A2A] transition-colors",
                     selectedTradeId === trade.order_number && "bg-[#2A2A2A]"
@@ -734,9 +1215,9 @@ function TradeManagement({ selectedAccount, onTradeSelect, shouldRefresh, onRefr
                   <td className="py-3 px-4">
                     <div className={cn(
                       "flex items-center gap-1",
-                      (trade.type === 'Buy' || trade.type === 'BUY') ? "text-green-400" : "text-red-400"
+                      trade.type?.toLowerCase().includes('buy') ? "text-green-400" : "text-red-400"
                     )}>
-                      {(trade.type === 'Buy' || trade.type === 'BUY') ? (
+                      {trade.type?.toLowerCase().includes('buy') ? (
                         <TrendingUp className="w-4 h-4" />
                       ) : (
                         <TrendingDown className="w-4 h-4" />
@@ -823,5 +1304,58 @@ function TradeManagement({ selectedAccount, onTradeSelect, shouldRefresh, onRefr
   );
 };
 
-const ExportedComponent = TradeManagement;
+// ErrorBoundary for TradeManagement component
+class TradeManagementErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, errorInfo: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error("TradeManagement component error:", error, errorInfo);
+    toast.error(`Component error: ${error.message}`);
+    this.setState({ errorInfo });
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-6 space-y-6">
+          <div className="flex items-center gap-2 text-red-400">
+            <AlertTriangle className="w-6 h-6" />
+            <h3 className="text-xl font-bold">Something went wrong</h3>
+          </div>
+          <div className="bg-red-500/10 border border-red-500/30 p-4 rounded-lg overflow-auto max-h-96">
+            <p className="text-white mb-2">The trade management component encountered an error:</p>
+            {this.state.errorInfo && (
+              <pre className="text-xs text-red-300 overflow-x-auto">
+                {this.state.errorInfo.componentStack}
+              </pre>
+            )}
+          </div>
+          <button 
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
+            onClick={() => this.setState({ hasError: false })}
+          >
+            Try Again
+          </button>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
+// Wrap component with error boundary
+const ExportedComponent = props => (
+  <TradeManagementErrorBoundary>
+    <TradeManagement {...props} />
+  </TradeManagementErrorBoundary>
+);
+
 export default ExportedComponent;
