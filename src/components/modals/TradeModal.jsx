@@ -57,6 +57,7 @@ const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelec
   // Unified Order State (replaces both market and pending states)
   const [orderData, setOrderData] = useState({
     symbol: '',
+    symbol2: '', // Added for spread trading
     orderType: 'MARKET_BUY',
     volume: 0.1,
     price: '', // Only used for pending orders
@@ -78,13 +79,41 @@ const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelec
     spread_stop_loss: '',
     spread_take_profit: '',
     expiration: '',
-    trade_type: '',
+    action: 'BUY_SPREAD',  // Default to BUY_SPREAD for backend compatibility
     comment: '',
   });
 
   // Get order types for dropdown
   const orderTypes = getOrderTypesForDropdown();
-  const currentOrderConfig = ORDER_TYPES[orderData.orderType];
+  
+  // Add spread trading options
+  const spreadOrderTypes = [
+    {
+      value: 'BUY_SPREAD',
+      label: 'BUY SPREAD',
+      category: 'SPREAD',
+      type: 'SPREAD',
+      description: 'Buy the spread between two symbols',
+      direction: 'BUY',
+      requiresPrice: false,
+      requiresSymbols: true // New flag to indicate this needs two symbols
+    },
+    {
+      value: 'SELL_SPREAD',
+      label: 'SELL SPREAD', 
+      category: 'SPREAD',
+      type: 'SPREAD',
+      description: 'Sell the spread between two symbols',
+      direction: 'SELL',
+      requiresPrice: false,
+      requiresSymbols: true
+    }
+  ];
+  
+  // Combine all order types
+  const allOrderTypes = [...orderTypes, ...spreadOrderTypes];
+  
+  const currentOrderConfig = ORDER_TYPES[orderData.orderType] || spreadOrderTypes.find(type => type.value === orderData.orderType);
 
   // Fetch available symbols when account is selected
   useEffect(() => {
@@ -248,6 +277,38 @@ const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelec
     setSubmitting(true);
 
     try {
+      // Check if this is a spread order
+      if (currentOrderConfig?.type === 'SPREAD') {
+        // Handle spread orders by calling the pair trading function
+        const spreadDirection = orderData.orderType; // 'BUY_SPREAD' or 'SELL_SPREAD'
+        
+        // Set up pairData from orderData
+        const spreadPairData = {
+          symbol1: orderData.symbol,
+          symbol2: orderData.symbol2,
+          volume: orderData.volume.toString(),
+          correlation_type: 'MANUAL', // Manual spread trade
+          order_type: 'MARKET',
+          action: spreadDirection,
+          comment: orderData.comment || '',
+          spread_stop_loss: orderData.stop_loss || '',
+          spread_take_profit: orderData.take_profit || ''
+        };
+        
+        // Temporarily update pairData and call handlePairTrade
+        const originalPairData = pairData;
+        setPairData(spreadPairData);
+        
+        try {
+          await handlePairTrade(spreadDirection);
+        } finally {
+          setPairData(originalPairData);
+        }
+        
+        return;
+      }
+
+      // Regular order handling for non-spread orders
       const volume = parseFloat(orderData.volume);
       const stopLoss = orderData.stop_loss ? parseFloat(orderData.stop_loss) : null;
       const takeProfit = orderData.take_profit ? parseFloat(orderData.take_profit) : null;
@@ -546,52 +607,24 @@ const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelec
         throw new Error('Volume must be greater than 0');
       }
 
-      // Build payload based on the new backend structure
+      // Build payload based on the exact curl format expected by backend
       const payload = {
-        symbol1: pairData.symbol1, // Don't force uppercase
-        symbol2: pairData.symbol2, // Don't force uppercase
+        symbol1: pairData.symbol1,
+        symbol2: pairData.symbol2,
         volume: volume,
-        correlation_type: pairData.correlation_type || 'STATISTICAL',
-        order_type: pairData.order_type || 'MARKET',
+        trade_type: direction || pairData.action || 'BUY_SPREAD'
       };
-
-      // Add trade type for manual direction override (not needed for STATISTICAL)
-      if (direction && direction !== 'STATISTICAL' && direction !== 'PENDING') {
-        payload.trade_type = direction;
-      }
-
-      // Add spread-based risk management
-      if (pairData.spread_stop_loss && parseFloat(pairData.spread_stop_loss) !== 0) {
-        payload.spread_stop_loss = parseFloat(pairData.spread_stop_loss);
-      }
-      if (pairData.spread_take_profit && parseFloat(pairData.spread_take_profit) !== 0) {
-        payload.spread_take_profit = parseFloat(pairData.spread_take_profit);
-      }
-
-      // Add pending order specific fields
-      if (pairData.order_type === 'PENDING') {
-        if (!pairData.entry_spread || parseFloat(pairData.entry_spread) === 0) {
-          throw new Error('Entry spread is required for pending orders');
-        }
-        
-        payload.entry_spread = parseFloat(pairData.entry_spread);
-        payload.spread_direction = pairData.spread_direction || 'NARROW';
-        
-        if (pairData.expiration) {
-          payload.expiration = new Date(pairData.expiration).toISOString();
-        }
-      }
 
       // Add comment if provided
       if (pairData.comment && pairData.comment.trim()) {
         payload.comment = pairData.comment.trim();
       }
 
-      //console.log('Sending pair trade payload:', payload);
+      console.log('🔄 Sending pair trade payload:', payload);
       const accountId = selectedAccount.account_id || selectedAccount.id;
       const response = await placePairTrade(accountId, payload);
       
-      //console.log('Pair trade response:', response);
+      console.log('Pair trade response:', response);
       
       if (response.success) {
         // Handle successful pair trade
@@ -757,10 +790,13 @@ const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelec
           const sym2Result = response.symbol2_result;
           
           if (sym1Result.success && sym2Result.success) {
-            const sym1Direction = sym1Result.details?.direction || 
-              (sym1Result.details?.cmd === 0 ? 'BUY' : 'SELL');
-            const sym2Direction = sym2Result.details?.direction || 
-              (sym2Result.details?.cmd === 0 ? 'BUY' : 'SELL');
+            // Get direction from individual_trades if available or fallback to details
+            const sym1Direction = response.spread_analysis?.individual_trades?.symbol1?.action || 
+                                 sym1Result.details?.direction || 
+                                 (sym1Result.details?.cmd === 0 ? 'BUY' : 'SELL');
+            const sym2Direction = response.spread_analysis?.individual_trades?.symbol2?.action || 
+                                 sym2Result.details?.direction || 
+                                 (sym2Result.details?.cmd === 0 ? 'BUY' : 'SELL');
               
             const sym1Color = sym1Direction === 'BUY' ? 'text-green-400' : 'text-red-400';
             const sym2Color = sym2Direction === 'BUY' ? 'text-green-400' : 'text-red-400';
@@ -852,7 +888,7 @@ const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelec
           entry_spread: '',
           spread_direction: 'NARROW',
           expiration: '',
-          trade_type: '',
+          action: 'BUY_SPREAD',  // Reset to default BUY_SPREAD
           comment: ''
         });
         onClose();
@@ -874,9 +910,9 @@ const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelec
               <div className="text-sm text-red-200">
                 {error.message || 'Failed to place pair trade. Please try again.'}
               </div>
-              {payload.symbol1 && payload.symbol2 && (
+              {pairData?.symbol1 && pairData?.symbol2 && (
                 <div className="text-xs text-red-300 mt-1">
-                  Failed pair: {payload.symbol1}/{payload.symbol2}
+                  Failed pair: {pairData.symbol1}/{pairData.symbol2}
                 </div>
               )}
             </div>
@@ -1025,6 +1061,8 @@ const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelec
               data={orderData}
               setData={setOrderData}
               orderTypes={orderTypes}
+              allOrderTypes={allOrderTypes}
+              spreadOrderTypes={spreadOrderTypes}
               currentOrderConfig={currentOrderConfig}
               livePrice={livePrice}
               priceLoading={priceLoading}
@@ -1048,6 +1086,7 @@ const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelec
               setData={setPairData}
               onSubmit={handlePairTrade}
               submitting={submitting}
+              selectedAccount={selectedAccount}
             />
           )}
         </div>
@@ -1061,6 +1100,8 @@ const UnifiedOrderPanel = ({
   data, 
   setData, 
   orderTypes, 
+  allOrderTypes,
+  spreadOrderTypes,
   currentOrderConfig, 
   livePrice, 
   priceLoading, 
@@ -1169,8 +1210,9 @@ const UnifiedOrderPanel = ({
   };
 
   // Group order types by category for better UX
-  const marketOrders = orderTypes.filter(type => type.category === 'MARKET');
-  const pendingOrders = orderTypes.filter(type => type.category === 'PENDING');
+  const marketOrders = allOrderTypes.filter(type => type.category === 'MARKET');
+  const pendingOrders = allOrderTypes.filter(type => type.category === 'PENDING');
+  const spreadOrders = allOrderTypes.filter(type => type.category === 'SPREAD');
 
   return (
     <div className="space-y-6">
@@ -1205,6 +1247,13 @@ const UnifiedOrderPanel = ({
                 </option>
               ))}
             </optgroup>
+            <optgroup label="Spread Trading">
+              {spreadOrders.map(type => (
+                <option key={type.value} value={type.value}>
+                  {type.label}
+                </option>
+              ))}
+            </optgroup>
           </select>
           {currentOrderConfig?.description && (
             <p className="text-xs text-gray-400 mt-1">{currentOrderConfig.description}</p>
@@ -1213,77 +1262,145 @@ const UnifiedOrderPanel = ({
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Symbol Selection */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <label className="text-sm font-medium text-gray-300">Symbol</label>
-              {symbolsLoading && (
-                <div className="flex items-center gap-1 text-xs text-blue-400">
-                  <RefreshCw className="w-3 h-3 animate-spin" />
-                  <span>Loading symbols...</span>
-                </div>
-              )}
-              {availableSymbols.length > 0 && !symbolsLoading && (
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-green-400">{availableSymbols.length} symbols available</span>
-                  <button
-                    onClick={refreshSymbols}
-                    className="text-xs text-blue-400 hover:text-blue-300"
-                    title="Refresh symbols list"
-                  >
-                    <RefreshCw className="w-3 h-3" />
-                  </button>
-                </div>
-              )}
-            </div>
-            <div className="flex relative">
-              <input
-                type="text"
-                value={data.symbol}
-                onChange={(e) => handleSymbolInputChange(e.target.value)}
-                onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-                placeholder="Symbol (e.g., EURUSDm, GBPUSDm, BTCUSDm)"
-                className="w-full bg-[#1A1A1A] border border-[#444] rounded-l-lg px-3 py-2 text-white"
-              />
-              <button
-                onClick={openSymbolSelector}
-                className="bg-[#333] border border-[#555] border-l-0 px-3 text-blue-400 hover:text-blue-300"
-              >
-                <Search className="w-4 h-4" />
-              </button>
-              {data.symbol && (
-                <button
-                  onClick={() => fetchLivePrice(data.symbol)}
-                  disabled={priceLoading}
-                  className="bg-[#333] border border-[#555] border-l-0 rounded-r-lg px-3 text-yellow-400 hover:text-yellow-300 disabled:opacity-50"
-                  title="Refresh live price"
-                >
-                  <RefreshCw className={`w-4 h-4 ${priceLoading ? 'animate-spin' : ''}`} />
-                </button>
-              )}
-              
-              {/* Symbol Suggestions Dropdown */}
-              {showSuggestions && symbolSuggestions.length > 0 && (
-                <div className="absolute top-full left-0 right-0 z-50 bg-[#1A1A1A] border border-[#444] rounded-b-lg shadow-lg">
-                  {symbolSuggestions.map((symbol, index) => (
+          <div className={currentOrderConfig?.requiresSymbols ? "col-span-2" : ""}>
+            {currentOrderConfig?.requiresSymbols ? (
+              // Two symbols for spread trading
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-sm font-medium text-gray-300">Symbol 1 (Primary)</label>
+                  </div>
+                  <div className="flex relative">
+                    <input
+                      type="text"
+                      value={data.symbol}
+                      onChange={(e) => handleSymbolInputChange(e.target.value)}
+                      onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                      placeholder="Symbol 1 (e.g., EURUSD)"
+                      className="w-full bg-[#1A1A1A] border border-[#444] rounded-l-lg px-3 py-2 text-white"
+                    />
                     <button
-                      key={symbol}
-                      type="button"
-                      onClick={() => {
-                        selectSuggestion(symbol);
-                        fetchLivePrice(symbol);
-                      }}
-                      className="w-full text-left px-3 py-2 hover:bg-[#333] text-gray-300 hover:text-white border-b border-[#444] last:border-b-0"
+                      onClick={openSymbolSelector}
+                      className="bg-[#333] border border-[#555] border-l-0 rounded-r-lg px-3 text-blue-400 hover:text-blue-300"
                     >
-                      {symbol}
+                      <Search className="w-4 h-4" />
                     </button>
-                  ))}
+                  </div>
                 </div>
-              )}
-            </div>
+                
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-sm font-medium text-gray-300">Symbol 2 (Secondary)</label>
+                  </div>
+                  <div className="flex relative">
+                    <input
+                      type="text"
+                      value={data.symbol2 || ''}
+                      onChange={(e) => updateData('symbol2', e.target.value)}
+                      placeholder="Symbol 2 (e.g., GBPUSD)"
+                      className="w-full bg-[#1A1A1A] border border-[#444] rounded-l-lg px-3 py-2 text-white"
+                    />
+                    <button
+                      onClick={openSymbolSelector}
+                      className="bg-[#333] border border-[#555] border-l-0 rounded-r-lg px-3 text-blue-400 hover:text-blue-300"
+                    >
+                      <Search className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              // Single symbol for regular trading
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-sm font-medium text-gray-300">Symbol</label>
+                  {symbolsLoading && (
+                    <div className="flex items-center gap-1 text-xs text-blue-400">
+                      <RefreshCw className="w-3 h-3 animate-spin" />
+                      <span>Loading symbols...</span>
+                    </div>
+                  )}
+                  {availableSymbols.length > 0 && !symbolsLoading && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-green-400">{availableSymbols.length} symbols available</span>
+                      <button
+                        onClick={refreshSymbols}
+                        className="text-xs text-blue-400 hover:text-blue-300"
+                        title="Refresh symbols list"
+                      >
+                        <RefreshCw className="w-3 h-3" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+                <div className="flex relative">
+                  <input
+                    type="text"
+                    value={data.symbol}
+                    onChange={(e) => handleSymbolInputChange(e.target.value)}
+                    onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                    placeholder="Symbol (e.g., EURUSDm, GBPUSDm, BTCUSDm)"
+                    className="w-full bg-[#1A1A1A] border border-[#444] rounded-l-lg px-3 py-2 text-white"
+                  />
+                  <button
+                    onClick={openSymbolSelector}
+                    className="bg-[#333] border border-[#555] border-l-0 px-3 text-blue-400 hover:text-blue-300"
+                  >
+                    <Search className="w-4 h-4" />
+                  </button>
+                  {data.symbol && (
+                    <button
+                      onClick={() => fetchLivePrice(data.symbol)}
+                      disabled={priceLoading}
+                      className="bg-[#333] border border-[#555] border-l-0 rounded-r-lg px-3 text-yellow-400 hover:text-yellow-300 disabled:opacity-50"
+                      title="Refresh live price"
+                    >
+                      <RefreshCw className={`w-4 h-4 ${priceLoading ? 'animate-spin' : ''}`} />
+                    </button>
+                  )}
+                  
+                  {/* Symbol Suggestions Dropdown */}
+                  {showSuggestions && symbolSuggestions.length > 0 && (
+                    <div className="absolute top-full left-0 right-0 z-50 bg-[#1A1A1A] border border-[#444] rounded-b-lg shadow-lg">
+                      {symbolSuggestions.map((symbol, index) => (
+                        <button
+                          key={symbol}
+                          type="button"
+                          onClick={() => {
+                            selectSuggestion(symbol);
+                            fetchLivePrice(symbol);
+                          }}
+                          className="w-full text-left px-3 py-2 hover:bg-[#333] text-gray-300 hover:text-white border-b border-[#444] last:border-b-0"
+                        >
+                          {symbol}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
           
           {/* Volume */}
-          <div>
+          {!currentOrderConfig?.requiresSymbols && (
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">Volume (Lots)</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0.01"
+                value={data.volume}
+                onChange={(e) => updateData('volume', e.target.value)}
+                className="w-full bg-[#1A1A1A] border border-[#444] rounded-lg px-3 py-2 text-white"
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Volume for spread orders - full width */}
+        {currentOrderConfig?.requiresSymbols && (
+          <div className="mt-4">
             <label className="block text-sm font-medium text-gray-300 mb-2">Volume (Lots)</label>
             <input
               type="number"
@@ -1294,7 +1411,7 @@ const UnifiedOrderPanel = ({
               className="w-full bg-[#1A1A1A] border border-[#444] rounded-lg px-3 py-2 text-white"
             />
           </div>
-        </div>
+        )}
 
         {/* Enhanced Live Price Display */}
         {data.symbol && (
@@ -1522,20 +1639,32 @@ const UnifiedOrderPanel = ({
         {/* Submit Button */}
         <button
           onClick={onSubmit}
-          disabled={submitting || (currentOrderConfig?.requiresPrice && !data.price)}
+          disabled={submitting || 
+            (currentOrderConfig?.requiresPrice && !data.price) ||
+            (currentOrderConfig?.requiresSymbols && (!data.symbol || !data.symbol2))
+          }
           className={`w-full mt-6 py-3 px-4 rounded-lg font-medium transition-colors ${
-            currentOrderConfig?.direction?.includes('BUY') || currentOrderConfig?.direction === 'BUY'
+            currentOrderConfig?.type === 'SPREAD'
+              ? currentOrderConfig?.direction === 'BUY'
+                ? 'bg-gradient-to-r from-green-600 to-green-700 hover:from-green-500 hover:to-green-600 text-white'
+                : 'bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white'
+              : currentOrderConfig?.direction?.includes('BUY') || currentOrderConfig?.direction === 'BUY'
               ? 'bg-green-600 hover:bg-green-700 text-white'
               : 'bg-red-600 hover:bg-red-700 text-white'
-          } ${submitting || (currentOrderConfig?.requiresPrice && !data.price) ? 'opacity-70 cursor-not-allowed' : ''}`}
+          } ${submitting || 
+            (currentOrderConfig?.requiresPrice && !data.price) ||
+            (currentOrderConfig?.requiresSymbols && (!data.symbol || !data.symbol2))
+            ? 'opacity-70 cursor-not-allowed' : ''}`}
         >
           {submitting ? (
             <div className="flex items-center justify-center gap-2">
               <RefreshCw className="w-4 h-4 animate-spin" />
-              Placing Order...
+              {currentOrderConfig?.type === 'SPREAD' ? 'Executing Spread...' : 'Placing Order...'}
             </div>
           ) : (
-            `${currentOrderConfig?.type === 'MARKET' ? 'Execute' : 'Place'} ${currentOrderConfig?.label || 'Order'}`
+            currentOrderConfig?.type === 'SPREAD' 
+              ? `Execute ${currentOrderConfig?.label}` 
+              : `${currentOrderConfig?.type === 'MARKET' ? 'Execute' : 'Place'} ${currentOrderConfig?.label || 'Order'}`
           )}
         </button>
 
@@ -1547,10 +1676,27 @@ const UnifiedOrderPanel = ({
               <span>Type:</span>
               <span className="text-white">{currentOrderConfig?.label}</span>
             </div>
-            <div className="flex justify-between">
-              <span>Symbol:</span>
-              <span className="text-white">{data.symbol}</span>
-            </div>
+            {currentOrderConfig?.requiresSymbols ? (
+              <>
+                <div className="flex justify-between">
+                  <span>Symbol 1:</span>
+                  <span className="text-white">{data.symbol || 'Not selected'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Symbol 2:</span>
+                  <span className="text-white">{data.symbol2 || 'Not selected'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Spread Pair:</span>
+                  <span className="text-white">{data.symbol && data.symbol2 ? `${data.symbol}/${data.symbol2}` : 'Incomplete'}</span>
+                </div>
+              </>
+            ) : (
+              <div className="flex justify-between">
+                <span>Symbol:</span>
+                <span className="text-white">{data.symbol}</span>
+              </div>
+            )}
             <div className="flex justify-between">
               <span>Volume:</span>
               <span className="text-white">{data.volume} lots</span>
@@ -1563,13 +1709,13 @@ const UnifiedOrderPanel = ({
             )}
             {data.stop_loss && (
               <div className="flex justify-between">
-                <span>Stop Loss:</span>
+                <span>{currentOrderConfig?.type === 'SPREAD' ? 'Spread Stop Loss:' : 'Stop Loss:'}</span>
                 <span className="text-red-400">{data.stop_loss}</span>
               </div>
             )}
             {data.take_profit && (
               <div className="flex justify-between">
-                <span>Take Profit:</span>
+                <span>{currentOrderConfig?.type === 'SPREAD' ? 'Spread Take Profit:' : 'Take Profit:'}</span>
                 <span className="text-green-400">{data.take_profit}</span>
               </div>
             )}

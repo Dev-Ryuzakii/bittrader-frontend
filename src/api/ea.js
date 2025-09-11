@@ -667,41 +667,123 @@ export const placeEAPendingOrder = async (accountId, orderRequest) => {
 /**
  * Place a pair trade (spread trading) via EA
  * Executes simultaneous trades on two symbols to trade the spread
+ * 
+ * @param {string} accountId - EA account ID
+ * @param {object} pairRequest - Pair trading request object with:
+ *   - symbol1: First symbol
+ *   - symbol2: Second symbol
+ *   - volume: Trade volume (applies to both symbols, hedge ratio auto-calculated)
+ *   - action: BUY or SELL (for spread direction) - optional, auto-detected in STATISTICAL mode
+ *   - correlation_type: STATISTICAL, SIMPLE, MEAN_REVERSION
+ *   - order_type: MARKET or PENDING
+ *   - spread_stop_loss: Spread-based stop loss
+ *   - spread_take_profit: Spread-based take profit
+ *   - entry_spread: Entry level for PENDING orders
+ *   - spread_direction: NARROW or WIDEN for PENDING orders
+ *   - comment: Trade comment - optional
  */
 export const placeEAPairTrade = async (accountId, pairRequest) => {
   try {
     console.log('Placing EA pair trade with payload:', pairRequest);
-    const response = await api.post(`/api/v1/ea/accounts/${accountId}/pair-trade`, pairRequest);
     
+    // Create a clean payload that matches the exact curl format expected by backend
+      const normalizedRequest = {
+      account_id: accountId, // <-- add this line!
+      symbol1: pairRequest.symbol1,
+      symbol2: pairRequest.symbol2,
+      trade_type: pairRequest.trade_type || pairRequest.action || 'BUY_SPREAD',
+      volume: typeof pairRequest.volume === 'string' ? parseFloat(pairRequest.volume) : pairRequest.volume
+    };
+    
+    // Add optional comment if provided
+    if (pairRequest.comment && pairRequest.comment.trim()) {
+      normalizedRequest.comment = pairRequest.comment.trim();
+    }
+    
+    console.log('Normalized EA pair trade payload (matching curl format):', normalizedRequest);
+
+    // Ensure we're using the endpoint format that aligns with the FastAPI backend
+    const response = await api.post(`/api/v1/ea/accounts/${accountId}/pair-trade`, normalizedRequest);
+    
+    console.log('📥 Raw API response for pair trade:', response);
+    
+    // Format the response to include all expected fields from FastAPI response
     const result = {
-      success: response.success || false,
+      success: response.success !== undefined ? response.success : true,
       message: response.message || 'Pair trade queued for EA execution',
       request_id: response.request_id || null,
       spread_symbol: response.spread_symbol || `${pairRequest.symbol1}-${pairRequest.symbol2}`,
       current_spread: response.current_spread || 0.0,
-      symbol1_request_id: response.symbol1_request_id || null,
-      symbol2_request_id: response.symbol2_request_id || null,
+      symbol1_result: response.symbol1_result || null,
+      symbol2_result: response.symbol2_result || null,
+      spread_analysis: response.spread_analysis || null,
       status: response.status || 'queued',
       queued_at: response.queued_at || new Date().toISOString(),
       ...response
     };
     
+    // Add expected FastAPI fields if they're missing
+    if (response.spread_analysis && !response.spread_analysis.individual_trades) {
+      result.spread_analysis.individual_trades = {
+        symbol1: { 
+          action: response.symbol1_result?.details?.direction || 'unknown', 
+          volume: response.symbol1_result?.details?.volume || pairRequest.volume
+        },
+        symbol2: { 
+          action: response.symbol2_result?.details?.direction || 'unknown',
+          volume: response.symbol2_result?.details?.volume || pairRequest.volume
+        }
+      };
+    }
+    
     console.log('EA pair trade response:', result);
     return result;
   } catch (error) {
-    console.error('Error placing EA pair trade:', error);
+    console.error('❌ Error placing EA pair trade:', error);
+    console.error('❌ Error details:', {
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      message: error.message
+    });
     
     let errorMessage = 'Failed to place EA pair trade';
     let errorType = 'unknown';
+    let suggestions = [];
     
     if (error.response?.status === 404) {
       errorMessage = 'EA account not found';
       errorType = 'account_not_found';
+      suggestions = ['Verify account ID is correct', 'Check if EA is connected'];
     } else if (error.response?.status === 403) {
       errorMessage = 'Access denied to EA account';
       errorType = 'access_denied';
+      suggestions = ['Verify your permissions for this account'];
+    } else if (error.response?.status === 422) {
+      errorMessage = 'Invalid pair trade parameters';
+      errorType = 'validation_error';
+      
+      // Extract detailed validation errors if available
+      if (error.response?.data?.detail && Array.isArray(error.response.data.detail)) {
+        const errors = error.response.data.detail;
+        const errorFields = errors.map(err => {
+          const field = err.loc?.slice(1).join('.') || 'unknown';
+          return `${field}: ${err.msg}`;
+        });
+        errorMessage = `Validation error: ${errorFields.join(', ')}`;
+        suggestions = ['Check input parameters', 'Verify symbol names are correct'];
+      } else if (typeof error.response?.data?.detail === 'string') {
+        errorMessage = error.response.data.detail;
+      }
     } else if (error.response?.data?.detail) {
       errorMessage = error.response.data.detail;
+      
+      // Look for specific error messages to provide targeted suggestions
+      if (errorMessage.toLowerCase().includes('symbol not found')) {
+        suggestions = ['Verify both symbols exist on this broker', 'Check symbol spelling'];
+      } else if (errorMessage.toLowerCase().includes('volume')) {
+        suggestions = ['Volume must be greater than 0.01', 'Check broker minimum volume requirements'];
+      }
     }
     
     return {
@@ -709,6 +791,7 @@ export const placeEAPairTrade = async (accountId, pairRequest) => {
       error: errorMessage,
       message: errorMessage,
       error_type: errorType,
+      suggestions: suggestions,
       status: 'failed'
     };
   }
