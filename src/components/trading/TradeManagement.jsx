@@ -62,6 +62,14 @@ function TradeManagement({ selectedAccount: propSelectedAccount, onTradeSelect, 
     leverage: 0
   });
   
+  // Modal state for position modifications
+  const [isModifyModalOpen, setIsModifyModalOpen] = useState(false);
+  const [modifyingTrade, setModifyingTrade] = useState(null);
+  const [modifyValues, setModifyValues] = useState({
+    stopLoss: null,
+    takeProfit: null
+  });
+  
   // Debug mode - set to false for production
   const debugMode = false;
   
@@ -674,6 +682,26 @@ function TradeManagement({ selectedAccount: propSelectedAccount, onTradeSelect, 
       };
     }
   }, [selectedAccount, fetchTrades]);
+
+  // Open the modify trade modal
+  const openModifyTradeModal = (trade) => {
+    setModifyingTrade(trade);
+    setModifyValues({
+      stopLoss: trade.sl || null,
+      takeProfit: trade.tp || null
+    });
+    setIsModifyModalOpen(true);
+  };
+  
+  // Close the modify trade modal
+  const closeModifyTradeModal = () => {
+    setIsModifyModalOpen(false);
+    setModifyingTrade(null);
+    setModifyValues({
+      stopLoss: null,
+      takeProfit: null
+    });
+  };
 
   // Handle trade modification (update stop loss/take profit)
   const handleModifyTrade = async (trade, modifications) => {
@@ -1452,25 +1480,7 @@ function TradeManagement({ selectedAccount: propSelectedAccount, onTradeSelect, 
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          
-                          // Example modifications - in a real app, you would show a modal dialog
-                          // to get user input for these values
-                          const modifications = {
-                            stopLoss: trade.sl ? trade.sl * 0.99 : null,
-                            takeProfit: trade.tp ? trade.tp * 1.01 : null,
-                            price: trade.opening ? trade.opening : null
-                          };
-                          
-                          // Call the handleModifyTrade function with additional option parameters for enhanced API support
-                          handleModifyTrade(trade, {
-                            ...modifications,
-                            // Add options for the enhanced API endpoints
-                            options: {
-                              symbol: trade.symbol || trade.asset,
-                              comment: `Modified from Trade Management UI on ${new Date().toISOString()}`,
-                              typeFilling: 1  // Use IOC (Immediate-or-Cancel) by default
-                            }
-                          });
+                          openModifyTradeModal(trade);
                         }}
                         className="p-1 text-blue-400 hover:text-blue-300 transition-colors"
                         title="Edit trade"
@@ -1489,6 +1499,114 @@ function TradeManagement({ selectedAccount: propSelectedAccount, onTradeSelect, 
       {error && (
         <div className="bg-red-500/20 border border-red-500/30 text-red-400 px-4 py-3 rounded-lg">
           {error}
+        </div>
+      )}
+      
+      {/* Modify Position/Order Modal */}
+      {isModifyModalOpen && modifyingTrade && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
+          <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-xl font-bold text-white mb-4 flex items-center justify-between">
+              <span>Modify {modifyingTrade.status === 'Executed' ? 'Position' : 'Order'}</span>
+              <button 
+                onClick={closeModifyTradeModal}
+                className="text-gray-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </h3>
+            
+            <div className="mb-4">
+              <div className="flex justify-between mb-2">
+                <span className="text-gray-400">Symbol:</span>
+                <span className="font-semibold text-white">{modifyingTrade.symbol || modifyingTrade.asset}</span>
+              </div>
+              <div className="flex justify-between mb-2">
+                <span className="text-gray-400">ID:</span>
+                <span className="font-mono text-sm text-white">{modifyingTrade.id}</span>
+              </div>
+              <div className="flex justify-between mb-2">
+                <span className="text-gray-400">Type:</span>
+                <span className={modifyingTrade.type === 'Buy' ? 'text-green-400' : 'text-red-400'}>
+                  {modifyingTrade.type}
+                </span>
+              </div>
+              <div className="flex justify-between mb-2">
+                <span className="text-gray-400">Volume:</span>
+                <span className="text-white">{modifyingTrade.volume || modifyingTrade.quantity} lot(s)</span>
+              </div>
+              {modifyingTrade.opening && (
+                <div className="flex justify-between mb-2">
+                  <span className="text-gray-400">Price:</span>
+                  <span className="text-white">{modifyingTrade.opening}</span>
+                </div>
+              )}
+            </div>
+            
+            <div className="space-y-4 mb-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-400 mb-1">
+                  Stop Loss
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={modifyValues.stopLoss !== null ? modifyValues.stopLoss : ''}
+                  onChange={(e) => setModifyValues(prev => ({
+                    ...prev,
+                    stopLoss: e.target.value === '' ? null : parseFloat(e.target.value)
+                  }))}
+                  className="w-full px-3 py-2 bg-[#2A2A2A] border border-[#3A3A3A] rounded-md text-white"
+                  placeholder="Enter stop loss price"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-400 mb-1">
+                  Take Profit
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={modifyValues.takeProfit !== null ? modifyValues.takeProfit : ''}
+                  onChange={(e) => setModifyValues(prev => ({
+                    ...prev,
+                    takeProfit: e.target.value === '' ? null : parseFloat(e.target.value)
+                  }))}
+                  className="w-full px-3 py-2 bg-[#2A2A2A] border border-[#3A3A3A] rounded-md text-white"
+                  placeholder="Enter take profit price"
+                />
+              </div>
+            </div>
+            
+            <div className="flex justify-end">
+              <button
+                onClick={() => {
+                  // Make sure at least one value is provided
+                  if (modifyValues.stopLoss === null && modifyValues.takeProfit === null) {
+                    toast.error('At least one of Stop Loss or Take Profit must be provided');
+                    return;
+                  }
+                  
+                  // Call the handleModifyTrade function with the values from the modal
+                  handleModifyTrade(modifyingTrade, {
+                    stopLoss: modifyValues.stopLoss,
+                    takeProfit: modifyValues.takeProfit,
+                    // Add options for the enhanced API endpoints
+                    options: {
+                      symbol: modifyingTrade.symbol || modifyingTrade.asset,
+                      comment: `Modified from Trade Management UI on ${new Date().toISOString()}`
+                    }
+                  });
+                  
+                  // Close the modal
+                  closeModifyTradeModal();
+                }}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md font-medium"
+              >
+                Apply Changes
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

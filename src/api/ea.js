@@ -264,36 +264,33 @@ export const modifyEAPosition = async (accountId, positionId, modifications, opt
     // Normalize modification parameters - support both snake_case and camelCase
     const stopLoss = modifications.stop_loss !== undefined ? modifications.stop_loss : modifications.stopLoss;
     const takeProfit = modifications.take_profit !== undefined ? modifications.take_profit : modifications.takeProfit;
-    const price = modifications.price !== undefined ? modifications.price : null;
     
-    // Check if at least one valid modification is provided
-    // Allow price as a valid modification parameter as well
-    if ((stopLoss === undefined || stopLoss === null) && 
-        (takeProfit === undefined || takeProfit === null) &&
-        (price === undefined || price === null)) {
-      throw new Error('At least one of price, stop_loss or take_profit must be provided');
+    // Based on the curl example and API requirements, both stop_loss and take_profit must be provided
+    if ((stopLoss === undefined || stopLoss === null) || 
+        (takeProfit === undefined || takeProfit === null)) {
+      throw new Error('At least one of stop_loss or take_profit must be provided');
     }
     
     // Format request data according to the API structure as shown in curl example
     const requestData = {
       position_id: positionId,
-      stop_loss: stopLoss !== undefined && stopLoss !== null ? Number(stopLoss) : null,
-      take_profit: takeProfit !== undefined && takeProfit !== null ? Number(takeProfit) : null,
-      // Include price if provided
-      ...(price !== null && { price: Number(price) }),
+      stop_loss: stopLoss !== undefined ? Number(stopLoss) : 0.0,
+      take_profit: takeProfit !== undefined ? Number(takeProfit) : 0.0,
       // Include these fields directly in request body as they are in the curl example
       symbol: modifications.symbol || options.symbol || '',  // Symbol can come from modifications or options
       comment: modifications.comment || options.comment || 'EA API Position Modify',
-      request_id: modifications.request_id || options.request_id || null,
-      volume: modifications.volume || 0.0  // Volume can be specified or EA will use existing
+      request_id: modifications.request_id || options.request_id || null
     };
     
-    // Remove any null values from requestData to ensure clean request
-    Object.keys(requestData).forEach(key => {
-      if (requestData[key] === null || requestData[key] === undefined) {
-        delete requestData[key];
-      }
-    });
+    // According to the curl example, we need to ensure both stop_loss and take_profit
+    // are included in the request, even if one is 0
+    if (requestData.stop_loss === null || requestData.stop_loss === undefined) {
+      requestData.stop_loss = 0.0;
+    }
+    
+    if (requestData.take_profit === null || requestData.take_profit === undefined) {
+      requestData.take_profit = 0.0;
+    }
     
     console.log('Sending modify position request with data:', requestData);
     
