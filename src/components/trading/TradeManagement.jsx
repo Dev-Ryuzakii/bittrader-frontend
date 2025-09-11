@@ -5,6 +5,10 @@ import {
   getEAOrders, 
   getEAAccountBalance, 
   getEAAccounts,
+  closeEAPosition,
+  cancelEAOrder,
+  modifyEAPosition,
+  modifyEAOrder,
   isEAAccount,
   eaWebSocket,
   EA_WEBSOCKET_MESSAGE_TYPES
@@ -56,6 +60,14 @@ function TradeManagement({ selectedAccount: propSelectedAccount, onTradeSelect, 
     freeMargin: 0,
     currency: 'USD',
     leverage: 0
+  });
+  
+  // Modal state for position modifications
+  const [isModifyModalOpen, setIsModifyModalOpen] = useState(false);
+  const [modifyingTrade, setModifyingTrade] = useState(null);
+  const [modifyValues, setModifyValues] = useState({
+    stopLoss: null,
+    takeProfit: null
   });
   
   // Debug mode - set to false for production
@@ -671,6 +683,155 @@ function TradeManagement({ selectedAccount: propSelectedAccount, onTradeSelect, 
     }
   }, [selectedAccount, fetchTrades]);
 
+  // Open the modify trade modal
+  const openModifyTradeModal = (trade) => {
+    setModifyingTrade(trade);
+    setModifyValues({
+      stopLoss: trade.sl || null,
+      takeProfit: trade.tp || null
+    });
+    setIsModifyModalOpen(true);
+  };
+  
+  // Close the modify trade modal
+  const closeModifyTradeModal = () => {
+    setIsModifyModalOpen(false);
+    setModifyingTrade(null);
+    setModifyValues({
+      stopLoss: null,
+      takeProfit: null
+    });
+  };
+
+  // Handle trade modification (update stop loss/take profit)
+  const handleModifyTrade = async (trade, modifications) => {
+    if (!selectedAccount?.id || !trade?.id) return;
+    
+    const tradeId = trade.id;
+    const isPosition = trade.status === 'Executed';
+    
+    toast.loading(`Modifying ${isPosition ? 'position' : 'order'} ${tradeId}...`, { id: 'modify-trade' });
+    
+    try {
+      const isEA = isEAAccount(selectedAccount);
+      
+      if (isEA) {
+        console.log(`Modifying EA ${isPosition ? 'position' : 'order'}:`, tradeId, modifications);
+        
+        // Extract additional options if provided
+        const options = modifications.options || {};
+        
+        if (isPosition) {
+          // Modify position with enhanced API parameters matching the curl format
+          // Check if at least one of the required modification parameters is provided
+          if (modifications.stopLoss === null && 
+              modifications.takeProfit === null && 
+              modifications.price === null) {
+            throw new Error('At least one of price, stop loss or take profit must be provided');
+          }
+          
+          // Directly pass parameters as expected by the API endpoint
+          const result = await modifyEAPosition(
+            selectedAccount.id, 
+            tradeId, 
+            {
+              stop_loss: modifications.stopLoss,
+              take_profit: modifications.takeProfit,
+              price: modifications.price,  // Include price parameter if provided
+              symbol: options.symbol || trade.symbol || trade.asset || '',
+              comment: options.comment || 'Modified from Trade Management',
+              request_id: options.request_id || `mod_pos_${Date.now()}`
+            }
+          );
+          
+          if (result.success) {
+            toast.success(
+              <div>
+                <p className="font-bold">Position Modified Successfully</p>
+                <p>{trade.symbol} • {trade.volume || trade.quantity} lot(s)</p>
+                <p className="text-xs mt-1">Your changes will be applied shortly</p>
+                {result.request_id && (
+                  <p className="text-xs text-gray-300">Request ID: {result.request_id}</p>
+                )}
+              </div>,
+              { id: 'modify-trade', duration: 4000 }
+            );
+            fetchTrades();
+            return result;
+          } else {
+            // Enhanced error handling
+            let errorMsg = result.error || 'Failed to modify position';
+            let suggestions = result.suggestions || [];
+            
+            if (suggestions.length > 0) {
+              errorMsg += `. Suggestions: ${suggestions.join(', ')}`;
+            }
+            
+            throw new Error(errorMsg);
+          }
+        } else {
+          // Modify order with enhanced API parameters matching the curl format
+          const result = await modifyEAOrder(
+            selectedAccount.id, 
+            tradeId, 
+            {
+              order_id: tradeId,
+              price: modifications.price,
+              stop_loss: modifications.stopLoss,
+              take_profit: modifications.takeProfit,
+              comment: options.comment || 'Modified from Trade Management',
+              symbol: options.symbol || trade.symbol || trade.asset || '',
+              request_id: options.request_id || `mod_ord_${Date.now()}`
+            }
+          );
+          
+          if (result.success) {
+            toast.success(
+              <div>
+                <p className="font-bold">Order Modified Successfully</p>
+                <p>{trade.symbol} • {trade.volume || trade.quantity} lot(s)</p>
+                <p className="text-xs mt-1">Your changes will be applied shortly</p>
+                {result.request_id && (
+                  <p className="text-xs text-gray-300">Request ID: {result.request_id}</p>
+                )}
+              </div>,
+              { id: 'modify-trade', duration: 4000 }
+            );
+            fetchTrades();
+            return result;
+          } else {
+            // Enhanced error handling
+            let errorMsg = result.error || 'Failed to modify order';
+            let suggestions = result.suggestions || [];
+            
+            if (suggestions.length > 0) {
+              errorMsg += `. Suggestions: ${suggestions.join(', ')}`;
+            }
+            
+            throw new Error(errorMsg);
+          }
+        }
+      } else {
+        // Logic for non-EA accounts would go here
+        toast.error('Modifying trades is currently only supported for EA accounts', { id: 'modify-trade' });
+        throw new Error('Modifying trades is currently only supported for EA accounts');
+      }
+    } catch (error) {
+      console.error('Error in handleModifyTrade:', error);
+      
+      toast.error(
+        <div>
+          <p className="font-bold">Failed to Modify Trade</p>
+          <p>Trade ID: {tradeId}</p>
+          <p className="text-sm text-red-300">Error: {error.message || 'Unknown error'}</p>
+        </div>,
+        { id: 'modify-trade', duration: 5000 }
+      );
+      
+      return { success: false, error: error.message };
+    }
+  };
+
   // Calculate trading statistics
   const calculateStats = useCallback((tradeData, balanceData) => {
     const stats = {
@@ -703,7 +864,7 @@ function TradeManagement({ selectedAccount: propSelectedAccount, onTradeSelect, 
   }, []);
 
   // Handle trade closure
-  const handleCloseTrade = async (tradeId) => {
+  const handleCloseTrade = async (tradeId, options = {}) => {
     if (!selectedAccount?.id || !tradeId) return;
     
     toast.loading(`Closing trade ${tradeId}...`, { id: 'close-trade' });
@@ -714,28 +875,38 @@ function TradeManagement({ selectedAccount: propSelectedAccount, onTradeSelect, 
       if (isEA) {
         console.log('Closing EA trade:', tradeId);
         
+        // Find the trade in our state to get details
+        const trade = trades.find(t => t.id === tradeId || t.order_number === tradeId);
+        const symbol = trade?.symbol || trade?.asset || '';
+        const volume = trade?.volume || trade?.quantity || 0;
+        const isPosition = trade?.status === 'Executed';
+        
         // Try to close as position first
         try {
-          // Use the correct API endpoint for closing positions
-          const positionUrl = `${API_CONFIG.baseUrl}${API_CONFIG.paths.eaClosePosition(selectedAccount.id, tradeId)}`;
+          console.log('Attempting to close position with ID:', tradeId);
           
-          console.log('Attempting to close position with URL:', positionUrl);
-          
-          const response = await fetch(positionUrl, {
-            method: 'DELETE',
-            headers: getAuthHeaders()
+          // Use the imported closeEAPosition function from ea.js with enhanced parameters
+          const result = await closeEAPosition(selectedAccount.id, tradeId, {
+            comment: options.comment || 'Closed from Trade Management',
+            symbol: symbol,
+            volume: volume,
+            // Enhanced fill policy support from backend
+            typeFilling: options.typeFilling || 1, // Default to IOC (Immediate-or-Cancel)
+            deviation: options.deviation || 10,    // Default slippage in points
+            request_id: options.request_id || `close_${Date.now()}`
           });
           
-          if (response.ok) {
-            const data = await response.json();
-            
+          if (result.success) {
             toast.success(
               <div>
                 <p className="font-bold">Position Closed Successfully</p>
-                <p>{data.symbol || ''} • {data.volume || ''} lot(s)</p>
-                {data.profit && <p className={data.profit >= 0 ? "text-green-400" : "text-red-400"}>
-                  Profit: {data.profit >= 0 ? '+' : ''}{data.profit?.toFixed(2)}
+                <p>{result.symbol || symbol || ''} • {result.volume || volume || ''} lot(s)</p>
+                {result.profit && <p className={result.profit >= 0 ? "text-green-400" : "text-red-400"}>
+                  Profit: {result.profit >= 0 ? '+' : ''}{typeof result.profit === 'number' ? result.profit.toFixed(2) : result.profit}
                 </p>}
+                {result.request_id && (
+                  <p className="text-xs text-gray-300">Request ID: {result.request_id}</p>
+                )}
               </div>,
               { id: 'close-trade', duration: 5000 }
             );
@@ -743,30 +914,44 @@ function TradeManagement({ selectedAccount: propSelectedAccount, onTradeSelect, 
             return;
           }
           
-          throw new Error(`Failed to close position: ${response.status}`);
+          throw new Error(result.error || 'Failed to close position');
         } catch (positionError) {
-          console.log('Not a position or error closing position, trying as order...');
+          console.log('Not a position or error closing position, trying as order...', positionError);
+          
+          // Check if fill policy error and retry with different fill policy
+          const fillPolicyError = positionError.message?.toLowerCase().includes('fill policy') || 
+                                 positionError.message?.toLowerCase().includes('invalid fills');
+                                 
+          if (fillPolicyError && !options.retryAttempted) {
+            console.log('Fill policy error detected, retrying with different fill policy');
+            return handleCloseTrade(tradeId, { 
+              ...options, 
+              typeFilling: 2,  // Try with Return fill type
+              retryAttempted: true,
+              comment: 'Retry with different fill policy'
+            });
+          }
           
           // Try cancelling as pending order
           try {
-            // Use the correct API endpoint for closing orders
-            const orderUrl = `${API_CONFIG.baseUrl}${API_CONFIG.paths.eaCloseOrder(selectedAccount.id, tradeId)}`;
+            console.log('Attempting to cancel order with ID:', tradeId);
             
-            console.log('Attempting to close order with URL:', orderUrl);
-            
-            const response = await fetch(orderUrl, {
-              method: 'DELETE',
-              headers: getAuthHeaders()
+            // Use the imported cancelEAOrder function from ea.js with enhanced parameters
+            const result = await cancelEAOrder(selectedAccount.id, tradeId, {
+              comment: options.comment || 'Cancelled from Trade Management',
+              symbol: symbol,
+              request_id: options.request_id || `cancel_${Date.now()}`
             });
             
-            if (response.ok) {
-              const data = await response.json();
-              
+            if (result.success) {
               toast.success(
                 <div>
                   <p className="font-bold">Order Cancelled Successfully</p>
-                  <p>{data.symbol || ''} • {data.volume || ''} lot(s)</p>
+                  <p>{result.symbol || symbol || ''} • {result.volume || volume || ''} lot(s)</p>
                   <p>Order #{tradeId}</p>
+                  {result.request_id && (
+                    <p className="text-xs text-gray-300">Request ID: {result.request_id}</p>
+                  )}
                 </div>,
                 { id: 'close-trade', duration: 4000 }
               );
@@ -774,17 +959,33 @@ function TradeManagement({ selectedAccount: propSelectedAccount, onTradeSelect, 
               return;
             }
             
-            throw new Error(`Failed to cancel order: ${response.status}`);
+            throw new Error(result.error || 'Failed to cancel order');
           } catch (orderError) {
             console.error('Failed to close EA trade:', { positionError, orderError });
+            
+            // Extract helpful suggestions if available
+            const suggestions = [];
+            if (orderError.suggestions) suggestions.push(...orderError.suggestions);
+            if (positionError.suggestions) suggestions.push(...positionError.suggestions);
+            
             toast.error(
               <div>
                 <p className="font-bold">Failed to Close Trade</p>
                 <p>Trade ID: {tradeId}</p>
-                <p className="text-sm text-red-300">Error: {positionError.message || 'Unknown error'}</p>
+                <p className="text-sm text-red-300">Error: {orderError.message || positionError.message || 'Unknown error'}</p>
+                {suggestions.length > 0 && (
+                  <div className="mt-2 text-xs">
+                    <p className="font-semibold">Suggestions:</p>
+                    <ul className="list-disc pl-4">
+                      {suggestions.map((suggestion, i) => (
+                        <li key={i}>{suggestion}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
                 <p className="text-xs mt-1">Please try again or contact support if this persists.</p>
               </div>,
-              { id: 'close-trade', duration: 6000 }
+              { id: 'close-trade', duration: 8000 }
             );
           }
         }
@@ -1110,7 +1311,7 @@ function TradeManagement({ selectedAccount: propSelectedAccount, onTradeSelect, 
           onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
           className="bg-[#222] border border-[#333] rounded-lg px-3 py-2 text-white text-sm"
         >
-          <option value="all">All Status</option>
+          <option value="all">All Statuses</option>
           <option value="Executed">Executed</option>
           <option value="Pending">Pending</option>
           <option value="Failed">Failed</option>
@@ -1279,7 +1480,7 @@ function TradeManagement({ selectedAccount: propSelectedAccount, onTradeSelect, 
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          // Handle edit
+                          openModifyTradeModal(trade);
                         }}
                         className="p-1 text-blue-400 hover:text-blue-300 transition-colors"
                         title="Edit trade"
@@ -1298,6 +1499,114 @@ function TradeManagement({ selectedAccount: propSelectedAccount, onTradeSelect, 
       {error && (
         <div className="bg-red-500/20 border border-red-500/30 text-red-400 px-4 py-3 rounded-lg">
           {error}
+        </div>
+      )}
+      
+      {/* Modify Position/Order Modal */}
+      {isModifyModalOpen && modifyingTrade && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
+          <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-xl font-bold text-white mb-4 flex items-center justify-between">
+              <span>Modify {modifyingTrade.status === 'Executed' ? 'Position' : 'Order'}</span>
+              <button 
+                onClick={closeModifyTradeModal}
+                className="text-gray-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </h3>
+            
+            <div className="mb-4">
+              <div className="flex justify-between mb-2">
+                <span className="text-gray-400">Symbol:</span>
+                <span className="font-semibold text-white">{modifyingTrade.symbol || modifyingTrade.asset}</span>
+              </div>
+              <div className="flex justify-between mb-2">
+                <span className="text-gray-400">ID:</span>
+                <span className="font-mono text-sm text-white">{modifyingTrade.id}</span>
+              </div>
+              <div className="flex justify-between mb-2">
+                <span className="text-gray-400">Type:</span>
+                <span className={modifyingTrade.type === 'Buy' ? 'text-green-400' : 'text-red-400'}>
+                  {modifyingTrade.type}
+                </span>
+              </div>
+              <div className="flex justify-between mb-2">
+                <span className="text-gray-400">Volume:</span>
+                <span className="text-white">{modifyingTrade.volume || modifyingTrade.quantity} lot(s)</span>
+              </div>
+              {modifyingTrade.opening && (
+                <div className="flex justify-between mb-2">
+                  <span className="text-gray-400">Price:</span>
+                  <span className="text-white">{modifyingTrade.opening}</span>
+                </div>
+              )}
+            </div>
+            
+            <div className="space-y-4 mb-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-400 mb-1">
+                  Stop Loss
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={modifyValues.stopLoss !== null ? modifyValues.stopLoss : ''}
+                  onChange={(e) => setModifyValues(prev => ({
+                    ...prev,
+                    stopLoss: e.target.value === '' ? null : parseFloat(e.target.value)
+                  }))}
+                  className="w-full px-3 py-2 bg-[#2A2A2A] border border-[#3A3A3A] rounded-md text-white"
+                  placeholder="Enter stop loss price"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-400 mb-1">
+                  Take Profit
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={modifyValues.takeProfit !== null ? modifyValues.takeProfit : ''}
+                  onChange={(e) => setModifyValues(prev => ({
+                    ...prev,
+                    takeProfit: e.target.value === '' ? null : parseFloat(e.target.value)
+                  }))}
+                  className="w-full px-3 py-2 bg-[#2A2A2A] border border-[#3A3A3A] rounded-md text-white"
+                  placeholder="Enter take profit price"
+                />
+              </div>
+            </div>
+            
+            <div className="flex justify-end">
+              <button
+                onClick={() => {
+                  // Make sure at least one value is provided
+                  if (modifyValues.stopLoss === null && modifyValues.takeProfit === null) {
+                    toast.error('At least one of Stop Loss or Take Profit must be provided');
+                    return;
+                  }
+                  
+                  // Call the handleModifyTrade function with the values from the modal
+                  handleModifyTrade(modifyingTrade, {
+                    stopLoss: modifyValues.stopLoss,
+                    takeProfit: modifyValues.takeProfit,
+                    // Add options for the enhanced API endpoints
+                    options: {
+                      symbol: modifyingTrade.symbol || modifyingTrade.asset,
+                      comment: `Modified from Trade Management UI on ${new Date().toISOString()}`
+                    }
+                  });
+                  
+                  // Close the modal
+                  closeModifyTradeModal();
+                }}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md font-medium"
+              >
+                Apply Changes
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

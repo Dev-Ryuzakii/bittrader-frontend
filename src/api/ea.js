@@ -169,6 +169,178 @@ export const getEAPositions = async (accountId) => {
   }
 };
 
+/**
+ * Close an open position via EA
+ * @param {string} accountId - EA account ID
+ * @param {string|number} positionId - Position ID to close
+ * @param {object} options - Additional options (comment, etc.)
+ */
+export const closeEAPosition = async (accountId, positionId, options = {}) => {
+  try {
+    console.log('Closing EA position:', { accountId, positionId, options });
+    
+    const requestData = {
+      position_id: positionId,
+      request_id: options.request_id || null,
+      comment: options.comment || 'EA API Position Close',
+      // Enhanced fill policy support
+      symbol: options.symbol || '',          // Add symbol if available, EA will get from position otherwise
+      volume: options.volume || 0.0,         // Add volume if available, EA will get from position otherwise
+      position_type: options.positionType || null,  // Add position type if provided
+      price: options.price || 0.0,           // Current market price or override price
+      type_filling: options.typeFilling || 0, // Fill policy: 0=FOK (Fill-or-Kill), 1=IOC (Immediate-or-Cancel), 2=Return
+      deviation: options.deviation || 10      // Default slippage in points
+    };
+    
+    const response = await api.post(
+      `/api/v1/ea/accounts/${accountId}/close-position`,
+      requestData
+    );
+    
+    const result = {
+      success: response.success || true,
+      message: response.message || 'Position close request queued for EA execution',
+      request_id: response.request_id || null,
+      position_id: positionId,
+      account_id: accountId,
+      status: response.status || 'queued_for_execution',
+      queued_at: response.queued_at || new Date().toISOString(),
+      ...response
+    };
+    
+    console.log('EA position close response:', result);
+    return result;
+  } catch (error) {
+    console.error('Error closing EA position:', error);
+    
+    let errorMessage = 'Failed to close position';
+    let errorType = 'unknown';
+    let suggestions = [];
+    
+    if (error.response?.status === 404) {
+      errorMessage = 'EA account or position not found';
+      errorType = 'position_not_found';
+      suggestions = ['Verify position ID is correct', 'Check if EA is connected'];
+    } else if (error.response?.status === 400) {
+      errorMessage = error.response.data?.detail || 'Invalid request parameters';
+      errorType = 'invalid_parameters';
+      
+      // Special handling for fill policy errors
+      const errorDetail = error.response.data?.detail?.toLowerCase() || '';
+      if (errorDetail.includes('invalid fills') || errorDetail.includes('10030')) {
+        errorMessage = 'Failed to close position due to fill policy restrictions';
+        errorType = 'fill_policy_error';
+        suggestions = [
+          'Try setting type_filling to 1 (IOC) or 2 (Return)',
+          'Check market conditions and price deviations',
+          'Increase deviation value for more slippage allowance'
+        ];
+      }
+    }
+    
+    return {
+      success: false,
+      error: errorMessage,
+      message: errorMessage,
+      error_type: errorType,
+      suggestions: suggestions,
+      status: 'failed',
+      position_id: positionId
+    };
+  }
+};
+
+/**
+ * Modify an existing position via EA (update SL/TP)
+ * @param {string} accountId - EA account ID
+ * @param {string|number} positionId - Position ID to modify
+ * @param {object} modifications - Modification parameters (stop_loss, take_profit)
+ * @param {object} options - Additional options (comment, etc.)
+ */
+export const modifyEAPosition = async (accountId, positionId, modifications, options = {}) => {
+  try {
+    console.log('Modifying EA position:', { accountId, positionId, modifications, options });
+    
+    // Normalize modification parameters - support both snake_case and camelCase
+    const stopLoss = modifications.stop_loss !== undefined ? modifications.stop_loss : modifications.stopLoss;
+    const takeProfit = modifications.take_profit !== undefined ? modifications.take_profit : modifications.takeProfit;
+    
+    // Based on the curl example and API requirements, both stop_loss and take_profit must be provided
+    if ((stopLoss === undefined || stopLoss === null) || 
+        (takeProfit === undefined || takeProfit === null)) {
+      throw new Error('At least one of stop_loss or take_profit must be provided');
+    }
+    
+    // Format request data according to the API structure as shown in curl example
+    const requestData = {
+      position_id: positionId,
+      stop_loss: stopLoss !== undefined ? Number(stopLoss) : 0.0,
+      take_profit: takeProfit !== undefined ? Number(takeProfit) : 0.0,
+      // Include these fields directly in request body as they are in the curl example
+      symbol: modifications.symbol || options.symbol || '',  // Symbol can come from modifications or options
+      comment: modifications.comment || options.comment || 'EA API Position Modify',
+      request_id: modifications.request_id || options.request_id || null
+    };
+    
+    // According to the curl example, we need to ensure both stop_loss and take_profit
+    // are included in the request, even if one is 0
+    if (requestData.stop_loss === null || requestData.stop_loss === undefined) {
+      requestData.stop_loss = 0.0;
+    }
+    
+    if (requestData.take_profit === null || requestData.take_profit === undefined) {
+      requestData.take_profit = 0.0;
+    }
+    
+    console.log('Sending modify position request with data:', requestData);
+    
+    const response = await api.post(
+      `/api/v1/ea/accounts/${accountId}/modify-position`,
+      requestData
+    );
+    
+    const result = {
+      success: response.success || true,
+      message: response.message || 'Position modification request queued for EA execution',
+      request_id: response.request_id || null,
+      position_id: positionId,
+      account_id: accountId,
+      status: response.status || 'queued_for_execution',
+      queued_at: response.queued_at || new Date().toISOString(),
+      ...response
+    };
+    
+    console.log('EA position modify response:', result);
+    return result;
+  } catch (error) {
+    console.error('Error modifying EA position:', error);
+    
+    let errorMessage = 'Failed to modify position';
+    let errorType = 'unknown';
+    let suggestions = [];
+    
+    if (error.response?.status === 404) {
+      errorMessage = 'EA account or position not found';
+      errorType = 'position_not_found';
+      suggestions = ['Verify position ID is correct', 'Check if EA is connected'];
+    } else if (error.response?.status === 400) {
+      errorMessage = error.response.data?.detail || 'Invalid request parameters';
+      errorType = 'invalid_parameters';
+      suggestions = ['Check that values are within acceptable ranges for the broker'];
+    }
+    
+    return {
+      success: false,
+      error: errorMessage,
+      message: errorMessage,
+      error_type: errorType,
+      suggestions: suggestions,
+      status: 'failed',
+      position_id: positionId
+    };
+  }
+};
+
 // =============================================================================
 // ORDER MANAGEMENT
 // =============================================================================
@@ -203,6 +375,163 @@ export const getEAOrders = async (accountId) => {
       success: false,
       error: error.message || 'Failed to fetch EA orders',
       data: []
+    };
+  }
+};
+
+/**
+ * Cancel a pending order via EA
+ * @param {string} accountId - EA account ID
+ * @param {string|number} orderId - Order ID to cancel
+ * @param {object} options - Additional options (comment, etc.)
+ */
+export const cancelEAOrder = async (accountId, orderId, options = {}) => {
+  try {
+    console.log('Cancelling EA order:', { accountId, orderId, options });
+    
+    const requestData = {
+      order_id: orderId,
+      request_id: options.request_id || null,
+      comment: options.comment || 'EA API Order Cancel',
+      // Additional fields from backend endpoint
+      symbol: options.symbol || '',  // Add symbol field even if empty, EA will get from order
+      volume: options.volume || 0.0  // EA will get actual volume from order
+    };
+    
+    const response = await api.post(
+      `/api/v1/ea/accounts/${accountId}/cancel-order`,
+      requestData
+    );
+    
+    const result = {
+      success: response.success || true,
+      message: response.message || 'Order cancellation request queued for EA execution',
+      request_id: response.request_id || null,
+      order_id: orderId,
+      account_id: accountId,
+      status: response.status || 'queued_for_execution',
+      queued_at: response.queued_at || new Date().toISOString(),
+      ...response
+    };
+    
+    console.log('EA order cancel response:', result);
+    return result;
+  } catch (error) {
+    console.error('Error cancelling EA order:', error);
+    
+    let errorMessage = 'Failed to cancel order';
+    let errorType = 'unknown';
+    let suggestions = [];
+    
+    if (error.response?.status === 404) {
+      errorMessage = 'EA account or order not found';
+      errorType = 'order_not_found';
+      suggestions = ['Verify order ID is correct', 'Check if EA is connected'];
+    } else if (error.response?.status === 400) {
+      errorMessage = error.response.data?.detail || 'Invalid request parameters';
+      errorType = 'invalid_parameters';
+    }
+    
+    return {
+      success: false,
+      error: errorMessage,
+      message: errorMessage,
+      error_type: errorType,
+      suggestions: suggestions,
+      status: 'failed',
+      order_id: orderId
+    };
+  }
+};
+
+/**
+ * Modify an existing pending order via EA (update price, SL/TP)
+ * @param {string} accountId - EA account ID
+ * @param {string|number} orderId - Order ID to modify
+ * @param {object} modifications - Modification parameters (price, stop_loss, take_profit)
+ * @param {object} options - Additional options (comment, etc.)
+ */
+export const modifyEAOrder = async (accountId, orderId, modifications, options = {}) => {
+  try {
+    console.log('Modifying EA order:', { accountId, orderId, modifications, options });
+    
+    // Normalize modification parameters - support both snake_case and camelCase
+    const price = modifications.price !== undefined ? modifications.price : modifications.price;
+    const stopLoss = modifications.stop_loss !== undefined ? modifications.stop_loss : modifications.stopLoss;
+    const takeProfit = modifications.take_profit !== undefined ? modifications.take_profit : modifications.takeProfit;
+    
+    // Validate required parameters
+    if ((price === undefined || price === null) && 
+        (stopLoss === undefined || stopLoss === null) && 
+        (takeProfit === undefined || takeProfit === null)) {
+      throw new Error('At least one of price, stop_loss or take_profit must be provided');
+    }
+    
+    // Create request data matching the curl format
+    const requestData = {
+      order_id: orderId,
+      price: price !== undefined && price !== null ? Number(price) : null,
+      stop_loss: stopLoss !== undefined && stopLoss !== null ? Number(stopLoss) : null,
+      take_profit: takeProfit !== undefined && takeProfit !== null ? Number(takeProfit) : null,
+      // Include these directly in the request body as they are in the curl example
+      request_id: modifications.request_id || options.request_id || null,
+      comment: modifications.comment || options.comment || 'EA API Order Modify',
+      symbol: modifications.symbol || options.symbol || '',  // Symbol may come from modifications or options
+      volume: modifications.volume || 0.0                    // Volume can be specified or EA will use existing
+    };
+    
+    // Remove any null values from requestData to ensure clean request
+    Object.keys(requestData).forEach(key => {
+      if (requestData[key] === null || requestData[key] === undefined) {
+        delete requestData[key];
+      }
+    });
+    
+    console.log('Sending modify order request with data:', requestData);
+    
+    const response = await api.post(
+      `/api/v1/ea/accounts/${accountId}/modify-order`,
+      requestData
+    );
+    
+    const result = {
+      success: response.success || true,
+      message: response.message || 'Order modification request queued for EA execution',
+      request_id: response.request_id || null,
+      order_id: orderId,
+      account_id: accountId,
+      status: response.status || 'queued_for_execution',
+      queued_at: response.queued_at || new Date().toISOString(),
+      ...response
+    };
+    
+    console.log('EA order modify response:', result);
+    return result;
+  } catch (error) {
+    console.error('Error modifying EA order:', error);
+    
+    let errorMessage = 'Failed to modify order';
+    let errorType = 'unknown';
+    let suggestions = [];
+    
+    if (error.response?.status === 404) {
+      errorMessage = 'EA account or order not found';
+      errorType = 'order_not_found';
+      suggestions = ['Verify order ID is correct', 'Check if EA is connected'];
+    } else if (error.response?.status === 400) {
+      errorMessage = error.response.data?.detail || 'Invalid request parameters';
+      errorType = 'invalid_parameters';
+      suggestions = ['Check that values are within acceptable ranges for the broker'];
+    }
+    
+    return {
+      success: false,
+      error: errorMessage,
+      message: errorMessage,
+      error_type: errorType,
+      suggestions: suggestions,
+      status: 'failed',
+      order_id: orderId
     };
   }
 };
@@ -338,41 +667,123 @@ export const placeEAPendingOrder = async (accountId, orderRequest) => {
 /**
  * Place a pair trade (spread trading) via EA
  * Executes simultaneous trades on two symbols to trade the spread
+ * 
+ * @param {string} accountId - EA account ID
+ * @param {object} pairRequest - Pair trading request object with:
+ *   - symbol1: First symbol
+ *   - symbol2: Second symbol
+ *   - volume: Trade volume (applies to both symbols, hedge ratio auto-calculated)
+ *   - action: BUY or SELL (for spread direction) - optional, auto-detected in STATISTICAL mode
+ *   - correlation_type: STATISTICAL, SIMPLE, MEAN_REVERSION
+ *   - order_type: MARKET or PENDING
+ *   - spread_stop_loss: Spread-based stop loss
+ *   - spread_take_profit: Spread-based take profit
+ *   - entry_spread: Entry level for PENDING orders
+ *   - spread_direction: NARROW or WIDEN for PENDING orders
+ *   - comment: Trade comment - optional
  */
 export const placeEAPairTrade = async (accountId, pairRequest) => {
   try {
     console.log('Placing EA pair trade with payload:', pairRequest);
-    const response = await api.post(`/api/v1/ea/accounts/${accountId}/pair-trade`, pairRequest);
     
+    // Create a clean payload that matches the exact curl format expected by backend
+      const normalizedRequest = {
+      account_id: accountId, // <-- add this line!
+      symbol1: pairRequest.symbol1,
+      symbol2: pairRequest.symbol2,
+      trade_type: pairRequest.trade_type || pairRequest.action || 'BUY_SPREAD',
+      volume: typeof pairRequest.volume === 'string' ? parseFloat(pairRequest.volume) : pairRequest.volume
+    };
+    
+    // Add optional comment if provided
+    if (pairRequest.comment && pairRequest.comment.trim()) {
+      normalizedRequest.comment = pairRequest.comment.trim();
+    }
+    
+    console.log('Normalized EA pair trade payload (matching curl format):', normalizedRequest);
+
+    // Ensure we're using the endpoint format that aligns with the FastAPI backend
+    const response = await api.post(`/api/v1/ea/accounts/${accountId}/pair-trade`, normalizedRequest);
+    
+    console.log('📥 Raw API response for pair trade:', response);
+    
+    // Format the response to include all expected fields from FastAPI response
     const result = {
-      success: response.success || false,
+      success: response.success !== undefined ? response.success : true,
       message: response.message || 'Pair trade queued for EA execution',
       request_id: response.request_id || null,
       spread_symbol: response.spread_symbol || `${pairRequest.symbol1}-${pairRequest.symbol2}`,
       current_spread: response.current_spread || 0.0,
-      symbol1_request_id: response.symbol1_request_id || null,
-      symbol2_request_id: response.symbol2_request_id || null,
+      symbol1_result: response.symbol1_result || null,
+      symbol2_result: response.symbol2_result || null,
+      spread_analysis: response.spread_analysis || null,
       status: response.status || 'queued',
       queued_at: response.queued_at || new Date().toISOString(),
       ...response
     };
     
+    // Add expected FastAPI fields if they're missing
+    if (response.spread_analysis && !response.spread_analysis.individual_trades) {
+      result.spread_analysis.individual_trades = {
+        symbol1: { 
+          action: response.symbol1_result?.details?.direction || 'unknown', 
+          volume: response.symbol1_result?.details?.volume || pairRequest.volume
+        },
+        symbol2: { 
+          action: response.symbol2_result?.details?.direction || 'unknown',
+          volume: response.symbol2_result?.details?.volume || pairRequest.volume
+        }
+      };
+    }
+    
     console.log('EA pair trade response:', result);
     return result;
   } catch (error) {
-    console.error('Error placing EA pair trade:', error);
+    console.error('❌ Error placing EA pair trade:', error);
+    console.error('❌ Error details:', {
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      message: error.message
+    });
     
     let errorMessage = 'Failed to place EA pair trade';
     let errorType = 'unknown';
+    let suggestions = [];
     
     if (error.response?.status === 404) {
       errorMessage = 'EA account not found';
       errorType = 'account_not_found';
+      suggestions = ['Verify account ID is correct', 'Check if EA is connected'];
     } else if (error.response?.status === 403) {
       errorMessage = 'Access denied to EA account';
       errorType = 'access_denied';
+      suggestions = ['Verify your permissions for this account'];
+    } else if (error.response?.status === 422) {
+      errorMessage = 'Invalid pair trade parameters';
+      errorType = 'validation_error';
+      
+      // Extract detailed validation errors if available
+      if (error.response?.data?.detail && Array.isArray(error.response.data.detail)) {
+        const errors = error.response.data.detail;
+        const errorFields = errors.map(err => {
+          const field = err.loc?.slice(1).join('.') || 'unknown';
+          return `${field}: ${err.msg}`;
+        });
+        errorMessage = `Validation error: ${errorFields.join(', ')}`;
+        suggestions = ['Check input parameters', 'Verify symbol names are correct'];
+      } else if (typeof error.response?.data?.detail === 'string') {
+        errorMessage = error.response.data.detail;
+      }
     } else if (error.response?.data?.detail) {
       errorMessage = error.response.data.detail;
+      
+      // Look for specific error messages to provide targeted suggestions
+      if (errorMessage.toLowerCase().includes('symbol not found')) {
+        suggestions = ['Verify both symbols exist on this broker', 'Check symbol spelling'];
+      } else if (errorMessage.toLowerCase().includes('volume')) {
+        suggestions = ['Volume must be greater than 0.01', 'Check broker minimum volume requirements'];
+      }
     }
     
     return {
@@ -380,6 +791,7 @@ export const placeEAPairTrade = async (accountId, pairRequest) => {
       error: errorMessage,
       message: errorMessage,
       error_type: errorType,
+      suggestions: suggestions,
       status: 'failed'
     };
   }
@@ -1599,6 +2011,10 @@ export default {
   // Position & Order Management
   getEAPositions,
   getEAOrders,
+  closeEAPosition,
+  modifyEAPosition,
+  cancelEAOrder,
+  modifyEAOrder,
   
   // Trade Execution
   placeEATrade,

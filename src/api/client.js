@@ -20,7 +20,7 @@ const validateToken = () => {
     }
     return token;
   } catch (e) {
-    //console.error('Token validation error:', e);
+    console.error('Token validation error:', e);
     auth.clearAuth();
     return null;
   }
