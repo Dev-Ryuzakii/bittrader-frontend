@@ -687,12 +687,18 @@ export const placeEAPairTrade = async (accountId, pairRequest) => {
     console.log('Placing EA pair trade with payload:', pairRequest);
     
     // Create a clean payload that matches the exact curl format expected by backend
-      const normalizedRequest = {
-      account_id: accountId, // <-- add this line!
+    const normalizedRequest = {
       symbol1: pairRequest.symbol1,
       symbol2: pairRequest.symbol2,
       trade_type: pairRequest.trade_type || pairRequest.action || 'BUY_SPREAD',
-      volume: typeof pairRequest.volume === 'string' ? parseFloat(pairRequest.volume) : pairRequest.volume
+      volume: typeof pairRequest.volume === 'string' ? parseFloat(pairRequest.volume) : pairRequest.volume,
+      // Add volume1 and volume2 fields which are required by the API
+      volume1: pairRequest.volume1 || pairRequest.volume,
+      volume2: pairRequest.volume2 || pairRequest.volume,
+      // Add optional fields if present
+      spread_stop_loss: pairRequest.spread_stop_loss || pairRequest.sl,
+      spread_take_profit: pairRequest.spread_take_profit || pairRequest.tp,
+      entry_spread: pairRequest.entry_spread
     };
     
     // Add optional comment if provided
@@ -740,16 +746,38 @@ export const placeEAPairTrade = async (accountId, pairRequest) => {
     return result;
   } catch (error) {
     console.error('❌ Error placing EA pair trade:', error);
+    
+    // Enhanced error handling to properly extract API error details
+    const errorResponse = error.response || {};
+    const errorData = errorResponse.data || {};
+    
     console.error('❌ Error details:', {
-      status: error.response?.status,
-      statusText: error.response?.statusText,
-      data: error.response?.data,
+      status: errorResponse.status,
+      statusText: errorResponse.statusText,
+      data: errorData,
+      detail: errorData.detail,
       message: error.message
     });
     
     let errorMessage = 'Failed to place EA pair trade';
     let errorType = 'unknown';
     let suggestions = [];
+    
+    // Handle 422 validation errors specifically
+    if (errorResponse.status === 422) {
+        if (Array.isArray(errorData.detail)) {
+            // Handle validation error array format
+            errorMessage = errorData.detail.map(err => 
+                `${err.loc.slice(1).join('.')}: ${err.msg}`
+            ).join('; ');
+            errorType = 'validation_error';
+            suggestions = ['Check all required fields are provided', 'Verify field formats'];
+        } else if (errorData.detail) {
+            // Handle single error message
+            errorMessage = errorData.detail;
+            errorType = 'validation_error';
+        }
+    }
     
     if (error.response?.status === 404) {
       errorMessage = 'EA account not found';

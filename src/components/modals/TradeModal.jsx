@@ -39,7 +39,7 @@ import {
   formatSymbolsForPicker 
 } from '../../utils/symbolpicker';
 import PairTradingPanel from './PairTradingPanel';
-import SymbolBrowser from './SymbolBrowser';
+import SymbolSelector from '../trading/SymbolSelector';
 
 const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelect, onPlaceTrade }) => {
   const [activeTab, setActiveTab] = useState('order');
@@ -53,6 +53,7 @@ const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelec
   const [availableSymbols, setAvailableSymbols] = useState([]);
   const [symbolsLoading, setSymbolsLoading] = useState(false);
   const [symbolsLoadedFor, setSymbolsLoadedFor] = useState(null); // Track which account symbols were loaded for
+  const [symbolCount, setSymbolCount] = useState(0); // Track number of available symbols
 
   // Unified Order State (replaces both market and pending states)
   const [orderData, setOrderData] = useState({
@@ -1004,7 +1005,7 @@ const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelec
                     key={account.account_id || account.id} 
                     value={(account.account_id || account.id)?.toString()}
                   >
-                    {account.broker || account.accountName || account.account_name || account.broker_name || `Account ${account.account_id}`}
+                    {account.broker_name || account.broker || account.accountName || `${account.broker_id || 'Broker'} Account ${account.account_id}`}
                     {account.server ? ` (${account.server})` : ''}
                     {account.platform ? ` - ${account.platform}` : ''}
                     {account.is_demo || (account.server && account.server.includes('Demo')) ? ' - Demo' : ''}
@@ -1725,10 +1726,11 @@ const UnifiedOrderPanel = ({
       
       {/* Symbol Selection Modal */}
       {showSymbolModal && (
-        <SymbolBrowser 
-          onClose={closeSymbolModal} 
+        <SymbolSelector 
+          onCancel={closeSymbolModal} 
           onSelect={handleSymbolSelect}
           selectedAccount={selectedAccount}
+          currentSymbol={data.symbol}
         />
       )}
     </div>

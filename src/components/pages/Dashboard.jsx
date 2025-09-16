@@ -124,7 +124,6 @@ const Dashboard = () => {
       account_name: account.broker || account.account_name || account.broker_name || `Account ${account.account_id}`,
       broker_name: account.broker || account.broker_name,
       balance: account.balance || 0,
-      pnl: account.profit || account.pnl || 0, // Use profit from EA data
       equity: account.equity || account.balance || 0,
       margin: account.margin || 0,
       free_margin: account.free_margin || 0,
@@ -145,8 +144,9 @@ const Dashboard = () => {
   // Calculate totals (only from connected EA accounts)
   const connectedAccounts = displayAccounts.filter(account => account.status === 'connected');
   const totalBalance = connectedAccounts.reduce((sum, account) => sum + (account.balance || 0), 0);
-  const totalPnl = connectedAccounts.reduce((sum, account) => sum + (account.profit || account.pnl || 0), 0);
   const totalEquity = connectedAccounts.reduce((sum, account) => sum + (account.equity || 0), 0);
+  // Calculate total P&L as Equity - Balance
+  const totalPnl = totalEquity - totalBalance;
   const totalMargin = connectedAccounts.reduce((sum, account) => sum + (account.margin || 0), 0);
   const totalFreeMargin = connectedAccounts.reduce((sum, account) => sum + (account.free_margin || 0), 0);
 
@@ -221,7 +221,6 @@ const Dashboard = () => {
         ) : (
           <AccountSlider
             totalBalance={totalBalance}
-            totalPnl={totalPnl}
             totalEquity={totalEquity}
             accounts={formattedAccounts}
           />

@@ -754,18 +754,30 @@ const PairTradingPanel = ({ data, setData, onSubmit, submitting, selectedAccount
         {/* Trade Configuration */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">Volume</label>
+            <label className="block text-sm font-medium text-gray-300 mb-2">Volume for {data.symbol1}</label>
             <input
               type="number"
               step="0.01"
               min="0.01"
-              value={data.volume || '0.1'}
-              onChange={(e) => updateData('volume', e.target.value)}
+              value={data.volume1 || '0.1'}
+              onChange={(e) => updateData('volume1', e.target.value)}
               className="w-full bg-[#1A1A1A] border border-[#444] rounded-lg px-3 py-2 text-white"
             />
           </div>
 
-         { /* Trade Action Selection */}
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">Volume for {data.symbol2}</label>
+            <input
+              type="number"
+              step="0.01"
+              min="0.01"
+              value={data.volume2 || '0.1'}
+              onChange={(e) => updateData('volume2', e.target.value)}
+              className="w-full bg-[#1A1A1A] border border-[#444] rounded-lg px-3 py-2 text-white"
+            />
+          </div>
+
+         {/* Line 768 omitted */}         { /* Trade Action Selection */}
                 <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
                   Trade Action
@@ -966,9 +978,9 @@ const PairTradingPanel = ({ data, setData, onSubmit, submitting, selectedAccount
             // For pending orders, single placement button
             <button
               onClick={() => onSubmit('PENDING')}
-              disabled={submitting || !data.symbol1 || !data.symbol2 || !data.entry_spread}
+              disabled={submitting || !data.symbol1 || !data.symbol2 || !data.entry_spread || !data.volume1 || !data.volume2}
               className={`w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors ${
-                submitting || !data.symbol1 || !data.symbol2 || !data.entry_spread ? 'opacity-70 cursor-not-allowed' : ''
+                submitting || !data.symbol1 || !data.symbol2 || !data.entry_spread || !data.volume1 || !data.volume2 ? 'opacity-70 cursor-not-allowed' : ''
               }`}
             >
               {submitting ? 'Placing Pending Order...' : 'Place Pending Spread Order'}
@@ -1041,9 +1053,9 @@ const PairTradingPanel = ({ data, setData, onSubmit, submitting, selectedAccount
               {/* Execute Button */}
               <button
                 onClick={() => onSubmit(selectedAction)}
-                disabled={submitting || !data.symbol1 || !data.symbol2 || !symbol1Price || !symbol2Price}
+                disabled={submitting || !data.symbol1 || !data.symbol2 || !symbol1Price || !symbol2Price || !data.volume1 || !data.volume2}
                 className={`w-full py-3 px-4 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 ${
-                  submitting || !data.symbol1 || !data.symbol2 || !symbol1Price || !symbol2Price
+                  submitting || !data.symbol1 || !data.symbol2 || !symbol1Price || !symbol2Price || !data.volume1 || !data.volume2
                     ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
                     : selectedAction === 'BUY_SPREAD'
                     ? 'bg-gradient-to-r from-green-600 to-green-700 hover:from-green-500 hover:to-green-600 text-white shadow-lg hover:shadow-green-500/25'
