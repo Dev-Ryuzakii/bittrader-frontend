@@ -57,7 +57,7 @@ const TradingViewWidget = ({ symbol = '', theme = 'dark' }) => {
   }, [symbol, theme]);
 
   return (
-    <div className="tradingview-widget-container" style={{ height: '660px', width: '100%', position: 'relative' }}>
+    <div className="tradingview-widget-container" style={{ height: '800px', width: '100%', position: 'relative' }}>
       {isLoading && (
         <div 
           style={{ 
@@ -79,7 +79,7 @@ const TradingViewWidget = ({ symbol = '', theme = 'dark' }) => {
       <div
         className="tradingview-widget-container__widget"
         ref={containerRef}
-        style={{ height: '640px', width: '100%' }}
+        style={{ height: '700px', width: '100%' }}
       ></div>
       <div className="tradingview-widget-copyright" style={{ fontSize: '13px', lineHeight: '20px', textAlign: 'center', marginTop: '0px' }}>
         <a

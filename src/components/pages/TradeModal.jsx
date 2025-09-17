@@ -135,7 +135,7 @@ const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelec
         throw new Error('Volume must be at least 0.01 lots');
       }
 
-      // Create clean payload with proper data types
+      // Create clean payload with proper data types matching the curl example
       const cleanPayload = {
         symbol: marketData.symbol?.toString().trim().toUpperCase(),
         trade_type: marketData.trade_type?.toString().toUpperCase(),
@@ -164,11 +164,11 @@ const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelec
         cleanPayload.comment = marketData.comment.trim();
       }
 
-      //console.log('Sending trade payload:', cleanPayload);
+      console.log('Sending trade payload:', cleanPayload);
 
       const response = await placeTrade(selectedAccount.id, cleanPayload);
       
-      //console.log('Trade response:', response);
+      console.log('Trade response:', response);
       
       if (response.success) {
         const message = response.message || `Market ${cleanPayload.trade_type} order placed successfully for ${cleanPayload.volume} ${cleanPayload.symbol}`;
@@ -200,8 +200,9 @@ const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelec
         throw new Error(response.error || response.message || 'Failed to place trade');
       }
     } catch (error) {
+      console.error('Trade error:', error);
       setError(error.message || 'Failed to place trade. Please try again.');
-      toast.error(error.message);
+      toast.error(error.message || 'Failed to place trade');
     } finally {
       setSubmitting(false);
     }
@@ -286,137 +287,29 @@ const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelec
     setSubmitting(true);
 
     try {
-      const volume1 = parseFloat(pairData.volume1);
-      const volume2 = parseFloat(pairData.volume2);
-      const threshold = parseFloat(pairData.correlation_threshold);
-
-      if (isNaN(volume1) || volume1 <= 0) {
-        throw new Error('Volume for Symbol 1 must be greater than 0');
-      }
-      if (isNaN(volume2) || volume2 <= 0) {
-        throw new Error('Volume for Symbol 2 must be greater than 0');
-      }
-      if (isNaN(threshold) || threshold < 0 || threshold > 1) {
-        throw new Error('Correlation threshold must be between 0 and 1');
-      }
-
-      // Build payload based on order type and correlation type
+      // Build payload based on the exact curl format expected by backend
       const payload = {
-        symbol1: pairData.symbol1.toUpperCase(),
-        symbol2: pairData.symbol2.toUpperCase(),
-        volume1: volume1,
-        volume2: volume2,
-        correlation_type: pairData.correlation_type,
-        correlation_threshold: threshold,
+        symbol1: pairData.symbol1,
+        symbol2: pairData.symbol2,
+        volume: parseFloat(pairData.volume1) || parseFloat(pairData.volume) || 0.1,
+        action: direction || pairData.action || 'BUY_SPREAD'
       };
 
-      // Add order type for pending orders
-      if (pairData.order_type === 'PENDING') {
-        payload.order_type = 'PENDING';
-        
-        // Validate required fields for pending orders
-        if (!pairData.entry_spread || parseFloat(pairData.entry_spread) <= 0) {
-          throw new Error('Entry spread is required for pending orders');
-        }
-        if (!pairData.spread_direction) {
-          throw new Error('Spread direction is required for pending orders');
-        }
-        
-        payload.entry_spread = parseFloat(pairData.entry_spread);
-        payload.spread_direction = pairData.spread_direction;
-        
-        // Add optional fields for pending orders
-        if (pairData.spread_stop_loss && parseFloat(pairData.spread_stop_loss) > 0) {
-          payload.spread_stop_loss = parseFloat(pairData.spread_stop_loss);
-        }
-        if (pairData.spread_take_profit && parseFloat(pairData.spread_take_profit) > 0) {
-          payload.spread_take_profit = parseFloat(pairData.spread_take_profit);
-        }
-        if (pairData.expiration) {
-          payload.expiration = new Date(pairData.expiration).toISOString();
-        }
-      } else {
-        // For market orders, include trade directions only if not using ANALYZE
-        if (pairData.correlation_type !== 'ANALYZE') {
-          // Determine trade types based on direction for manual correlation types
-          if (direction === 'BUY') {
-            payload.trade_type1 = 'BUY';
-            payload.trade_type2 = 'SELL';
-          } else if (direction === 'SELL') {
-            payload.trade_type1 = 'SELL';
-            payload.trade_type2 = 'BUY';
-          }
-        }
-        // For ANALYZE correlation type, let the API determine the directions
-      }
-
-      // Add individual stop loss and take profit if specified
-      if (pairData.stop_loss1 && parseFloat(pairData.stop_loss1) > 0) {
-        payload.stop_loss1 = parseFloat(pairData.stop_loss1);
-      }
-      if (pairData.stop_loss2 && parseFloat(pairData.stop_loss2) > 0) {
-        payload.stop_loss2 = parseFloat(pairData.stop_loss2);
-      }
-      if (pairData.take_profit1 && parseFloat(pairData.take_profit1) > 0) {
-        payload.take_profit1 = parseFloat(pairData.take_profit1);
-      }
-      if (pairData.take_profit2 && parseFloat(pairData.take_profit2) > 0) {
-        payload.take_profit2 = parseFloat(pairData.take_profit2);
-      }
+      // Add optional fields
       if (pairData.comment && pairData.comment.trim()) {
         payload.comment = pairData.comment.trim();
       }
 
-      //console.log('Sending pair trade payload:', payload);
+      console.log('🔄 Sending pair trade payload:', payload);
       const response = await placePairTrade(selectedAccount.id, payload);
       
-      //console.log('Pair trade response:', response);
+      console.log('Pair trade response:', response);
       
       if (response.success) {
         // Handle successful pair trade
         let successMessage = response.message || 'Pair trade executed successfully';
         
-        // Enhanced success message based on order type
-        if (pairData.order_type === 'PENDING') {
-          successMessage = `Pending spread order placed successfully`;
-        } else if (pairData.correlation_type === 'ANALYZE') {
-          successMessage = `Statistical pair trade executed`;
-        }
-        
         toast.success(successMessage);
-        
-        // Display correlation analysis if available
-        if (response.correlation_analysis) {
-          const analysis = response.correlation_analysis;
-          
-          if (analysis.correlation_type === 'STATISTICAL') {
-            // Show detailed statistical analysis
-            toast.success(
-              <div className="text-sm">
-                <p><strong>Statistical Analysis:</strong></p>
-                <p>Correlation: {(analysis.correlation || 0).toFixed(3)}</p>
-                <p>Z-Score: {(analysis.z_score || 0).toFixed(2)}</p>
-                <p>Signal: {analysis.recommendation || 'Analysis complete'}</p>
-                {analysis.determined_trade_type1 && analysis.determined_trade_type2 && (
-                  <p>Actions: {analysis.symbol1} {analysis.determined_trade_type1}, {analysis.symbol2} {analysis.determined_trade_type2}</p>
-                )}
-              </div>,
-              { duration: 8000 }
-            );
-          } else if (pairData.order_type === 'PENDING') {
-            // Show pending order details
-            toast.info(
-              <div className="text-sm">
-                <p><strong>Pending Order Details:</strong></p>
-                <p>Entry Spread: {analysis.entry_spread}</p>
-                <p>Current Spread: {(analysis.current_spread || 0).toFixed(5)}</p>
-                <p>Direction: {analysis.spread_direction}</p>
-                <p>Difference: {(analysis.spread_difference || 0).toFixed(5)}</p>
-              </div>,
-              { duration: 6000 }
-            );
-          }
-        }
         
         // Display individual trade results
         if (response.symbol1_result || response.symbol2_result) {

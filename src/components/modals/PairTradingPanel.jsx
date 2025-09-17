@@ -463,6 +463,63 @@ const PairTradingPanel = ({ data, setData, onSubmit, submitting, selectedAccount
     }
   };
 
+  // Update the onClick handlers to pass the correct data structure
+  const handlePendingOrderSubmit = () => {
+    // For pending orders, construct the proper payload
+    const payload = {
+      symbol1: data.symbol1,
+      symbol2: data.symbol2,
+      volume1: parseFloat(data.volume1) || 0.1,
+      volume2: parseFloat(data.volume2) || 0.1,
+      action: selectedAction || data.action || 'buy_spread',
+      order_type: 'PENDING',
+      entry_spread: parseFloat(data.entry_spread),
+      spread_direction: data.spread_direction || 'NARROW'
+    };
+    
+    // Add optional fields
+    if (data.spread_stop_loss) payload.spread_stop_loss = parseFloat(data.spread_stop_loss);
+    if (data.spread_take_profit) payload.spread_take_profit = parseFloat(data.spread_take_profit);
+    if (data.comment) payload.comment = data.comment;
+    
+    onSubmit(payload);
+  };
+
+  const handleMarketOrderSubmit = () => {
+    // For market orders, construct the proper payload
+    const payload = {
+      symbol1: data.symbol1,
+      symbol2: data.symbol2,
+      volume1: parseFloat(data.volume1) || 0.1,
+      volume2: parseFloat(data.volume2) || 0.1,
+      action: selectedAction || data.action || 'buy_spread',
+      order_type: 'MARKET'
+    };
+    
+    // Add optional fields
+    if (data.spread_stop_loss) payload.spread_stop_loss = parseFloat(data.spread_stop_loss);
+    if (data.spread_take_profit) payload.spread_take_profit = parseFloat(data.spread_take_profit);
+    if (data.comment) payload.comment = data.comment;
+    
+    onSubmit(payload);
+  };
+
+  const handleStatisticalSubmit = () => {
+    // For statistical analysis, construct the proper payload
+    const payload = {
+      symbol1: data.symbol1,
+      symbol2: data.symbol2,
+      volume1: parseFloat(data.volume1) || 0.1,
+      volume2: parseFloat(data.volume2) || 0.1,
+      action: selectedAction || data.action || 'buy_spread'
+    };
+    
+    // Add optional fields
+    if (data.comment) payload.comment = data.comment;
+    
+    onSubmit(payload);
+  };
+
   return (
     <div className="space-y-6">
       <div className="bg-[#222] border border-[#333] rounded-lg p-4">
@@ -977,7 +1034,7 @@ const PairTradingPanel = ({ data, setData, onSubmit, submitting, selectedAccount
           {data.order_type === 'PENDING' ? (
             // For pending orders, single placement button
             <button
-              onClick={() => onSubmit('PENDING')}
+              onClick={handlePendingOrderSubmit}
               disabled={submitting || !data.symbol1 || !data.symbol2 || !data.entry_spread || !data.volume1 || !data.volume2}
               className={`w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors ${
                 submitting || !data.symbol1 || !data.symbol2 || !data.entry_spread || !data.volume1 || !data.volume2 ? 'opacity-70 cursor-not-allowed' : ''
@@ -988,7 +1045,7 @@ const PairTradingPanel = ({ data, setData, onSubmit, submitting, selectedAccount
           ) : data.correlation_type === 'STATISTICAL' ? (
             // For statistical analysis, single analyze & execute button
             <button
-              onClick={() => onSubmit(selectedAction || data.action || 'BUY_SPREAD')}
+              onClick={handleStatisticalSubmit}
               disabled={submitting || !data.symbol1 || !data.symbol2}
               className={`w-full py-3 px-4 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors ${
                 submitting || !data.symbol1 || !data.symbol2 ? 'opacity-70 cursor-not-allowed' : ''
@@ -1052,7 +1109,7 @@ const PairTradingPanel = ({ data, setData, onSubmit, submitting, selectedAccount
 
               {/* Execute Button */}
               <button
-                onClick={() => onSubmit(selectedAction)}
+                onClick={handleMarketOrderSubmit}
                 disabled={submitting || !data.symbol1 || !data.symbol2 || !symbol1Price || !symbol2Price || !data.volume1 || !data.volume2}
                 className={`w-full py-3 px-4 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 ${
                   submitting || !data.symbol1 || !data.symbol2 || !symbol1Price || !symbol2Price || !data.volume1 || !data.volume2

@@ -327,7 +327,7 @@ const Dashboard = () => {
           {/* Trading Chart */}
           <div className="grid grid-cols-1 gap-6">
             <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg overflow-hidden">
-              <div className="h-[800px] w-full">
+              <div className="h-[640px] w-full">
                 <TradingViewWidget 
                   symbol={selectedSymbol} 
                   theme="dark"
