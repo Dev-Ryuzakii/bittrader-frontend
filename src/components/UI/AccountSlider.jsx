@@ -25,7 +25,6 @@ const AccountSlider = ({ totalBalance, totalPnl, totalEquity, accounts }) => {
           {/* Total Portfolio Card */}
           <AccountCard
             balance={totalBalance}
-            pnl={totalPnl}
             equity={totalEquity}
             colorVariant={1}
             isTotal={true}
@@ -37,7 +36,6 @@ const AccountSlider = ({ totalBalance, totalPnl, totalEquity, accounts }) => {
               key={account.account_id || account.id}
               accountName={account.accountName}
               balance={account.balance}
-              pnl={account.pnl}
               equity={account.equity}
               colorVariant={account.colorVariant}
               isTotal={false}

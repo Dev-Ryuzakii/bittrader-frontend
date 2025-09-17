@@ -23,6 +23,7 @@ import {
   getEASymbolPrice as getSymbolPrice,
   getEALivePrices as getLivePrices,
   getEASymbols as getSymbols,
+  getEAPopularSymbols,
   searchEASymbols,
   EA_ORDER_TYPES as ORDER_TYPES,
   executeEAOrder as executeOrder,
@@ -39,7 +40,7 @@ import {
   formatSymbolsForPicker 
 } from '../../utils/symbolpicker';
 import PairTradingPanel from './PairTradingPanel';
-import SymbolBrowser from './SymbolBrowser';
+import SymbolSelector from '../trading/SymbolSelector';
 
 const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelect, onPlaceTrade }) => {
   const [activeTab, setActiveTab] = useState('order');
@@ -53,6 +54,7 @@ const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelec
   const [availableSymbols, setAvailableSymbols] = useState([]);
   const [symbolsLoading, setSymbolsLoading] = useState(false);
   const [symbolsLoadedFor, setSymbolsLoadedFor] = useState(null); // Track which account symbols were loaded for
+  const [symbolCount, setSymbolCount] = useState(0); // Track number of available symbols
 
   // Unified Order State (replaces both market and pending states)
   const [orderData, setOrderData] = useState({
@@ -138,11 +140,41 @@ const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelec
     setSymbolsLoading(true);
     
     try {
-      const response = await getSymbols(accountId);
+      // Fetch both standard symbols and popular symbols
+      const [symbolsResponse, popularResponse] = await Promise.all([
+        getSymbols(accountId),
+        getEAPopularSymbols(accountId)
+      ]);
       
-      if (response.success && response.data) {
-        setAvailableSymbols(response.data);
+      if (symbolsResponse.success && symbolsResponse.data) {
+        // Process symbols with additional metadata
+        const processedSymbols = symbolsResponse.data.map(symbol => ({
+          ...symbol,
+          displayName: symbol.description || symbol.symbol || symbol.broker_symbol,
+          searchKey: (symbol.symbol + (symbol.broker_symbol || '') + (symbol.description || ''))
+            .toLowerCase()
+            .replace(/[^a-z0-9]/g, ''),
+          broker: selectedAccount.broker_name || selectedAccount.broker || 'Unknown Broker'
+        }));
+        
+        setAvailableSymbols(processedSymbols);
+        setSymbolCount(processedSymbols.length);
         setSymbolsLoadedFor(accountId); // Mark symbols as loaded for this account
+        
+        // If we also got popular symbols, add the popular flag
+        if (popularResponse.success && popularResponse.data) {
+          const popularSymbolSet = new Set();
+          Object.values(popularResponse.data).flat().forEach(symbol => {
+            if (symbol.symbol) popularSymbolSet.add(symbol.symbol);
+          });
+          
+          const updatedSymbols = processedSymbols.map(symbol => ({
+            ...symbol,
+            popular: popularSymbolSet.has(symbol.symbol)
+          }));
+          
+          setAvailableSymbols(updatedSymbols);
+        }
       }
     } catch (error) {
       console.error('Error fetching available symbols:', error);
@@ -407,7 +439,7 @@ const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelec
         try {
           const audio = new Audio();
           audio.src = tradeDirection === 'BUY' ? 
-            'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4LjEwLjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAADcQD///////////////////////////////////////////8AAAA8TEFNRTMuMTAwAc0AAAAAAAAAABSAJAKDQgAAQAAAA3EMplERAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//sQZAAP8AAAaQAAAAgAAA0gAAABAAABpAAAACAAADSAAAAETEFNRTMuMTAwVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//sQZB8P8AAAaQAAAAgAAA0gAAABAAABpAAAACAAADSAAAAEVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV' :
+            'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4LjEwLjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAADcQD///////////////////////////////////////////8AAAA8TEFNRTMuMTAwAc0AAAAAAAAAABSAJAKDQgAAQAAAA3EMplERAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//sQZAAP8AAAaQAAAAgAAA0gAAABAAABpAAAACAAADSAAAAETEFNRTMuMTAwVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV' :
             'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4LjEwLjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAADcQD///////////////////////////////////////////8AAAA8TEFNRTMuMTAwAc0AAAAAAAAAABSAJAKDQgAARgAAAHEMDwGXAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//sQZAAP8AAAaQAAAAgAAA0gAAABAAABpAAAACAAADSAAAAETEFNRTMuMTAwVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//sQZB8P8AAAaQAAAAgAAA0gAAABAAABpAAAACAAADSAAAAEVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV';
           audio.volume = 0.3;
           audio.play().catch(e => console.log('Audio play prevented by browser policy'));
@@ -580,7 +612,7 @@ const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelec
       // Play error sound
       try {
         const errorAudio = new Audio();
-        errorAudio.src = 'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4LjIwLjEwMAAAAAAAAAAAAAAA/+M4wAAAAAAAAAAAAEluZm8AAAAPAAAAEAAABVgANTU1NTU1Q0NDQ0NDUFBQUFBQXl5eXl5ebm5ubm5ug4ODg4ODkZGRkZGRnp6enp6erKysrKysubm5ubm5x8fHx8fH1dXV1dXV4uLi4uLi8PDw8PDw//////////8AAAAATGF2YzU4LjM1AAAAAAAAAAAAAAAAJAYqAAAAAAAABVgxS3iVAAAAAAD/4zjEAANIAUcBKAGQgAAjECAALCEDBmB4YogKACAmOQ/Pjzwx3/X7vw7IP/KBj/yj/8fvw7/X/X/X/X70ETEFNRTMuMTAwVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/jOMQcAdZjpFQKMGrgAAAwAABpgUAAAZMGpTcdf+P4/c+KP/P/H8+uf5/jfH9//8QhrQwDGXPllUhCC0oCDf/5BWf/5iCT//8grf//IAhAEP//EIDgt///EIAFbv//gzSaBW///IN3Df//1Sags3//1N4Vb///U3hu///qz6Cp///Vn0FW///4oENT///igQ1P//+KATRP//+KBDf///igQ3///9AgIb////QICG////EIOqt///xCDiq///w6Bo3BAICqv//8ECG////BAhv///wQIb////BAhv///wQIb////BAhv///xChqf///EKGp///8QuTw///8Q1Cf///ENQn///xDUJ///8OAaD///w4CwIAAA/in/+NCkEAAAYB8YP/wszxQDC6GHz/+MQxAgQexjGjidMcgJ0V1EIcrk4Q1bl9/EEvh2//pWJGVa/fwtDr9+SYOFwj+dlMzYYyuRT9/TRRM0yn//0TJp///q0yn///9HiYmf////9EQQJn/////0RPLhOl//////REMS//////0ZGmL//////LiFM///////ELgn///////q2mK////////SYxmZmZgAAAAAP/4xDE8g2J8MY0TGDMAMzMzMzMzMzAAYMECBAgQJnMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMz/+MQxO0AAANIAAAAADMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMz/+MQxPcAAANIAAAAADMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMz';
+        errorAudio.src = 'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4LjIwLjEwMAAAAAAAAAAAAAAA/+M4wAAAAAAAAAAAAEluZm8AAAAPAAAAEAAABVgANTU1NTU1Q0NDQ0NDUFBQUFBQXl5eXl5ebm5ubm5ug4ODg4ODkZGRkZGRnp6enp6erKysrKysubm5ubm5x8fHx8fH1dXV1dXV4uLi4uLi8PDw8PDw//////////8AAAAATGF2YzU4LjM1AAAAAAAAAAAAAAAAJAYqAAAAAAAABVgxS3iVAAAAAAD/4zjEAANIAUcBKAGQgAAjECAALCEDBmB4YogKACAmOQ/Pjzwx3/X7vw7IP/KBj/yj/8fvw7/X/X/X/X70ETEFNRTMuMTAwVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/jOMQcAdZjpFQKMGrgAAAwAABpgUAAAZMGpTcdf+P4/c+KP/P/H8+uf5/jfH9//8QhrQwDGXPllUhCC0oCDf/5BWf/5iCT//8grf//IAhAEP//EIDgt///EIAFbv//gzSaBW///IN3Df//1Sags3//1N4Vb///U3hu///qz6Cp///Vn0FW///4oENT///igQ1P//+KATRP//+KBDf///igQ3///9AgIb////QICG////EIOqt///xCDiq///w6Bo3BAICqv//8ECG////BAhv///wQIb////BAhv///wQIb////BAhv///xChqf///EKGp///8QuTw///8Q1Cf///ENQn///xDUJ///8OAaD///w4CwIAAA/in/+NCkEAAAYB8YP/wszxQDC6GHz/+MQxAgQexjGjidMcgJ0V1EIcrk4Q1bl9/EEvh2//pWJGVa/fwtDr9+SYOFwj+dlMzYYyuRT9/TRRM0yn//0TJp///q0yn///9HiYmf//////REQQJn/////0RPLhOl//////REMS//////0ZGmL//////LiFM///////ELgn///////q2mK////////SYxmZmZgAAAAAP/4xDE8g2J8MY0TGDMAMzMzMzMzMzAAYMECBAgQJnMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMz/+MQxO0AAANIAAAAADMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMz/+MQxPcAAANIAAAAADMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMz';
         errorAudio.volume = 0.3;
         errorAudio.play().catch(e => console.log('Audio play prevented by browser policy'));
       } catch (e) {
@@ -591,7 +623,7 @@ const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelec
     }
   };
 
-    const handlePairTrade = async (direction) => {
+  const handleMarketTrade = async () => {
     if (!selectedAccount) {
       setError('Please select an account to trade with');
       return;
@@ -601,28 +633,124 @@ const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelec
     setSubmitting(true);
 
     try {
-      const volume = parseFloat(pairData.volume) || 0.1;
+      const volume = parseFloat(marketData.volume);
+      const stopLoss = marketData.stop_loss ? parseFloat(marketData.stop_loss) : null;
+      const takeProfit = marketData.take_profit ? parseFloat(marketData.take_profit) : null;
 
       if (isNaN(volume) || volume <= 0) {
         throw new Error('Volume must be greater than 0');
       }
 
-      // Build payload based on the exact curl format expected by backend
-      const payload = {
-        symbol1: pairData.symbol1,
-        symbol2: pairData.symbol2,
-        volume: volume,
-        trade_type: direction || pairData.action || 'BUY_SPREAD'
-      };
-
-      // Add comment if provided
-      if (pairData.comment && pairData.comment.trim()) {
-        payload.comment = pairData.comment.trim();
+      // Ensure minimum volume constraints (common in Forex)
+      if (volume < 0.01) {
+        throw new Error('Volume must be at least 0.01 lots');
       }
 
-      console.log('🔄 Sending pair trade payload:', payload);
+      // Create clean payload with proper data types matching the curl example
+      const cleanPayload = {
+        symbol: marketData.symbol?.toString().trim().toUpperCase(),
+        trade_type: marketData.trade_type?.toString().toUpperCase(),
+        volume: Math.round(volume * 100) / 100, // Round to 2 decimal places
+      };
+
+      // Validate required fields
+      if (!cleanPayload.symbol || typeof cleanPayload.symbol !== 'string') {
+        throw new Error('Valid symbol is required');
+      }
+      if (!cleanPayload.trade_type || !['BUY', 'SELL'].includes(cleanPayload.trade_type)) {
+        throw new Error('Valid trade type (BUY/SELL) is required');
+      }
+      if (!cleanPayload.volume || isNaN(cleanPayload.volume) || cleanPayload.volume <= 0) {
+        throw new Error('Valid volume greater than 0 is required');
+      }
+
+      // Only include optional fields if they have valid values
+      if (stopLoss && stopLoss > 0) {
+        cleanPayload.stop_loss = Math.round(stopLoss * 100000) / 100000; // Round to 5 decimal places
+      }
+      if (takeProfit && takeProfit > 0) {
+        cleanPayload.take_profit = Math.round(takeProfit * 100000) / 100000; // Round to 5 decimal places
+      }
+      if (marketData.comment && marketData.comment.trim()) {
+        cleanPayload.comment = marketData.comment.trim();
+      }
+
+      console.log('Sending trade payload:', cleanPayload);
+
+      const response = await placeTrade(selectedAccount.id, cleanPayload);
+      
+      console.log('Trade response:', response);
+      
+      if (response.success) {
+        const message = response.message || `Market ${cleanPayload.trade_type} order placed successfully for ${cleanPayload.volume} ${cleanPayload.symbol}`;
+        toast.success(message);
+        
+        // Show detailed trade information if available
+        if (response.order_id || response.position_id) {
+          toast.success(
+            <div className="text-sm">
+              <p><strong>Trade Details:</strong></p>
+              {response.order_id && <p>Order ID: {response.order_id}</p>}
+              {response.position_id && <p>Position ID: {response.position_id}</p>}
+              <p>View your position in the Order Management Panel</p>
+            </div>,
+            { duration: 6000 }
+          );
+        }
+        
+        // Wait a moment for the trade to be processed
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Call onPlaceTrade with the proper parameters
+        if (onPlaceTrade) {
+          await onPlaceTrade(selectedAccount.id, cleanPayload);
+        }
+        
+        onClose();
+      } else {
+        throw new Error(response.error || response.message || 'Failed to place trade');
+      }
+    } catch (error) {
+      console.error('Trade error:', error);
+      setError(error.message || 'Failed to place trade. Please try again.');
+      toast.error(error.message || 'Failed to place trade');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+    const handlePairTrade = async (payload) => {
+    if (!selectedAccount) {
+      setError('Please select an account to trade with');
+      return;
+    }
+
+    setError('');
+    setSubmitting(true);
+
+    try {
+      // Validate required fields
+      if (!payload.symbol1 || !payload.symbol2) {
+        throw new Error('Both symbols are required');
+      }
+
+      // Build payload based on the exact curl format expected by backend
+      const apiPayload = {
+        symbol1: payload.symbol1,
+        symbol2: payload.symbol2,
+        volume1: parseFloat(payload.volume1) || 0.1,
+        volume2: parseFloat(payload.volume2) || 0.1,
+        action: (payload.action || 'buy_spread').toUpperCase()
+      };
+
+      // Add optional fields
+      if (payload.comment && payload.comment.trim()) {
+        apiPayload.comment = payload.comment.trim();
+      }
+
+      console.log('🔄 Sending pair trade payload:', apiPayload);
       const accountId = selectedAccount.account_id || selectedAccount.id;
-      const response = await placePairTrade(accountId, payload);
+      const response = await placePairTrade(accountId, apiPayload);
       
       console.log('Pair trade response:', response);
       
@@ -630,14 +758,6 @@ const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelec
         // Handle successful pair trade
         let successMessage = response.message || 'Pair trade executed successfully';
         
-        // Enhanced success message based on order type
-        if (pairData.order_type === 'PENDING') {
-          successMessage = `Pending spread order placed: Will execute when spread reaches ${payload.entry_spread}`;
-        } else if (pairData.correlation_type === 'STATISTICAL') {
-          successMessage = `Statistical pair trade executed: ${response.spread_symbol || `${payload.symbol1}-${payload.symbol2}`}`;
-        }
-        
-        // Enhanced primary success notification with icon
         toast.success(
           (t) => (
             <div className="flex items-center gap-3">
@@ -647,7 +767,7 @@ const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelec
                   Pair Trade Executed!
                 </div>
                 <div className="text-sm text-gray-300">
-                  {payload.symbol1}/{payload.symbol2} • {payload.volume} lots
+                  {payload.symbol1}/{payload.symbol2} • {apiPayload.volume1 || 0.1} lots
                 </div>
                 <div className="text-xs text-blue-300 mt-1">
                   {successMessage}
@@ -674,17 +794,17 @@ const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelec
             className: 'animate-pulse-once',
           }
         );
-        
+
         // Play sound effect for pair trade execution
         try {
           const audio = new Audio();
-          audio.src = 'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4LjEwLjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAADcQD///////////////////////////////////////////8AAAA8TEFNRTMuMTAwAc0AAAAAAAAAABSAJAKDQgAAQAAAA3EMplERAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//sQZAAP8AAAaQAAAAgAAA0gAAABAAABpAAAACAAADSAAAAETEFNRTMuMTAwVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//sQZB8P8AAAaQAAAAgAAA0gAAABAAABpAAAACAAADSAAAAEVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV';
+          audio.src = 'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4LjEwLjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAADcQD///////////////////////////////////////////8AAAA8TEFNRTMuMTAwAc0AAAAAAAAAABSAJAKDQgAAQAAAA3EMplERAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//sQZAAP8AAAaQAAAAgAAA0gAAABAAABpAAAACAAADSAAAAETEFNRTMuMTAwVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//sQZB8P8AAAaQAAAAgAAA0gAAABAAABpAAAACAAADSAAAAEVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV';
           audio.volume = 0.3;
           audio.play().catch(e => console.log('Audio play prevented by browser policy'));
         } catch (e) {
           // Ignore audio errors
         }
-        
+
         // Display spread analysis if available
         if (response.spread_analysis) {
           const analysis = response.spread_analysis;
@@ -744,7 +864,7 @@ const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelec
                 },
               }
             );
-          } else if (pairData.order_type === 'PENDING') {
+          } else if (payload.order_type === 'PENDING') {
             // Show pending order details
             toast.success(
               <div className="text-sm space-y-1">
@@ -789,163 +909,78 @@ const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelec
           const sym1Result = response.symbol1_result;
           const sym2Result = response.symbol2_result;
           
-          if (sym1Result.success && sym2Result.success) {
-            // Get direction from individual_trades if available or fallback to details
-            const sym1Direction = response.spread_analysis?.individual_trades?.symbol1?.action || 
-                                 sym1Result.details?.direction || 
-                                 (sym1Result.details?.cmd === 0 ? 'BUY' : 'SELL');
-            const sym2Direction = response.spread_analysis?.individual_trades?.symbol2?.action || 
-                                 sym2Result.details?.direction || 
-                                 (sym2Result.details?.cmd === 0 ? 'BUY' : 'SELL');
+          const sym1Success = sym1Result.success;
+          const sym2Success = sym2Result.success;
+          
+          // Enhanced result notification with individual trade details
+          toast.success(
+            <div className="text-sm space-y-2">
+              <div className="flex items-center gap-2">
+                <div className={`w-2 h-2 rounded-full ${sym1Success && sym2Success ? 'bg-green-500' : (sym1Success || sym2Success) ? 'bg-yellow-500' : 'bg-red-500'} animate-pulse`}></div>
+                <strong className="text-white">
+                  {sym1Success && sym2Success ? 'Both Trades Executed!' : 
+                   (sym1Success || sym2Success) ? 'Partial Execution' : 'Trade Execution Failed'}
+                </strong>
+              </div>
               
-            const sym1Color = sym1Direction === 'BUY' ? 'text-green-400' : 'text-red-400';
-            const sym2Color = sym2Direction === 'BUY' ? 'text-green-400' : 'text-red-400';
-            
-            toast.success(
-              <div className="text-sm space-y-1">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                  <strong className="text-white">Pair Trade Positions</strong>
+              <div className="grid grid-cols-2 gap-3 text-xs">
+                <div className={`p-2 rounded border ${sym1Success ? 'border-green-500/30 bg-green-500/10' : 'border-red-500/30 bg-red-500/10'}`}>
+                  <div className="font-medium text-white flex items-center gap-1">
+                    {sym1Success ? '✅' : '❌'} {payload.symbol1}
+                  </div>
+                  <div className="text-gray-300 mt-1">
+                    {sym1Result.message || sym1Result.error || 'Trade result'}
+                  </div>
+                  {sym1Result.position_id && (
+                    <div className="text-blue-300 text-xs mt-1">
+                      Position: {sym1Result.position_id}
+                    </div>
+                  )}
                 </div>
                 
-                <div className="flex items-center gap-2 mb-2 border-b border-gray-700 pb-2">
-                  <div className={`font-medium ${sym1Color}`}>
-                    {sym1Direction === 'BUY' ? '📈 LONG' : '📉 SHORT'}
+                <div className={`p-2 rounded border ${sym2Success ? 'border-green-500/30 bg-green-500/10' : 'border-red-500/30 bg-red-500/10'}`}>
+                  <div className="font-medium text-white flex items-center gap-1">
+                    {sym2Success ? '✅' : '❌'} {payload.symbol2}
                   </div>
-                  <div className="text-white">
-                    {payload.symbol1}
+                  <div className="text-gray-300 mt-1">
+                    {sym2Result.message || sym2Result.error || 'Trade result'}
                   </div>
+                  {sym2Result.position_id && (
+                    <div className="text-blue-300 text-xs mt-1">
+                      Position: {sym2Result.position_id}
+                    </div>
+                  )}
                 </div>
-                
-                {sym1Result.details && (
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs mb-3">
-                    <div className="text-gray-400">Volume:</div>
-                    <div className="text-white">{sym1Result.details.volume} lots</div>
-                    
-                    <div className="text-gray-400">Entry Price:</div>
-                    <div className="text-white font-mono">{sym1Result.details.open_price}</div>
-                    
-                    {sym1Result.details.ticket && (
-                      <>
-                        <div className="text-gray-400">Ticket:</div>
-                        <div className="text-blue-400 font-mono">{sym1Result.details.ticket}</div>
-                      </>
-                    )}
-                  </div>
-                )}
-                
-                <div className="flex items-center gap-2 mb-2 border-b border-gray-700 pb-2">
-                  <div className={`font-medium ${sym2Color}`}>
-                    {sym2Direction === 'BUY' ? '📈 LONG' : '📉 SHORT'}
-                  </div>
-                  <div className="text-white">
-                    {payload.symbol2}
-                  </div>
-                </div>
-                
-                {sym2Result.details && (
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
-                    <div className="text-gray-400">Volume:</div>
-                    <div className="text-white">{sym2Result.details.volume} lots</div>
-                    
-                    <div className="text-gray-400">Entry Price:</div>
-                    <div className="text-white font-mono">{sym2Result.details.open_price}</div>
-                    
-                    {sym2Result.details.ticket && (
-                      <>
-                        <div className="text-gray-400">Ticket:</div>
-                        <div className="text-blue-400 font-mono">{sym2Result.details.ticket}</div>
-                      </>
-                    )}
-                  </div>
-                )}
-              </div>,
-              { 
-                duration: 8000,
-                position: 'bottom-right',
-                icon: <Target className="w-5 h-5 text-green-500" />,
-                style: {
-                  background: 'linear-gradient(135deg, #1f2937 0%, #374151 100%)',
-                  border: '1px solid #10b981',
-                  color: 'white',
-                  maxWidth: '400px',
-                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.4)',
-                },
-              }
-            );
-          }
+              </div>
+            </div>,
+            { 
+              duration: 8000,
+              position: 'top-right',
+              icon: sym1Success && sym2Success ? '✅' : (sym1Success || sym2Success) ? '⚠️' : '❌',
+              style: {
+                background: 'linear-gradient(135deg, #1f2937 0%, #374151 100%)',
+                border: sym1Success && sym2Success ? '1px solid #10b981' : 
+                        (sym1Success || sym2Success) ? '1px solid #f59e0b' : '1px solid #ef4444',
+                color: 'white',
+                maxWidth: '400px',
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.4)',
+              },
+            }
+          );
         }
         
-        // Reset form and close modal
-        setPairData({
-          symbol1: '',
-          symbol2: '',
-          volume: '0.1',
-          correlation_type: 'STATISTICAL',
-          order_type: 'MARKET',
-          spread_stop_loss: '',
-          spread_take_profit: '',
-          entry_spread: '',
-          spread_direction: 'NARROW',
-          expiration: '',
-          action: 'BUY_SPREAD',  // Reset to default BUY_SPREAD
-          comment: ''
-        });
+        // Note: Don't call onPlaceTrade callback for pair trades as it's designed for single symbol trades
+        // and the pair trade has already been successfully executed above
+        
+        // Close modal after successful execution
         onClose();
       } else {
         throw new Error(response.error || response.message || 'Failed to place pair trade');
       }
     } catch (error) {
+      console.error('Pair trade error:', error);
       setError(error.message || 'Failed to place pair trade. Please try again.');
-      
-      // Enhanced error toast for pair trading with icon and detailed styling
-      toast.error(
-        (t) => (
-          <div className="flex items-center gap-3">
-            <div className="text-2xl">⚠️</div>
-            <div className="flex-1">
-              <div className="font-semibold text-white">
-                Pair Trade Failed
-              </div>
-              <div className="text-sm text-red-200">
-                {error.message || 'Failed to place pair trade. Please try again.'}
-              </div>
-              {pairData?.symbol1 && pairData?.symbol2 && (
-                <div className="text-xs text-red-300 mt-1">
-                  Failed pair: {pairData.symbol1}/{pairData.symbol2}
-                </div>
-              )}
-            </div>
-            <button 
-              onClick={() => toast.dismiss(t.id)} 
-              className="text-white opacity-70 hover:opacity-100"
-            >
-              <X size={18} />
-            </button>
-          </div>
-        ),
-        { 
-          duration: 8000,
-          position: 'top-center',
-          icon: <Scale className="w-5 h-5 text-red-500" />,
-          style: {
-            background: 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%)',
-            border: '1px solid #dc2626',
-            color: 'white',
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.4)',
-          },
-        }
-      );
-      
-      // Play error sound
-      try {
-        const errorAudio = new Audio();
-        errorAudio.src = 'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4LjIwLjEwMAAAAAAAAAAAAAAA/+M4wAAAAAAAAAAAAEluZm8AAAAPAAAAEAAABVgANTU1NTU1Q0NDQ0NDUFBQUFBQXl5eXl5ebm5ubm5ug4ODg4ODkZGRkZGRnp6enp6erKysrKysubm5ubm5x8fHx8fH1dXV1dXV4uLi4uLi8PDw8PDw//////////8AAAAATGF2YzU4LjM1AAAAAAAAAAAAAAAAJAYqAAAAAAAABVgxS3iVAAAAAAD/4zjEAANIAUcBKAGQgAAjECAALCEDBmB4YogKACAmOQ/Pjzwx3/X7vw7IP/KBj/yj/8fvw7/X/X/X/X70ETEFNRTMuMTAwVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/jOMQcAdZjpFQKMGrgAAAwAABpgUAAAZMGpTcdf+P4/c+KP/P/H8+uf5/jfH9//8QhrQwDGXPllUhCC0oCDf/5BWf/5iCT//8grf//IAhAEP//EIDgt///EIAFbv//gzSaBW///IN3Df//1Sags3//1N4Vb///U3hu///qz6Cp///Vn0FW///4oENT///igQ1P//+KATRP//+KBDf///igQ3///9AgIb////QICG////EIOqt///xCDiq///w6Bo3BAICqv//8ECG////BAhv///wQIb////BAhv///wQIb////BAhv///xChqf///EKGp///8QuTw///8Q1Cf///ENQn///xDUJ///8OAaD///w4CwIAAA/in/+NCkEAAAYB8YP/wszxQDC6GHz/+MQxAgQexjGjidMcgJ0V1EIcrk4Q1bl9/EEvh2//pWJGVa/fwtDr9+SYOFwj+dlMzYYyuRT9/TRRM0yn//0TJp///q0yn///9HiYmf////9EQQJn/////0RPLhOl//////REMS//////0ZGmL//////LiFM///////ELgn///////q2mK////////SYxmZmZgAAAAAP/4xDE8g2J8MY0TGDMAMzMzMzMzMzAAYMECBAgQJnMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMz/+MQxO0AAANIAAAAADMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMz/+MQxPcAAANIAAAAADMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMz';
-        errorAudio.volume = 0.3;
-        errorAudio.play().catch(e => console.log('Audio play prevented by browser policy'));
-      } catch (e) {
-        // Ignore audio errors
-      }
+      toast.error(error.message || 'Failed to place pair trade');
     } finally {
       setSubmitting(false);
     }
@@ -1004,7 +1039,7 @@ const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelec
                     key={account.account_id || account.id} 
                     value={(account.account_id || account.id)?.toString()}
                   >
-                    {account.broker || account.accountName || account.account_name || account.broker_name || `Account ${account.account_id}`}
+                    {account.broker_name || account.broker || account.accountName || `${account.broker_id || 'Broker'} Account ${account.account_id}`}
                     {account.server ? ` (${account.server})` : ''}
                     {account.platform ? ` - ${account.platform}` : ''}
                     {account.is_demo || (account.server && account.server.includes('Demo')) ? ' - Demo' : ''}
@@ -1181,25 +1216,71 @@ const UnifiedOrderPanel = ({
     updateData('symbol', value);
     
     // Clear previous price data immediately when typing
-    if (value.length < 3) {
+    if (value.length < 2) {
       setLivePrice(null);
       setPriceError(null);
-    }
-    
-    // Show suggestions for partial matches (use case-insensitive search)
-    if (value.length >= 2) {
-      try {
-        const suggestions = await getSymbolSuggestions(value);
-        setSymbolSuggestions(suggestions);
-        setShowSuggestions(suggestions.length > 0);
-      } catch (error) {
-        console.warn('Failed to get symbol suggestions:', error);
-        setSymbolSuggestions([]);
-        setShowSuggestions(false);
-      }
-    } else {
       setSymbolSuggestions([]);
       setShowSuggestions(false);
+      return;
+    }
+    
+    // First try to filter from available symbols (instant results)
+    const searchTerm = value.toLowerCase();
+    const localSuggestions = availableSymbols
+      .filter(symbol => {
+        if (!symbol) return false;
+        const matchString = [
+          symbol.symbol,
+          symbol.broker_symbol,
+          symbol.description
+        ].filter(Boolean).join(' ').toLowerCase();
+        return matchString.includes(searchTerm);
+      })
+      .sort((a, b) => {
+        // Prioritize exact matches and symbols starting with search term
+        const aSymbol = (a.symbol || '').toLowerCase();
+        const bSymbol = (b.symbol || '').toLowerCase();
+        if (aSymbol === searchTerm) return -1;
+        if (bSymbol === searchTerm) return 1;
+        if (aSymbol.startsWith(searchTerm) && !bSymbol.startsWith(searchTerm)) return -1;
+        if (!aSymbol.startsWith(searchTerm) && bSymbol.startsWith(searchTerm)) return 1;
+        // Then prioritize popular symbols
+        if (a.popular && !b.popular) return -1;
+        if (!a.popular && b.popular) return 1;
+        return 0;
+      })
+      .slice(0, 10); // Limit to 10 suggestions
+
+    setSymbolSuggestions(localSuggestions);
+    setShowSuggestions(localSuggestions.length > 0);
+
+    // If we have less than 3 local suggestions, also try the API
+    if (localSuggestions.length < 3 && selectedAccount) {
+      try {
+        const response = await searchEASymbols(
+          selectedAccount.account_id || selectedAccount.id,
+          value
+        );
+        
+        if (response.success && response.data) {
+          // Combine API results with local results, remove duplicates
+          const apiSuggestions = response.data.filter(apiSymbol => 
+            !localSuggestions.some(localSymbol => 
+              localSymbol.symbol === apiSymbol.symbol
+            )
+          );
+          
+          const combinedSuggestions = [
+            ...localSuggestions,
+            ...apiSuggestions
+          ].slice(0, 10);
+          
+          setSymbolSuggestions(combinedSuggestions);
+          setShowSuggestions(combinedSuggestions.length > 0);
+        }
+      } catch (error) {
+        console.warn('Failed to get additional symbol suggestions:', error);
+      }
     }
   };
 
@@ -1361,18 +1442,48 @@ const UnifiedOrderPanel = ({
                   
                   {/* Symbol Suggestions Dropdown */}
                   {showSuggestions && symbolSuggestions.length > 0 && (
-                    <div className="absolute top-full left-0 right-0 z-50 bg-[#1A1A1A] border border-[#444] rounded-b-lg shadow-lg">
+                    <div className="absolute top-full left-0 right-0 z-50 bg-[#1A1A1A] border border-[#444] rounded-b-lg shadow-lg max-h-60 overflow-y-auto">
                       {symbolSuggestions.map((symbol, index) => (
                         <button
-                          key={symbol}
+                          key={symbol.symbol || symbol.broker_symbol || index}
                           type="button"
                           onClick={() => {
-                            selectSuggestion(symbol);
-                            fetchLivePrice(symbol);
+                            selectSuggestion(symbol.symbol || symbol.broker_symbol);
+                            fetchLivePrice(symbol.symbol || symbol.broker_symbol);
                           }}
-                          className="w-full text-left px-3 py-2 hover:bg-[#333] text-gray-300 hover:text-white border-b border-[#444] last:border-b-0"
+                          className="w-full text-left px-3 py-2 hover:bg-[#333] text-gray-300 hover:text-white border-b border-[#444] last:border-b-0 flex items-center justify-between gap-2"
                         >
-                          {symbol}
+                          <div className="flex items-center gap-2">
+                            {/* Symbol icon based on type */}
+                            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${
+                              symbol.popular ? 'bg-yellow-500/20 text-yellow-500' :
+                              symbol.type === 'forex' ? 'bg-blue-500/20 text-blue-500' :
+                              symbol.type === 'crypto' ? 'bg-purple-500/20 text-purple-500' :
+                              'bg-gray-500/20 text-gray-500'
+                            }`}>
+                              {symbol.popular ? '★' : 
+                               symbol.type === 'forex' ? 'FX' :
+                               symbol.type === 'crypto' ? '₿' : 'S'}
+                            </div>
+                            
+                            <div>
+                              <div className="font-medium">
+                                {symbol.symbol || symbol.broker_symbol}
+                              </div>
+                              {symbol.description && (
+                                <div className="text-xs text-gray-500">
+                                  {symbol.description}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          
+                          {/* Broker or type tag */}
+                          {(symbol.broker || symbol.type) && (
+                            <div className="text-xs px-2 py-1 rounded bg-gray-800 text-gray-400">
+                              {symbol.broker || symbol.type}
+                            </div>
+                          )}
                         </button>
                       ))}
                     </div>
@@ -1725,10 +1836,11 @@ const UnifiedOrderPanel = ({
       
       {/* Symbol Selection Modal */}
       {showSymbolModal && (
-        <SymbolBrowser 
-          onClose={closeSymbolModal} 
+        <SymbolSelector 
+          onCancel={closeSymbolModal} 
           onSelect={handleSymbolSelect}
           selectedAccount={selectedAccount}
+          currentSymbol={data.symbol}
         />
       )}
     </div>

@@ -66,7 +66,7 @@ export const getEAAccountBalance = async (accountId) => {
     // Try both endpoint formats to ensure compatibility with backend
     let response;
     try {
-      response = await api.get(`/ea/account/${accountId}`);
+      response = await api.get(`/api/v1/ea/accounts/${accountId}`);
       console.log('Balance response from /ea/account endpoint:', response);
     } catch (firstError) {
       console.warn('First EA balance endpoint failed, trying alternative:', firstError);
@@ -143,8 +143,8 @@ export const getEAPositions = async (accountId) => {
     // Try both endpoint formats to ensure compatibility with backend
     let response;
     try {
-      response = await api.get(`/ea/positions/${accountId}`);
-      console.log('Positions response from /ea/positions endpoint:', response);
+      response = await api.get(`/api/v1/ea/accounts/${accountId}/positions`);
+      console.log('Positions response from /api/v1/ea/accounts/{id}/positions endpoint:', response);
     } catch (firstError) {
       console.warn('First EA positions endpoint failed, trying alternative:', firstError);
       response = await api.get(`/api/v1/ea/accounts/${accountId}/positions`);
@@ -353,7 +353,7 @@ export const getEAOrders = async (accountId) => {
     // Try both endpoint formats to ensure compatibility with backend
     let response;
     try {
-      response = await api.get(`/ea/orders/${accountId}`);
+      response = await api.get(`/api/v1/ea/accounts/${accountId}/orders`);
       console.log('Orders response from /ea/orders endpoint:', response);
     } catch (firstError) {
       console.warn('First EA orders endpoint failed, trying alternative:', firstError);
@@ -547,7 +547,27 @@ export const modifyEAOrder = async (accountId, orderId, modifications, options =
 export const placeEATrade = async (accountId, tradeRequest) => {
   try {
     console.log('Placing EA trade with payload:', tradeRequest);
-    const response = await api.post(`/api/v1/ea/accounts/${accountId}/trade`, tradeRequest);
+    
+    // Create a clean payload that matches the exact curl format expected by backend
+    const normalizedRequest = {
+      action: tradeRequest.trade_type?.toLowerCase() || 'buy',
+      symbol: tradeRequest.symbol,
+      volume: typeof tradeRequest.volume === 'string' ? parseFloat(tradeRequest.volume) : tradeRequest.volume,
+      comment: tradeRequest.comment || 'EA API Order'
+    };
+    
+    // Add optional SL/TP if provided
+    if (tradeRequest.stop_loss !== undefined && tradeRequest.stop_loss !== null) {
+      normalizedRequest.stop_loss = typeof tradeRequest.stop_loss === 'string' ? parseFloat(tradeRequest.stop_loss) : tradeRequest.stop_loss;
+    }
+    
+    if (tradeRequest.take_profit !== undefined && tradeRequest.take_profit !== null) {
+      normalizedRequest.take_profit = typeof tradeRequest.take_profit === 'string' ? parseFloat(tradeRequest.take_profit) : tradeRequest.take_profit;
+    }
+    
+    console.log('Normalized EA trade payload (matching curl format):', normalizedRequest);
+    
+    const response = await api.post(`/api/v1/ea/accounts/${accountId}/trade`, normalizedRequest);
     
     const result = {
       success: response.success || false,
@@ -672,8 +692,9 @@ export const placeEAPendingOrder = async (accountId, orderRequest) => {
  * @param {object} pairRequest - Pair trading request object with:
  *   - symbol1: First symbol
  *   - symbol2: Second symbol
- *   - volume: Trade volume (applies to both symbols, hedge ratio auto-calculated)
- *   - action: BUY or SELL (for spread direction) - optional, auto-detected in STATISTICAL mode
+ *   - volume1: Trade volume for symbol1
+ *   - volume2: Trade volume for symbol2
+ *   - action: BUY_SPREAD or SELL_SPREAD (for spread direction) - optional, auto-detected in STATISTICAL mode
  *   - correlation_type: STATISTICAL, SIMPLE, MEAN_REVERSION
  *   - order_type: MARKET or PENDING
  *   - spread_stop_loss: Spread-based stop loss
@@ -687,12 +708,17 @@ export const placeEAPairTrade = async (accountId, pairRequest) => {
     console.log('Placing EA pair trade with payload:', pairRequest);
     
     // Create a clean payload that matches the exact curl format expected by backend
-      const normalizedRequest = {
-      account_id: accountId, // <-- add this line!
+    const normalizedRequest = {
       symbol1: pairRequest.symbol1,
       symbol2: pairRequest.symbol2,
-      trade_type: pairRequest.trade_type || pairRequest.action || 'BUY_SPREAD',
-      volume: typeof pairRequest.volume === 'string' ? parseFloat(pairRequest.volume) : pairRequest.volume
+      // Use action instead of trade_type to match the API expectation
+      action: pairRequest.trade_type || pairRequest.action || 'BUY_SPREAD',
+      volume1: typeof pairRequest.volume1 === 'string' ? parseFloat(pairRequest.volume1) : pairRequest.volume1,
+      volume2: typeof pairRequest.volume2 === 'string' ? parseFloat(pairRequest.volume2) : pairRequest.volume2,
+      // Add optional fields if present
+      spread_stop_loss: pairRequest.spread_stop_loss || pairRequest.sl,
+      spread_take_profit: pairRequest.spread_take_profit || pairRequest.tp,
+      entry_spread: pairRequest.entry_spread
     };
     
     // Add optional comment if provided
@@ -700,10 +726,17 @@ export const placeEAPairTrade = async (accountId, pairRequest) => {
       normalizedRequest.comment = pairRequest.comment.trim();
     }
     
+    // Remove any undefined or null values
+    Object.keys(normalizedRequest).forEach(key => {
+      if (normalizedRequest[key] === undefined || normalizedRequest[key] === null) {
+        delete normalizedRequest[key];
+      }
+    });
+    
     console.log('Normalized EA pair trade payload (matching curl format):', normalizedRequest);
 
-    // Ensure we're using the endpoint format that aligns with the FastAPI backend
-    const response = await api.post(`/api/v1/ea/accounts/${accountId}/pair-trade`, normalizedRequest);
+    // Use the same trade endpoint that supports pair trading
+    const response = await api.post(`/api/v1/ea/accounts/${accountId}/trade`, normalizedRequest);
     
     console.log('📥 Raw API response for pair trade:', response);
     
@@ -740,16 +773,38 @@ export const placeEAPairTrade = async (accountId, pairRequest) => {
     return result;
   } catch (error) {
     console.error('❌ Error placing EA pair trade:', error);
+    
+    // Enhanced error handling to properly extract API error details
+    const errorResponse = error.response || {};
+    const errorData = errorResponse.data || {};
+    
     console.error('❌ Error details:', {
-      status: error.response?.status,
-      statusText: error.response?.statusText,
-      data: error.response?.data,
+      status: errorResponse.status,
+      statusText: errorResponse.statusText,
+      data: errorData,
+      detail: errorData.detail,
       message: error.message
     });
     
     let errorMessage = 'Failed to place EA pair trade';
     let errorType = 'unknown';
     let suggestions = [];
+    
+    // Handle 422 validation errors specifically
+    if (errorResponse.status === 422) {
+        if (Array.isArray(errorData.detail)) {
+            // Handle validation error array format
+            errorMessage = errorData.detail.map(err => 
+                `${err.loc.slice(1).join('.')}: ${err.msg}`
+            ).join('; ');
+            errorType = 'validation_error';
+            suggestions = ['Check all required fields are provided', 'Verify field formats'];
+        } else if (errorData.detail) {
+            // Handle single error message
+            errorMessage = errorData.detail;
+            errorType = 'validation_error';
+        }
+    }
     
     if (error.response?.status === 404) {
       errorMessage = 'EA account not found';
@@ -1610,19 +1665,27 @@ export const executeEAOrder = async (accountId, orderType, orderData) => {
       throw new Error(`Invalid EA order type: ${orderType}`);
     }
 
-    // Prepare order payload
+    console.log('🔄 Executing trade:', {accountId, orderType, payload: orderData, account: orderData.account});
+
+    // Prepare order payload with proper formatting
     const payload = {
       symbol: orderData.symbol,
-      volume: orderData.volume,
-      stop_loss: orderData.stop_loss,
-      take_profit: orderData.take_profit,
-      comment: orderData.comment || 'EA API Order',
-      request_id: orderData.request_id || null
+      volume: typeof orderData.volume === 'string' ? parseFloat(orderData.volume) : orderData.volume,
+      comment: orderData.comment || 'EA API Order'
     };
 
+    // Add SL/TP if provided
+    if (orderData.stop_loss !== undefined && orderData.stop_loss !== null) {
+      payload.stop_loss = typeof orderData.stop_loss === 'string' ? parseFloat(orderData.stop_loss) : orderData.stop_loss;
+    }
+    
+    if (orderData.take_profit !== undefined && orderData.take_profit !== null) {
+      payload.take_profit = typeof orderData.take_profit === 'string' ? parseFloat(orderData.take_profit) : orderData.take_profit;
+    }
+
     if (orderConfig.type === "MARKET") {
-      // Market order
-      payload.trade_type = orderConfig.direction;
+      // Market order - use action field instead of trade_type
+      payload.action = orderConfig.direction.toLowerCase();
       return await placeEATrade(accountId, payload);
     } else {
       // Pending order

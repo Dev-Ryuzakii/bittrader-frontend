@@ -27,8 +27,12 @@ import {
   Edit3,
   RefreshCw,
   ChevronDown,
-  Download
+  Download,
+  ChevronRight,
+  ChevronDown as ChevronDownIcon,
+  Zap
 } from 'lucide-react';
+import PairTradeModifyModal from '../modals/PairTradeModifyModal';
 
 // Helper function for className concatenation
 const cn = (...classes) => classes.filter(Boolean).join(' ');
@@ -47,13 +51,129 @@ function TradeManagement({ selectedAccount: propSelectedAccount, onTradeSelect, 
     type: 'all',
     source: 'all'
   });
+  // State to track which pair trades are expanded
+  const [expandedPairTrades, setExpandedPairTrades] = useState(new Set());
+  
+  // Cache state for faster subsequent loads
+  const [dataCache, setDataCache] = useState({
+    lastFetch: null,
+    data: null,
+    accountId: null
+  });
+  
   const [stats, setStats] = useState({
     totalTrades: 0,
     winRate: 0,
     avgPL: 0,
     bestTrade: null,
     worstTrade: null,
-    volume: 0,
+    volume: 0
+  });
+
+  // Memoize processed trade data to avoid unnecessary recalculations
+  const processedTradeData = useMemo(() => {
+    if (!trades || trades.length === 0) {
+      return {
+        filteredTrades: [],
+        totalProfit: 0,
+        totalVolume: 0,
+        winRate: 0,
+        count: 0
+      };
+    }
+
+    // Apply filters
+    let filteredTrades = trades;
+    
+    if (filters.status !== 'all') {
+      filteredTrades = filteredTrades.filter(trade => {
+        if (trade.type === 'pair') {
+          return filters.status === 'active' ? trade.status === 'active' : trade.status !== 'active';
+        }
+        return filters.status === 'active' ? 
+          (trade.status === 'open' || trade.status === 'pending') : 
+          (trade.status === 'closed' || trade.status === 'filled');
+      });
+    }
+
+    if (filters.type !== 'all') {
+      filteredTrades = filteredTrades.filter(trade => {
+        if (filters.type === 'position') return trade.type === 'position';
+        if (filters.type === 'order') return trade.type === 'order';
+        if (filters.type === 'pair') return trade.type === 'pair';
+        return true;
+      });
+    }
+
+    if (filters.source !== 'all') {
+      filteredTrades = filteredTrades.filter(trade => {
+        if (filters.source === 'manual') return !trade.ea_id;
+        if (filters.source === 'ea') return trade.ea_id;
+        return true;
+      });
+    }
+
+    // Calculate aggregated stats
+    const totalProfit = filteredTrades.reduce((sum, trade) => {
+      if (trade.type === 'pair') {
+        return sum + (trade.total_pl || 0);
+      }
+      return sum + (trade.profit || trade.unrealized_pl || 0);
+    }, 0);
+
+    const totalVolume = filteredTrades.reduce((sum, trade) => {
+      if (trade.type === 'pair') {
+        return sum + (trade.volume1 || 0) + (trade.volume2 || 0);
+      }
+      return sum + (trade.volume || 0);
+    }, 0);
+
+    const closedTrades = filteredTrades.filter(trade => {
+      if (trade.type === 'pair') return trade.status === 'closed';
+      return trade.status === 'closed' || trade.status === 'filled';
+    });
+
+    const winningTrades = closedTrades.filter(trade => {
+      if (trade.type === 'pair') return (trade.total_pl || 0) > 0;
+      return (trade.profit || 0) > 0;
+    });
+
+    const winRate = closedTrades.length > 0 ? (winningTrades.length / closedTrades.length) * 100 : 0;
+
+    return {
+      filteredTrades,
+      totalProfit,
+      totalVolume,
+      winRate,
+      count: filteredTrades.length
+    };
+  }, [trades, filters]);
+
+  // Memoize sorted trade data
+  const sortedTrades = useMemo(() => {
+    const { filteredTrades } = processedTradeData;
+    
+    return [...filteredTrades].sort((a, b) => {
+      let aValue = a[sortConfig.key];
+      let bValue = b[sortConfig.key];
+
+      // Handle special sorting cases
+      if (sortConfig.key === 'profit') {
+        aValue = a.profit || a.unrealized_pl || (a.type === 'pair' ? a.total_pl : 0) || 0;
+        bValue = b.profit || b.unrealized_pl || (b.type === 'pair' ? b.total_pl : 0) || 0;
+      } else if (sortConfig.key === 'date') {
+        aValue = new Date(a.open_time || a.created_at || a.date);
+        bValue = new Date(b.open_time || b.created_at || b.date);
+      }
+
+      if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [processedTradeData, sortConfig]);
+  
+  // Account balance state
+  const [accountBalance, setAccountBalance] = useState({
     balance: 0,
     equity: 0,
     margin: 0,
@@ -62,13 +182,28 @@ function TradeManagement({ selectedAccount: propSelectedAccount, onTradeSelect, 
     leverage: 0
   });
   
-  // Modal state for position modifications
+  
+  // Virtual scrolling optimization for large datasets
+  const ITEMS_PER_PAGE = 50;
+  const [currentPage, setCurrentPage] = useState(1);
+  
+  const paginatedTrades = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    const end = start + ITEMS_PER_PAGE;
+    return sortedTrades.slice(start, end);
+  }, [sortedTrades, currentPage]);
+
+  const totalPages = Math.ceil(sortedTrades.length / ITEMS_PER_PAGE);
   const [isModifyModalOpen, setIsModifyModalOpen] = useState(false);
   const [modifyingTrade, setModifyingTrade] = useState(null);
   const [modifyValues, setModifyValues] = useState({
     stopLoss: null,
     takeProfit: null
   });
+  
+  // State for pair trade modification modal
+  const [isPairModifyModalOpen, setIsPairModifyModalOpen] = useState(false);
+  const [modifyingPairTrade, setModifyingPairTrade] = useState(null);
   
   // Debug mode - set to false for production
   const debugMode = false;
@@ -252,8 +387,8 @@ function TradeManagement({ selectedAccount: propSelectedAccount, onTradeSelect, 
     }
   }, []);
 
-  // Fetch trades and positions
-  const fetchTrades = useCallback(async () => {
+  // Fetch trades and positions with caching
+  const fetchTrades = useCallback(async (forceRefresh = false) => {
     // If no account is selected yet
     if (!selectedAccount?.id) {
       console.log('No selected account, checking if we need to fetch accounts');
@@ -281,6 +416,23 @@ function TradeManagement({ selectedAccount: propSelectedAccount, onTradeSelect, 
       setError('No trading account selected. Please select an account from the dropdown.');
       return;
     }
+
+    // Check cache first (cache valid for 10 seconds for fast UI, but allow manual refresh)
+    const now = Date.now();
+    const cacheMaxAge = 10000; // 10 seconds
+    if (!forceRefresh && 
+        dataCache.lastFetch && 
+        dataCache.accountId === selectedAccount.id && 
+        (now - dataCache.lastFetch) < cacheMaxAge &&
+        dataCache.data) {
+      console.log('Using cached data for fast display');
+      setTrades(dataCache.data.trades || []);
+      if (dataCache.data.stats) {
+        setStats(prev => ({ ...prev, ...dataCache.data.stats }));
+      }
+      toast.success('Loaded from cache', { id: 'fetch-trades', duration: 1000 });
+      return;
+    }
     
     console.log('=== FETCHING TRADES FOR ACCOUNT ===');
     console.log('Using Account:', selectedAccount);
@@ -302,21 +454,10 @@ function TradeManagement({ selectedAccount: propSelectedAccount, onTradeSelect, 
         console.log('Using EA API functions from ea.js');
         
         // Make API calls in parallel using the imported functions
-        const [balanceResult, positionsResult, ordersResult] = await Promise.all([
-          getEAAccountBalance(selectedAccount.id).catch(error => ({
-            success: false,
-            error: error.message || 'Failed to fetch balance'
-          })),
-          getEAPositions(selectedAccount.id).catch(error => ({
-            success: false,
-            data: [],
-            error: error.message || 'Failed to fetch positions'
-          })),
-          getEAOrders(selectedAccount.id).catch(error => ({
-            success: false,
-            data: [],
-            error: error.message || 'Failed to fetch orders'
-          }))
+        const [balanceResult, positionsResult, ordersResult] = await Promise.allSettled([
+          getEAAccountBalance(selectedAccount.id),
+          getEAPositions(selectedAccount.id),
+          getEAOrders(selectedAccount.id)
         ]);
         
         console.log('EA API Results:', {
@@ -325,14 +466,20 @@ function TradeManagement({ selectedAccount: propSelectedAccount, onTradeSelect, 
           orders: ordersResult
         });
 
-        // Process balance data
-        const balanceData = balanceResult.success ? balanceResult.data : {};
+        // Process balance data with error handling
+        const balanceData = balanceResult.status === 'fulfilled' && balanceResult.value?.success 
+          ? balanceResult.value.data 
+          : {};
         
-        // Process positions data
-        const positionsArray = positionsResult.success ? (positionsResult.data || []) : [];
+        // Process positions data with error handling
+        const positionsArray = positionsResult.status === 'fulfilled' && positionsResult.value?.success 
+          ? (positionsResult.value.data || []) 
+          : [];
         
-        // Process orders data
-        const ordersArray = ordersResult.success ? (ordersResult.data || []) : [];
+        // Process orders data with error handling
+        const ordersArray = ordersResult.status === 'fulfilled' && ordersResult.value?.success 
+          ? (ordersResult.value.data || []) 
+          : [];
 
         console.log('Processed Data:', {
           balanceData,
@@ -426,6 +573,23 @@ function TradeManagement({ selectedAccount: propSelectedAccount, onTradeSelect, 
         setTrades(allTrades);
         calculateStats(allTrades, balanceData);
         
+        // Cache the results
+        setDataCache({
+          lastFetch: Date.now(),
+          accountId: selectedAccount.id,
+          data: {
+            trades: allTrades,
+            stats: {
+              balance: parseFloat(balanceData.balance || 0),
+              equity: parseFloat(balanceData.equity || 0),
+              margin: parseFloat(balanceData.margin || 0),
+              freeMargin: parseFloat(balanceData.free_margin || 0),
+              currency: balanceData.currency || 'USD',
+              leverage: parseInt(balanceData.leverage || 1, 10)
+            }
+          }
+        });
+        
         // Show success message
         if (allTrades.length > 0) {
           console.log(`✅ Loaded ${positions.length} positions and ${orders.length} orders from EA`);
@@ -444,11 +608,21 @@ function TradeManagement({ selectedAccount: propSelectedAccount, onTradeSelect, 
         const positionsUrl = `${API_CONFIG.baseUrl}${API_CONFIG.paths.brokerPositions(selectedAccount.id)}`;
         const ordersUrl = `${API_CONFIG.baseUrl}${API_CONFIG.paths.brokerOrders(selectedAccount.id)}`;
         
-        // Make API calls
-        const [balanceResult, positionsResult, ordersResult] = await Promise.all([
-          apiCall(balanceUrl),
-          apiCall(positionsUrl),
-          apiCall(ordersUrl)
+        // Make API calls in parallel with timeout
+        const apiTimeout = 5000; // 5 seconds timeout
+        const [balanceResult, positionsResult, ordersResult] = await Promise.allSettled([
+          Promise.race([
+            apiCall(balanceUrl),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Balance API timeout')), apiTimeout))
+          ]),
+          Promise.race([
+            apiCall(positionsUrl),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Positions API timeout')), apiTimeout))
+          ]),
+          Promise.race([
+            apiCall(ordersUrl),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Orders API timeout')), apiTimeout))
+          ])
         ]);
         
         console.log('Broker API Results:', {
@@ -457,26 +631,32 @@ function TradeManagement({ selectedAccount: propSelectedAccount, onTradeSelect, 
           orders: ordersResult
         });
         
-        // Process broker API data
-        const balanceData = balanceResult.success ? balanceResult.data : {};
+        // Process broker API data with error handling
+        const balanceData = balanceResult.status === 'fulfilled' && balanceResult.value?.success 
+          ? balanceResult.value.data 
+          : {};
         
-        // Process positions data
-        const positionsData = positionsResult.data || {};
+        // Process positions data with error handling
+        const positionsData = positionsResult.status === 'fulfilled' && positionsResult.value?.success 
+          ? positionsResult.value.data 
+          : {};
         const positionsArray = Array.isArray(positionsData)
           ? positionsData
-          : Array.isArray(positionsData.positions)
+          : Array.isArray(positionsData?.positions)
             ? positionsData.positions
-            : positionsData.data && Array.isArray(positionsData.data) 
+            : positionsData?.data && Array.isArray(positionsData.data) 
             ? positionsData.data
             : [];
             
-        // Process orders data
-        const ordersData = ordersResult.data || {};
+        // Process orders data with error handling
+        const ordersData = ordersResult.status === 'fulfilled' && ordersResult.value?.success 
+          ? ordersResult.value.data 
+          : {};
         const ordersArray = Array.isArray(ordersData)
           ? ordersData
-          : Array.isArray(ordersData.orders)
+          : Array.isArray(ordersData?.orders)
             ? ordersData.orders
-            : ordersData.data && Array.isArray(ordersData.data)
+            : ordersData?.data && Array.isArray(ordersData.data)
             ? ordersData.data
             : [];
 
@@ -537,6 +717,20 @@ function TradeManagement({ selectedAccount: propSelectedAccount, onTradeSelect, 
         setTrades(allTrades);
         calculateStats(allTrades, balanceData);
         
+        // Cache the broker results
+        setDataCache({
+          lastFetch: Date.now(),
+          accountId: selectedAccount.id,
+          data: {
+            trades: allTrades,
+            stats: {
+              balance: parseFloat(balanceData.balance || 0),
+              equity: parseFloat(balanceData.equity || 0),
+              currency: balanceData.currency || 'USD'
+            }
+          }
+        });
+        
         // Show success message
         if (allTrades.length > 0) {
           toast.success(`Loaded ${allTrades.length} trades from broker account`, { id: 'fetch-trades' });
@@ -570,11 +764,17 @@ function TradeManagement({ selectedAccount: propSelectedAccount, onTradeSelect, 
     if (isEA) {
       console.log('Setting up EA WebSocket for account:', selectedAccount.id);
       
-      // Set up event listeners for real-time updates
+      // Set up event listeners for real-time updates with throttling
+      let updateTimeout = null;
+      
       const handleTradeUpdate = (data) => {
         console.log('EA trade update received:', data);
         if (data.account_id === selectedAccount.id) {
-          fetchTrades();
+          // Throttle updates to prevent excessive API calls
+          if (updateTimeout) clearTimeout(updateTimeout);
+          updateTimeout = setTimeout(() => {
+            fetchTrades(false); // Use cache-friendly refresh for real-time updates
+          }, 1000); // Wait 1 second before updating
         }
       };
 
@@ -863,6 +1063,131 @@ function TradeManagement({ selectedAccount: propSelectedAccount, onTradeSelect, 
     }));
   }, []);
 
+  // Function to identify and group pair trades
+  const groupPairTrades = useCallback((trades) => {
+    const regularTrades = [];
+    const pairTrades = [];
+    
+    // Group trades by potential pair indicators and timing
+    const tradeMap = new Map();
+    
+    // Helper function to check if trades can form a pair
+    const canFormPair = (trade1, trade2) => {
+      // Must have opposite directions
+      const isOppositeDirection = 
+        (trade1.type.toLowerCase().includes('buy') && trade2.type.toLowerCase().includes('sell')) ||
+        (trade1.type.toLowerCase().includes('sell') && trade2.type.toLowerCase().includes('buy'));
+      
+      // Must be close in time (within 5 seconds)
+      const timeGap = Math.abs(new Date(trade1.date) - new Date(trade2.date));
+      const isCloseInTime = timeGap <= 5000; // 5 seconds
+      
+      return isOppositeDirection && isCloseInTime;
+    };
+    
+    // Sort trades by date for proper pairing
+    const sortedTrades = [...trades].sort((a, b) => new Date(a.date) - new Date(b.date));
+    
+    // First pass: Handle explicit pair_id
+    sortedTrades.forEach(trade => {
+      if (trade.pair_id) {
+        const key = trade.pair_id;
+        if (!tradeMap.has(key)) {
+          tradeMap.set(key, []);
+        }
+        tradeMap.get(key).push(trade);
+      }
+    });
+    
+    // Second pass: Handle trades without pair_id
+    const remainingTrades = sortedTrades.filter(trade => !trade.pair_id);
+    
+    // Group potential pairs by timestamp proximity
+    for (let i = 0; i < remainingTrades.length; i++) {
+      const currentTrade = remainingTrades[i];
+      if (currentTrade.processed) continue;
+      
+      // Look for a matching trade within the next few trades
+      for (let j = i + 1; j < Math.min(i + 5, remainingTrades.length); j++) {
+        const potentialPair = remainingTrades[j];
+        if (potentialPair.processed) continue;
+        
+        if (canFormPair(currentTrade, potentialPair)) {
+          const pairKey = `time_${Date.now()}_${i}`;
+          tradeMap.set(pairKey, [currentTrade, potentialPair]);
+          currentTrade.processed = true;
+          potentialPair.processed = true;
+          break;
+        }
+      }
+      
+      if (!currentTrade.processed) {
+        regularTrades.push(currentTrade);
+      }
+    }
+    
+    // Process grouped pair trades
+    tradeMap.forEach((legs, key) => {
+      if (legs.length === 2) {
+        // Create pairs based on the timestamps (assuming pairs are created close in time)
+        const sortedLegs = [...legs].sort((a, b) => new Date(a.date) - new Date(b.date));
+        const [firstLeg, secondLeg] = sortedLegs;
+        
+        // Calculate the spread and combined P/L
+        const entry1 = parseFloat(firstLeg.opening) || 0;
+        const entry2 = parseFloat(secondLeg.opening) || 0;
+        const spreadEntry = entry1 - entry2; // The spread between the two entries
+        const combinedPL = legs.reduce((sum, leg) => sum + (parseFloat(leg.trade_pl) || 0), 0);
+        
+        // Create combined pair trade entry with enhanced details
+        const pairTrade = {
+          id: key,
+          pair_id: key,
+          order_number: `${firstLeg.order_number}/${secondLeg.order_number}`,
+          asset: `${firstLeg.symbol}/${secondLeg.symbol}`,
+          type: 'Pair Trade',
+          quantity: `${firstLeg.volume || firstLeg.quantity}/${secondLeg.volume || secondLeg.quantity}`,
+          opening: spreadEntry.toFixed(5), // Show the spread as the entry price
+          entries: `${entry1.toFixed(5)}/${entry2.toFixed(5)}`, // Store original entries for reference
+          trade_pl: combinedPL,
+          date: new Date(Math.min(...legs.map(l => new Date(l.date)))).toISOString(),
+          status: legs.every(l => l.status === 'Executed') ? 'Executed' : 'Pending',
+          source: 'Pair Trade',
+          isPairTrade: true,
+          legs: [firstLeg, secondLeg],
+          sl: legs.some(l => l.sl || l.stop_loss) ? 'Multiple' : null,
+          tp: legs.some(l => l.tp || l.take_profit) ? 'Multiple' : null,
+          comment: `Pair trade: ${firstLeg.symbol}/${secondLeg.symbol} (Spread: ${spreadEntry.toFixed(5)})`,
+          // Additional metadata for UI
+          firstLegSymbol: firstLeg.symbol,
+          secondLegSymbol: secondLeg.symbol,
+          firstLegQuantity: firstLeg.volume || firstLeg.quantity,
+          secondLegQuantity: secondLeg.volume || secondLeg.quantity,
+          timestamp: Date.now()
+        };
+        
+        pairTrades.push(pairTrade);
+      } else {
+        // If not exactly 2 legs, treat as regular trades
+        legs.forEach(leg => {
+          if (!leg.processed) {
+            regularTrades.push(leg);
+          }
+        });
+      }
+    });
+    
+    // Clean up processed flag
+    regularTrades.forEach(trade => delete trade.processed);
+    
+    // Sort trades by date, with pair trades appearing near their component trades
+    const allTrades = [...regularTrades, ...pairTrades].sort((a, b) => 
+      new Date(a.date) - new Date(b.date)
+    );
+    
+    return allTrades;
+  }, []);
+
   // Handle trade closure
   const handleCloseTrade = async (tradeId, options = {}) => {
     if (!selectedAccount?.id || !tradeId) return;
@@ -1038,7 +1363,10 @@ function TradeManagement({ selectedAccount: propSelectedAccount, onTradeSelect, 
 
   // Sort and filter trades
   const filteredAndSortedTrades = useMemo(() => {
-    return trades
+    // First group pair trades
+    const groupedTrades = groupPairTrades(trades);
+    
+    return groupedTrades
       .filter(trade => {
         if (filters.status !== 'all' && trade.status !== filters.status) return false;
         if (filters.type !== 'all' && !trade.type?.includes(filters.type)) return false;
@@ -1067,8 +1395,8 @@ function TradeManagement({ selectedAccount: propSelectedAccount, onTradeSelect, 
         if (valA < valB) return -direction;
         return 0;
       });
-  }, [trades, filters, sortConfig]);
-  
+  }, [trades, filters, sortConfig, groupPairTrades]);
+
   // Export trades to CSV
   const exportToCsv = () => {
     if (filteredAndSortedTrades.length === 0) {
@@ -1159,6 +1487,133 @@ function TradeManagement({ selectedAccount: propSelectedAccount, onTradeSelect, 
     }
   }, [shouldRefresh, fetchTrades, onRefreshComplete]);
 
+  // Toggle expansion of pair trade
+  const togglePairTradeExpansion = (pairTradeId) => {
+    setExpandedPairTrades(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(pairTradeId)) {
+        newSet.delete(pairTradeId);
+      } else {
+        newSet.add(pairTradeId);
+      }
+      return newSet;
+    });
+  };
+
+  // Handle closing a pair trade (both legs)
+  const handleClosePairTrade = async (pairTrade, options = {}) => {
+    if (!selectedAccount?.id || !pairTrade?.legs) return;
+    
+    toast.loading(`Closing pair trade with ${pairTrade.legs.length} legs...`, { id: 'close-pair-trade' });
+    
+    try {
+      const isEA = isEAAccount(selectedAccount);
+      
+      if (isEA) {
+        // Close both legs of the pair trade
+        const closePromises = pairTrade.legs.map(leg => 
+          closeEAPosition(selectedAccount.id, leg.id, {
+            comment: options.comment || 'Closed pair trade leg from Trade Management',
+            symbol: leg.symbol,
+            volume: leg.volume,
+            typeFilling: options.typeFilling || 1,
+            deviation: options.deviation || 10,
+            request_id: options.request_id || `close_pair_${leg.id}_${Date.now()}`
+          })
+        );
+        
+        const results = await Promise.all(closePromises);
+        
+        // Check if all legs were closed successfully
+        const allSuccess = results.every(result => result.success);
+        
+        if (allSuccess) {
+          toast.success(
+            <div>
+              <p className="font-bold">Pair Trade Closed Successfully</p>
+              <p>{pairTrade.asset} • {pairTrade.quantity}</p>
+              <p className="text-xs mt-1">All {pairTrade.legs.length} legs closed</p>
+            </div>,
+            { id: 'close-pair-trade', duration: 5000 }
+          );
+          fetchTrades();
+        } else {
+          const failedLegs = results.filter(result => !result.success);
+          toast.error(
+            <div>
+              <p className="font-bold">Partial Failure Closing Pair Trade</p>
+              <p>{failedLegs.length} of {pairTrade.legs.length} legs failed to close</p>
+              <p className="text-xs mt-1">Please check individual legs</p>
+            </div>,
+            { id: 'close-pair-trade', duration: 5000 }
+          );
+        }
+      } else {
+        toast.error('Pair trade closing is currently only supported for EA accounts', { id: 'close-pair-trade' });
+      }
+    } catch (error) {
+      console.error('Error closing pair trade:', error);
+      toast.error(`Error closing pair trade: ${error.message}`, { id: 'close-pair-trade' });
+    }
+  };
+
+  // Handle modifying a pair trade (both legs)
+  const handleModifyPairTrade = async (pairTrade, modifications) => {
+    if (!selectedAccount?.id || !pairTrade?.legs) return;
+    
+    toast.loading(`Modifying pair trade with ${pairTrade.legs.length} legs...`, { id: 'modify-pair-trade' });
+    
+    try {
+      const isEA = isEAAccount(selectedAccount);
+      
+      if (isEA) {
+        // Modify both legs of the pair trade
+        const modifyPromises = pairTrade.legs.map(leg => 
+          modifyEAPosition(selectedAccount.id, leg.id, {
+            stop_loss: modifications.stopLoss,
+            take_profit: modifications.takeProfit,
+            price: modifications.price,
+            symbol: leg.symbol,
+            comment: modifications.options?.comment || 'Modified pair trade leg from Trade Management',
+            request_id: modifications.options?.request_id || `modify_pair_${leg.id}_${Date.now()}`
+          })
+        );
+        
+        const results = await Promise.all(modifyPromises);
+        
+        // Check if all legs were modified successfully
+        const allSuccess = results.every(result => result.success);
+        
+        if (allSuccess) {
+          toast.success(
+            <div>
+              <p className="font-bold">Pair Trade Modified Successfully</p>
+              <p>{pairTrade.asset} • {pairTrade.quantity}</p>
+              <p className="text-xs mt-1">All {pairTrade.legs.length} legs modified</p>
+            </div>,
+            { id: 'modify-pair-trade', duration: 5000 }
+          );
+          fetchTrades();
+        } else {
+          const failedLegs = results.filter(result => !result.success);
+          toast.error(
+            <div>
+              <p className="font-bold">Partial Failure Modifying Pair Trade</p>
+              <p>{failedLegs.length} of {pairTrade.legs.length} legs failed to modify</p>
+              <p className="text-xs mt-1">Please check individual legs</p>
+            </div>,
+            { id: 'modify-pair-trade', duration: 5000 }
+          );
+        }
+      } else {
+        toast.error('Pair trade modification is currently only supported for EA accounts', { id: 'modify-pair-trade' });
+      }
+    } catch (error) {
+      console.error('Error modifying pair trade:', error);
+      toast.error(`Error modifying pair trade: ${error.message}`, { id: 'modify-pair-trade' });
+    }
+  };
+
   return (
     <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-6 space-y-6">
       {/* Header */}
@@ -1223,6 +1678,15 @@ function TradeManagement({ selectedAccount: propSelectedAccount, onTradeSelect, 
         </div>
         <div className="flex items-center gap-3">
           <button 
+            onClick={() => fetchTrades(false)} // Use cache when available
+            disabled={loading}
+            className="flex items-center gap-2 px-3 py-2 bg-[#2A2A2A] hover:bg-[#333] text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Quick refresh (uses cache)"
+          >
+            <Zap className="w-4 h-4" />
+            Quick
+          </button>
+          <button 
             onClick={exportToCsv}
             className="flex items-center gap-2 px-4 py-2 bg-[#2A2A2A] hover:bg-[#333] text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={filteredAndSortedTrades.length === 0}
@@ -1230,9 +1694,10 @@ function TradeManagement({ selectedAccount: propSelectedAccount, onTradeSelect, 
             <Download className="w-4 h-4" /> Export CSV
           </button>
           <button 
-            onClick={fetchTrades}
+            onClick={() => fetchTrades(true)} // Force refresh
             disabled={loading}
             className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#2F00FF] to-[#1C0099] hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+            title="Force refresh data from server"
           >
             <RefreshCw className={cn("w-4 h-4", loading && "animate-spin")} />
             Refresh
@@ -1347,6 +1812,7 @@ function TradeManagement({ selectedAccount: propSelectedAccount, onTradeSelect, 
         <table className="w-full">
           <thead>
             <tr className="border-b border-[#333]">
+              <th className="text-left py-3 px-4 text-gray-300 font-medium"></th>
               <th className="text-left py-3 px-4 text-gray-300 font-medium">Date</th>
               <th className="text-left py-3 px-4 text-gray-300 font-medium">Order #</th>
               <th className="text-left py-3 px-4 text-gray-300 font-medium">Asset</th>
@@ -1364,7 +1830,7 @@ function TradeManagement({ selectedAccount: propSelectedAccount, onTradeSelect, 
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan="12" className="text-center py-8">
+                <td colSpan="13" className="text-center py-8">
                   <div className="flex items-center justify-center">
                     <RefreshCw className="w-6 h-6 text-blue-400 animate-spin mr-2" />
                     <span className="text-gray-400">Loading trades...</span>
@@ -1373,7 +1839,7 @@ function TradeManagement({ selectedAccount: propSelectedAccount, onTradeSelect, 
               </tr>
             ) : error ? (
               <tr>
-                <td colSpan="12" className="text-center py-8">
+                <td colSpan="13" className="text-center py-8">
                   <div className="flex flex-col items-center justify-center space-y-3">
                     <div className="flex items-center text-red-400">
                       <AlertTriangle className="w-6 h-6 mr-2" />
@@ -1384,7 +1850,7 @@ function TradeManagement({ selectedAccount: propSelectedAccount, onTradeSelect, 
               </tr>
             ) : filteredAndSortedTrades.length === 0 ? (
               <tr>
-                <td colSpan="12" className="text-center py-8">
+                <td colSpan="13" className="text-center py-8">
                   <div className="flex flex-col items-center justify-center text-gray-400">
                     <Activity className="w-12 h-12 mb-2" />
                     <p>No trades found</p>
@@ -1392,105 +1858,221 @@ function TradeManagement({ selectedAccount: propSelectedAccount, onTradeSelect, 
                 </td>
               </tr>
             ) : (
-              filteredAndSortedTrades.map((trade) => (
-                <tr 
-                  key={trade.id || trade.order_number}
-                  className={cn(
-                    "border-b border-[#333] hover:bg-[#2A2A2A] transition-colors",
-                    selectedTradeId === trade.order_number && "bg-[#2A2A2A]"
-                  )}
-                  onClick={() => {
-                    setSelectedTradeId(trade.order_number);
-                    if (onTradeSelect) onTradeSelect(trade);
-                  }}
-                >
-                  <td className="py-3 px-4 text-gray-300">
-                    {new Date(trade.date).toLocaleString()}
-                  </td>
-                  <td className="py-3 px-4 text-gray-300 font-mono">
-                    {trade.order_number}
-                  </td>
-                  <td className="py-3 px-4 text-white font-medium">
-                    {trade.asset || trade.symbol}
-                  </td>
-                  <td className="py-3 px-4">
-                    <div className={cn(
-                      "flex items-center gap-1",
-                      trade.type?.toLowerCase().includes('buy') ? "text-green-400" : "text-red-400"
-                    )}>
-                      {trade.type?.toLowerCase().includes('buy') ? (
-                        <TrendingUp className="w-4 h-4" />
-                      ) : (
-                        <TrendingDown className="w-4 h-4" />
+              filteredAndSortedTrades.map((trade) => {
+                // Check if this is a pair trade
+                const isPairTrade = trade.isPairTrade;
+                const isExpanded = expandedPairTrades.has(trade.id);
+                
+                return (
+                  <React.Fragment key={trade.id || trade.order_number}>
+                    <tr 
+                      className={cn(
+                        "border-b border-[#333] hover:bg-[#2A2A2A] transition-colors",
+                        selectedTradeId === trade.order_number && "bg-[#2A2A2A]"
                       )}
-                      {trade.type}
-                    </div>
-                  </td>
-                  <td className="py-3 px-4 text-gray-300">
-                    {trade.quantity || trade.volume}
-                  </td>
-                  <td className="py-3 px-4 text-gray-300 font-mono">
-                    {trade.opening?.toFixed(5)}
-                  </td>
-                  <td className="py-3 px-4 text-gray-300 font-mono">
-                    {(trade.sl || trade.stop_loss)?.toFixed(5) || '-'}
-                  </td>
-                  <td className="py-3 px-4 text-gray-300 font-mono">
-                    {(trade.tp || trade.take_profit)?.toFixed(5) || '-'}
-                  </td>
-                  <td className={cn(
-                    "py-3 px-4 font-medium",
-                    (trade.trade_pl || 0) >= 0 ? "text-green-400" : "text-red-400"
-                  )}>
-                    {trade.trade_pl ? (
-                      `${trade.trade_pl >= 0 ? '+' : ''}${trade.trade_pl.toFixed(2)}`
-                    ) : '-'}
-                  </td>
-                  <td className="py-3 px-4">
-                    <span className={cn(
-                      "px-2 py-1 rounded-full text-xs font-medium",
-                      trade.status === 'Executed' && "bg-green-500/20 text-green-400 border border-green-500/30",
-                      trade.status === 'Pending' && "bg-amber-500/20 text-amber-400 border border-amber-500/30",
-                      trade.status === 'Failed' && "bg-red-500/20 text-red-400 border border-red-500/30"
-                    )}>
-                      {trade.status}
-                    </span>
-                  </td>
-                  <td className="py-3 px-4">
-                    <span className={cn(
-                      "px-2 py-1 rounded text-xs font-medium",
-                      trade.source === 'EA' && "bg-blue-500/20 text-blue-400 border border-blue-500/30",
-                      trade.source === 'Broker' && "bg-purple-500/20 text-purple-400 border border-purple-500/30"
-                    )}>
-                      {trade.source || 'Unknown'}
-                    </span>
-                  </td>
-                  <td className="py-3 px-4">
-                    <div className="flex gap-2">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleCloseTrade(trade.order_number);
-                        }}
-                        className="p-1 text-red-400 hover:text-red-300 transition-colors"
-                        title="Close trade"
+                      onClick={() => {
+                        setSelectedTradeId(trade.order_number);
+                        if (onTradeSelect) onTradeSelect(trade);
+                        
+                        // If it's a pair trade, toggle expansion
+                        if (isPairTrade) {
+                          togglePairTradeExpansion(trade.id);
+                        }
+                      }}
+                    >
+                      <td className="py-3 px-4">
+                        {isPairTrade && (
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              togglePairTradeExpansion(trade.id);
+                            }}
+                            className="text-gray-400 hover:text-white"
+                          >
+                            {isExpanded ? <ChevronDownIcon className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                          </button>
+                        )}
+                      </td>
+                      <td className="py-3 px-4 text-gray-300">
+                        {new Date(trade.date).toLocaleString()}
+                      </td>
+                      <td className="py-3 px-4 text-gray-300 font-mono">
+                        {trade.order_number}
+                      </td>
+                      <td className="py-3 px-4 text-white font-medium">
+                        {trade.asset || trade.symbol}
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className={cn(
+                          "flex items-center gap-1",
+                          trade.type?.toLowerCase().includes('buy') ? "text-green-400" : 
+                          trade.type?.toLowerCase().includes('pair') ? "text-purple-400" : "text-red-400"
+                        )}>
+                          {trade.type?.toLowerCase().includes('buy') ? (
+                            <TrendingUp className="w-4 h-4" />
+                          ) : trade.type?.toLowerCase().includes('pair') ? (
+                            <Activity className="w-4 h-4" />
+                          ) : (
+                            <TrendingDown className="w-4 h-4" />
+                          )}
+                          {trade.type}
+                        </div>
+                      </td>
+                      <td className="py-3 px-4 text-gray-300">
+                        {trade.quantity || trade.volume}
+                      </td>
+                      <td className="py-3 px-4 text-gray-300 font-mono">
+                        {typeof trade.opening === 'string' ? trade.opening : trade.opening?.toFixed(5)}
+                      </td>
+                      <td className="py-3 px-4 text-gray-300 font-mono">
+                        {(trade.sl || trade.stop_loss)?.toFixed(5) || '-'}
+                      </td>
+                      <td className="py-3 px-4 text-gray-300 font-mono">
+                        {(trade.tp || trade.take_profit)?.toFixed(5) || '-'}
+                      </td>
+                      <td className={cn(
+                        "py-3 px-4 font-medium",
+                        (trade.trade_pl || 0) >= 0 ? "text-green-400" : "text-red-400"
+                      )}>
+                        {trade.trade_pl ? (
+                          `${trade.trade_pl >= 0 ? '+' : ''}${trade.trade_pl.toFixed(2)}`
+                        ) : '-'}
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className={cn(
+                          "px-2 py-1 rounded-full text-xs font-medium",
+                          trade.status === 'Executed' && "bg-green-500/20 text-green-400 border border-green-500/30",
+                          trade.status === 'Pending' && "bg-amber-500/20 text-amber-400 border border-amber-500/30",
+                          trade.status === 'Failed' && "bg-red-500/20 text-red-400 border border-red-500/30"
+                        )}>
+                          {trade.status}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className={cn(
+                          "px-2 py-1 rounded text-xs font-medium",
+                          trade.source === 'EA' && "bg-blue-500/20 text-blue-400 border border-blue-500/30",
+                          trade.source === 'Broker' && "bg-purple-500/20 text-purple-400 border border-purple-500/30",
+                          trade.source === 'Pair Trade' && "bg-purple-500/20 text-purple-400 border border-purple-500/30"
+                        )}>
+                          {trade.source || 'Unknown'}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="flex gap-2">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (isPairTrade) {
+                                handleClosePairTrade(trade);
+                              } else {
+                                handleCloseTrade(trade.order_number);
+                              }
+                            }}
+                            className="p-1 text-red-400 hover:text-red-300 transition-colors"
+                            title={isPairTrade ? "Close pair trade" : "Close trade"}
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (isPairTrade) {
+                                // For pair trades, open the pair trade modify modal
+                                setModifyingPairTrade(trade);
+                                setIsPairModifyModalOpen(true);
+                              } else {
+                                openModifyTradeModal(trade);
+                              }
+                            }}
+                            className="p-1 text-blue-400 hover:text-blue-300 transition-colors"
+                            title={isPairTrade ? "Modify pair trade" : "Edit trade"}
+                          >
+                            <Edit3 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                    
+                    {/* Expanded view for pair trades */}
+                    {isPairTrade && isExpanded && trade.legs && trade.legs.map((leg, index) => (
+                      <tr 
+                        key={`${trade.id}_leg_${index}`} 
+                        className="border-b border-[#333] bg-[#222] hover:bg-[#2A2A2A]"
                       >
-                        <X className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openModifyTradeModal(trade);
-                        }}
-                        className="p-1 text-blue-400 hover:text-blue-300 transition-colors"
-                        title="Edit trade"
-                      >
-                        <Edit3 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))
+                        <td className="py-2 px-4"></td>
+                        <td className="py-2 px-4 text-gray-400 text-sm">
+                          {new Date(leg.date).toLocaleTimeString()}
+                        </td>
+                        <td className="py-2 px-4 text-gray-400 font-mono text-sm">
+                          {leg.order_number}
+                        </td>
+                        <td className="py-2 px-4 text-gray-300 font-medium text-sm">
+                          {leg.symbol}
+                        </td>
+                        <td className="py-2 px-4">
+                          <div className={cn(
+                            "flex items-center gap-1 text-sm",
+                            leg.type?.toLowerCase().includes('buy') ? "text-green-400" : "text-red-400"
+                          )}>
+                            {leg.type?.toLowerCase().includes('buy') ? (
+                              <TrendingUp className="w-3 h-3" />
+                            ) : (
+                              <TrendingDown className="w-3 h-3" />
+                            )}
+                            {leg.type}
+                          </div>
+                        </td>
+                        <td className="py-2 px-4 text-gray-400 text-sm">
+                          {leg.quantity || leg.volume}
+                        </td>
+                        <td className="py-2 px-4 text-gray-400 font-mono text-sm">
+                          {leg.opening?.toFixed(5)}
+                        </td>
+                        <td className="py-2 px-4 text-gray-400 font-mono text-sm">
+                          {(leg.sl || leg.stop_loss)?.toFixed(5) || '-'}
+                        </td>
+                        <td className="py-2 px-4 text-gray-400 font-mono text-sm">
+                          {(leg.tp || leg.take_profit)?.toFixed(5) || '-'}
+                        </td>
+                        <td className={cn(
+                          "py-2 px-4 font-medium text-sm",
+                          (leg.trade_pl || 0) >= 0 ? "text-green-400" : "text-red-400"
+                        )}>
+                          {leg.trade_pl ? (
+                            `${leg.trade_pl >= 0 ? '+' : ''}${leg.trade_pl.toFixed(2)}`
+                          ) : '-'}
+                        </td>
+                        <td className="py-2 px-4">
+                          <span className={cn(
+                            "px-2 py-1 rounded-full text-xs font-medium",
+                            leg.status === 'Executed' && "bg-green-500/20 text-green-400 border border-green-500/30"
+                          )}>
+                            {leg.status}
+                          </span>
+                        </td>
+                        <td className="py-2 px-4 text-gray-400 text-sm">
+                          {leg.source}
+                        </td>
+                        <td className="py-2 px-4">
+                          <div className="flex gap-2">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleCloseTrade(leg.order_number);
+                              }}
+                              className="p-1 text-red-400 hover:text-red-300 transition-colors"
+                              title="Close leg"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </React.Fragment>
+                );
+              })
             )}
           </tbody>
         </table>

@@ -4,7 +4,6 @@ import { TrendingUp, TrendingDown, DollarSign, PieChart } from 'lucide-react';
 const AccountCard = ({ 
   accountName = "Account 1", 
   balance = 0, 
-  pnl = 0, 
   equity = 0, 
   colorVariant = 1,
   isTotal = false 
@@ -80,6 +79,8 @@ const AccountCard = ({
   };
 
   const currentVariant = colorVariants[colorVariant] || colorVariants[1];
+  // Calculate P&L as Equity - Balance
+  const pnl = equity - balance;
   const isPnlPositive = pnl >= 0;
 
   const formatCurrency = (amount) => {
