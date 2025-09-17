@@ -66,7 +66,7 @@ export const getEAAccountBalance = async (accountId) => {
     // Try both endpoint formats to ensure compatibility with backend
     let response;
     try {
-      response = await api.get(`/ea/account/${accountId}`);
+      response = await api.get(`/api/v1/ea/accounts/${accountId}`);
       console.log('Balance response from /ea/account endpoint:', response);
     } catch (firstError) {
       console.warn('First EA balance endpoint failed, trying alternative:', firstError);
@@ -143,8 +143,8 @@ export const getEAPositions = async (accountId) => {
     // Try both endpoint formats to ensure compatibility with backend
     let response;
     try {
-      response = await api.get(`/ea/positions/${accountId}`);
-      console.log('Positions response from /ea/positions endpoint:', response);
+      response = await api.get(`/api/v1/ea/accounts/${accountId}/positions`);
+      console.log('Positions response from /api/v1/ea/accounts/{id}/positions endpoint:', response);
     } catch (firstError) {
       console.warn('First EA positions endpoint failed, trying alternative:', firstError);
       response = await api.get(`/api/v1/ea/accounts/${accountId}/positions`);
@@ -353,7 +353,7 @@ export const getEAOrders = async (accountId) => {
     // Try both endpoint formats to ensure compatibility with backend
     let response;
     try {
-      response = await api.get(`/ea/orders/${accountId}`);
+      response = await api.get(`/api/v1/ea/accounts/${accountId}/orders`);
       console.log('Orders response from /ea/orders endpoint:', response);
     } catch (firstError) {
       console.warn('First EA orders endpoint failed, trying alternative:', firstError);
@@ -692,8 +692,9 @@ export const placeEAPendingOrder = async (accountId, orderRequest) => {
  * @param {object} pairRequest - Pair trading request object with:
  *   - symbol1: First symbol
  *   - symbol2: Second symbol
- *   - volume: Trade volume (applies to both symbols, hedge ratio auto-calculated)
- *   - action: BUY or SELL (for spread direction) - optional, auto-detected in STATISTICAL mode
+ *   - volume1: Trade volume for symbol1
+ *   - volume2: Trade volume for symbol2
+ *   - action: BUY_SPREAD or SELL_SPREAD (for spread direction) - optional, auto-detected in STATISTICAL mode
  *   - correlation_type: STATISTICAL, SIMPLE, MEAN_REVERSION
  *   - order_type: MARKET or PENDING
  *   - spread_stop_loss: Spread-based stop loss
@@ -711,13 +712,16 @@ export const placeEAPairTrade = async (accountId, pairRequest) => {
       symbol1: pairRequest.symbol1,
       symbol2: pairRequest.symbol2,
       // Use action instead of trade_type to match the API expectation
-      action: pairRequest.action || 'buy_spread',
-      // Use volume1 and volume2 as required by the API
-      volume1: typeof pairRequest.volume1 === 'string' ? parseFloat(pairRequest.volume1) : pairRequest.volume1 || 0.01,
-      volume2: typeof pairRequest.volume2 === 'string' ? parseFloat(pairRequest.volume2) : pairRequest.volume2 || 0.01
+      action: pairRequest.trade_type || pairRequest.action || 'BUY_SPREAD',
+      volume1: typeof pairRequest.volume1 === 'string' ? parseFloat(pairRequest.volume1) : pairRequest.volume1,
+      volume2: typeof pairRequest.volume2 === 'string' ? parseFloat(pairRequest.volume2) : pairRequest.volume2,
+      // Add optional fields if present
+      spread_stop_loss: pairRequest.spread_stop_loss || pairRequest.sl,
+      spread_take_profit: pairRequest.spread_take_profit || pairRequest.tp,
+      entry_spread: pairRequest.entry_spread
     };
     
-    // Add optional fields if present
+    // Add optional comment if provided
     if (pairRequest.comment && pairRequest.comment.trim()) {
       normalizedRequest.comment = pairRequest.comment.trim();
     }
@@ -731,8 +735,8 @@ export const placeEAPairTrade = async (accountId, pairRequest) => {
     
     console.log('Normalized EA pair trade payload (matching curl format):', normalizedRequest);
 
-    // Ensure we're using the endpoint format that aligns with the FastAPI backend
-    const response = await api.post(`/api/v1/ea/accounts/${accountId}/pair-trade`, normalizedRequest);
+    // Use the same trade endpoint that supports pair trading
+    const response = await api.post(`/api/v1/ea/accounts/${accountId}/trade`, normalizedRequest);
     
     console.log('📥 Raw API response for pair trade:', response);
     
@@ -756,11 +760,11 @@ export const placeEAPairTrade = async (accountId, pairRequest) => {
       result.spread_analysis.individual_trades = {
         symbol1: { 
           action: response.symbol1_result?.details?.direction || 'unknown', 
-          volume: response.symbol1_result?.details?.volume || pairRequest.volume1
+          volume: response.symbol1_result?.details?.volume || pairRequest.volume
         },
         symbol2: { 
           action: response.symbol2_result?.details?.direction || 'unknown',
-          volume: response.symbol2_result?.details?.volume || pairRequest.volume2
+          volume: response.symbol2_result?.details?.volume || pairRequest.volume
         }
       };
     }

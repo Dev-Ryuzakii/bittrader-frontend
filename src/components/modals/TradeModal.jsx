@@ -23,6 +23,7 @@ import {
   getEASymbolPrice as getSymbolPrice,
   getEALivePrices as getLivePrices,
   getEASymbols as getSymbols,
+  getEAPopularSymbols,
   searchEASymbols,
   EA_ORDER_TYPES as ORDER_TYPES,
   executeEAOrder as executeOrder,
@@ -439,7 +440,7 @@ const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelec
           const audio = new Audio();
           audio.src = tradeDirection === 'BUY' ? 
             'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4LjEwLjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAADcQD///////////////////////////////////////////8AAAA8TEFNRTMuMTAwAc0AAAAAAAAAABSAJAKDQgAAQAAAA3EMplERAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//sQZAAP8AAAaQAAAAgAAA0gAAABAAABpAAAACAAADSAAAAETEFNRTMuMTAwVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV' :
-            'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4LjEwLjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAADcQD///////////////////////////////////////////8AAAA8TEFNRTMuMTAwAc0AAAAAAAAAABSAJAKDQgAARgAAAHEMDwGXAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//sQZAAP8AAAaQAAAAgAAA0gAAABAAABpAAAACAAADSAAAAEVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//sQZB8P8AAAaQAAAAgAAA0gAAABAAABpAAAACAAADSAAAAEVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV';
+            'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4LjEwLjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAADcQD///////////////////////////////////////////8AAAA8TEFNRTMuMTAwAc0AAAAAAAAAABSAJAKDQgAARgAAAHEMDwGXAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//sQZAAP8AAAaQAAAAgAAA0gAAABAAABpAAAACAAADSAAAAETEFNRTMuMTAwVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//sQZB8P8AAAaQAAAAgAAA0gAAABAAABpAAAACAAADSAAAAEVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV';
           audio.volume = 0.3;
           audio.play().catch(e => console.log('Audio play prevented by browser policy'));
         } catch (e) {
@@ -611,7 +612,7 @@ const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelec
       // Play error sound
       try {
         const errorAudio = new Audio();
-        errorAudio.src = 'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4LjIwLjEwMAAAAAAAAAAAAAAA/+M4wAAAAAAAAAAAAEluZm8AAAAPAAAAEAAABVgANTU1NTU1Q0NDQ0NDUFBQUFBQXl5eXl5ebm5ubm5ug4ODg4ODkZGRkZGRnp6enp6erKysrKysubm5ubm5x8fHx8fH1dXV1dXV4uLi4uLi8PDw8PDw//////////8AAAAATGF2YzU4LjM1AAAAAAAAAAAAAAAAJAYqAAAAAAAABVgxS3iVAAAAAAD/4zjEAANIAUcBKAGQgAAjECAALCEDBmB4YogKACAmOQ/Pjzwx3/X7vw7IP/KBj/yj/8fvw7/X/X/X/X70ETEFNRTMuMTAwVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/jOMQcAdZjpFQKMGrgAAAwAABpgUAAAZMGpTcdf+P4/c+KP/P/H8+uf5/jfH9//8QhrQwDGXPllUhCC0oCDf/5BWf/5iCT//8grf//IAhAEP//EIDgt///EIAFbv//gzSaBW///IN3Df//1Sags3//1N4Vb///U3hu///qz6Cp///Vn0FW///4oENT///igQ1P//+KATRP//+KBDf///igQ3///9AgIb////QICG////BAhv///wQIb////BAhv///wQIb////BAhv///xChqf///EKGp///8QuTw///8Q1Cf///ENQn///xDUJ///8OAaD///w4CwIAAA/in/+NCkEAAAYB8YP/wszxQDC6GHz/+MQxAgQexjGjidMcgJ0V1EIcrk4Q1bl9/EEvh2//pWJGVa/fwtDr9+SYOFwj+dlMzYYyuRT9/TRRM0yn//0TJp///q0yn///9HiYmf//////REQQJn/////0RPLhOl//////REMS//////0ZGmL//////LiFM///////ELgn///////q2mK////////SYxmZmZgAAAAAP/4xDE8g2J8MY0TGDMAMzMzMzMzMzAAYMECBAgQJnMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMz/+MQxO0AAANIAAAAADMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMz/+MQxPcAAANIAAAAADMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMz';
+        errorAudio.src = 'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4LjIwLjEwMAAAAAAAAAAAAAAA/+M4wAAAAAAAAAAAAEluZm8AAAAPAAAAEAAABVgANTU1NTU1Q0NDQ0NDUFBQUFBQXl5eXl5ebm5ubm5ug4ODg4ODkZGRkZGRnp6enp6erKysrKysubm5ubm5x8fHx8fH1dXV1dXV4uLi4uLi8PDw8PDw//////////8AAAAATGF2YzU4LjM1AAAAAAAAAAAAAAAAJAYqAAAAAAAABVgxS3iVAAAAAAD/4zjEAANIAUcBKAGQgAAjECAALCEDBmB4YogKACAmOQ/Pjzwx3/X7vw7IP/KBj/yj/8fvw7/X/X/X/X70ETEFNRTMuMTAwVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/jOMQcAdZjpFQKMGrgAAAwAABpgUAAAZMGpTcdf+P4/c+KP/P/H8+uf5/jfH9//8QhrQwDGXPllUhCC0oCDf/5BWf/5iCT//8grf//IAhAEP//EIDgt///EIAFbv//gzSaBW///IN3Df//1Sags3//1N4Vb///U3hu///qz6Cp///Vn0FW///4oENT///igQ1P//+KATRP//+KBDf///igQ3///9AgIb////QICG////EIOqt///xCDiq///w6Bo3BAICqv//8ECG////BAhv///wQIb////BAhv///wQIb////BAhv///xChqf///EKGp///8QuTw///8Q1Cf///ENQn///xDUJ///8OAaD///w4CwIAAA/in/+NCkEAAAYB8YP/wszxQDC6GHz/+MQxAgQexjGjidMcgJ0V1EIcrk4Q1bl9/EEvh2//pWJGVa/fwtDr9+SYOFwj+dlMzYYyuRT9/TRRM0yn//0TJp///q0yn///9HiYmf//////REQQJn/////0RPLhOl//////REMS//////0ZGmL//////LiFM///////ELgn///////q2mK////////SYxmZmZgAAAAAP/4xDE8g2J8MY0TGDMAMzMzMzMzMzAAYMECBAgQJnMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMz/+MQxO0AAANIAAAAADMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMz/+MQxPcAAANIAAAAADMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMz';
         errorAudio.volume = 0.3;
         errorAudio.play().catch(e => console.log('Audio play prevented by browser policy'));
       } catch (e) {
@@ -718,7 +719,7 @@ const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelec
     }
   };
 
-  const handlePairTrade = async (payload) => {
+    const handlePairTrade = async (payload) => {
     if (!selectedAccount) {
       setError('Please select an account to trade with');
       return;
@@ -739,7 +740,7 @@ const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelec
         symbol2: payload.symbol2,
         volume1: parseFloat(payload.volume1) || 0.1,
         volume2: parseFloat(payload.volume2) || 0.1,
-        action: payload.action || 'buy_spread'
+        action: (payload.action || 'buy_spread').toUpperCase()
       };
 
       // Add optional fields
@@ -757,38 +758,65 @@ const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelec
         // Handle successful pair trade
         let successMessage = response.message || 'Pair trade executed successfully';
         
-        toast.success(successMessage);
-        
-        // Display individual trade results
-        if (response.symbol1_result || response.symbol2_result) {
-          const symbol1Success = response.symbol1_result?.success;
-          const symbol2Success = response.symbol2_result?.success;
-          
-          if (symbol1Success && symbol2Success) {
-            toast.success(`Both trades executed successfully`);
-          } else if (symbol1Success || symbol2Success) {
-            toast.warning(`Partial execution: ${symbol1Success ? 'Symbol1' : 'Symbol2'} succeeded`);
+        toast.success(
+          (t) => (
+            <div className="flex items-center gap-3">
+              <div className="text-2xl">⚖️</div>
+              <div className="flex-1">
+                <div className="font-semibold text-white">
+                  Pair Trade Executed!
+                </div>
+                <div className="text-sm text-gray-300">
+                  {payload.symbol1}/{payload.symbol2} • {apiPayload.volume1 || 0.1} lots
+                </div>
+                <div className="text-xs text-blue-300 mt-1">
+                  {successMessage}
+                </div>
+              </div>
+              <button 
+                onClick={() => toast.dismiss(t.id)} 
+                className="text-white opacity-70 hover:opacity-100"
+              >
+                <X size={18} />
+              </button>
+            </div>
+          ),
+          { 
+            duration: 6000,
+            position: 'top-center',
+            icon: <Scale className="w-5 h-5 text-purple-500" />,
+            style: {
+              background: 'linear-gradient(135deg, #1f2937 0%, #374151 100%)',
+              border: '1px solid #8b5cf6',
+              color: 'white',
+              boxShadow: '0 4px 6px rgba(0, 0, 0, 0.3)',
+            },
+            className: 'animate-pulse-once',
           }
+        );
+
+        // Play sound effect for pair trade execution
+        try {
+          const audio = new Audio();
+          audio.src = 'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4LjEwLjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAADcQD///////////////////////////////////////////8AAAA8TEFNRTMuMTAwAc0AAAAAAAAAABSAJAKDQgAAQAAAA3EMplERAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//sQZAAP8AAAaQAAAAgAAA0gAAABAAABpAAAACAAADSAAAAETEFNRTMuMTAwVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//sQZB8P8AAAaQAAAAgAAA0gAAABAAABpAAAACAAADSAAAAEVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV';
+          audio.volume = 0.3;
+          audio.play().catch(e => console.log('Audio play prevented by browser policy'));
+        } catch (e) {
+          // Ignore audio errors
         }
-        
-        // Call onPlaceTrade callback if provided
-        if (onPlaceTrade) {
-          await onPlaceTrade(selectedAccount.id, apiPayload);
-        }
-        
-        // Close modal after successful execution
-        onClose();
-      } else {
-        throw new Error(response.error || response.message || 'Failed to place pair trade');
-      }
-    } catch (error) {
-      console.error('Pair trade error:', error);
-      setError(error.message || 'Failed to place pair trade. Please try again.');
-      toast.error(error.message || 'Failed to place pair trade');
-    } finally {
-      setSubmitting(false);
-    }
-  };
+
+        // Display spread analysis if available
+        if (response.spread_analysis) {
+          const analysis = response.spread_analysis;
+          
+          if (analysis.correlation_coefficient || analysis.z_score) {
+            // Show detailed statistical analysis
+            toast.success(
+              <div className="text-sm space-y-1">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse"></div>
+                  <strong className="text-white">Statistical Analysis</strong>
+                </div>
                 
                 <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
                   {analysis.correlation_coefficient && (
@@ -941,10 +969,8 @@ const TradeModal = ({ isOpen, onClose, accounts, selectedAccount, onAccountSelec
           );
         }
         
-        // Call onPlaceTrade callback if provided
-        if (onPlaceTrade) {
-          await onPlaceTrade(selectedAccount.id, apiPayload);
-        }
+        // Note: Don't call onPlaceTrade callback for pair trades as it's designed for single symbol trades
+        // and the pair trade has already been successfully executed above
         
         // Close modal after successful execution
         onClose();

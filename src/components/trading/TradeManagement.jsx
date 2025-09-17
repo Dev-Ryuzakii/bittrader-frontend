@@ -29,7 +29,8 @@ import {
   ChevronDown,
   Download,
   ChevronRight,
-  ChevronDown as ChevronDownIcon
+  ChevronDown as ChevronDownIcon,
+  Zap
 } from 'lucide-react';
 import PairTradeModifyModal from '../modals/PairTradeModifyModal';
 
@@ -52,13 +53,127 @@ function TradeManagement({ selectedAccount: propSelectedAccount, onTradeSelect, 
   });
   // State to track which pair trades are expanded
   const [expandedPairTrades, setExpandedPairTrades] = useState(new Set());
+  
+  // Cache state for faster subsequent loads
+  const [dataCache, setDataCache] = useState({
+    lastFetch: null,
+    data: null,
+    accountId: null
+  });
+  
   const [stats, setStats] = useState({
     totalTrades: 0,
     winRate: 0,
     avgPL: 0,
     bestTrade: null,
     worstTrade: null,
-    volume: 0,
+    volume: 0
+  });
+
+  // Memoize processed trade data to avoid unnecessary recalculations
+  const processedTradeData = useMemo(() => {
+    if (!trades || trades.length === 0) {
+      return {
+        filteredTrades: [],
+        totalProfit: 0,
+        totalVolume: 0,
+        winRate: 0,
+        count: 0
+      };
+    }
+
+    // Apply filters
+    let filteredTrades = trades;
+    
+    if (filters.status !== 'all') {
+      filteredTrades = filteredTrades.filter(trade => {
+        if (trade.type === 'pair') {
+          return filters.status === 'active' ? trade.status === 'active' : trade.status !== 'active';
+        }
+        return filters.status === 'active' ? 
+          (trade.status === 'open' || trade.status === 'pending') : 
+          (trade.status === 'closed' || trade.status === 'filled');
+      });
+    }
+
+    if (filters.type !== 'all') {
+      filteredTrades = filteredTrades.filter(trade => {
+        if (filters.type === 'position') return trade.type === 'position';
+        if (filters.type === 'order') return trade.type === 'order';
+        if (filters.type === 'pair') return trade.type === 'pair';
+        return true;
+      });
+    }
+
+    if (filters.source !== 'all') {
+      filteredTrades = filteredTrades.filter(trade => {
+        if (filters.source === 'manual') return !trade.ea_id;
+        if (filters.source === 'ea') return trade.ea_id;
+        return true;
+      });
+    }
+
+    // Calculate aggregated stats
+    const totalProfit = filteredTrades.reduce((sum, trade) => {
+      if (trade.type === 'pair') {
+        return sum + (trade.total_pl || 0);
+      }
+      return sum + (trade.profit || trade.unrealized_pl || 0);
+    }, 0);
+
+    const totalVolume = filteredTrades.reduce((sum, trade) => {
+      if (trade.type === 'pair') {
+        return sum + (trade.volume1 || 0) + (trade.volume2 || 0);
+      }
+      return sum + (trade.volume || 0);
+    }, 0);
+
+    const closedTrades = filteredTrades.filter(trade => {
+      if (trade.type === 'pair') return trade.status === 'closed';
+      return trade.status === 'closed' || trade.status === 'filled';
+    });
+
+    const winningTrades = closedTrades.filter(trade => {
+      if (trade.type === 'pair') return (trade.total_pl || 0) > 0;
+      return (trade.profit || 0) > 0;
+    });
+
+    const winRate = closedTrades.length > 0 ? (winningTrades.length / closedTrades.length) * 100 : 0;
+
+    return {
+      filteredTrades,
+      totalProfit,
+      totalVolume,
+      winRate,
+      count: filteredTrades.length
+    };
+  }, [trades, filters]);
+
+  // Memoize sorted trade data
+  const sortedTrades = useMemo(() => {
+    const { filteredTrades } = processedTradeData;
+    
+    return [...filteredTrades].sort((a, b) => {
+      let aValue = a[sortConfig.key];
+      let bValue = b[sortConfig.key];
+
+      // Handle special sorting cases
+      if (sortConfig.key === 'profit') {
+        aValue = a.profit || a.unrealized_pl || (a.type === 'pair' ? a.total_pl : 0) || 0;
+        bValue = b.profit || b.unrealized_pl || (b.type === 'pair' ? b.total_pl : 0) || 0;
+      } else if (sortConfig.key === 'date') {
+        aValue = new Date(a.open_time || a.created_at || a.date);
+        bValue = new Date(b.open_time || b.created_at || b.date);
+      }
+
+      if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [processedTradeData, sortConfig]);
+  
+  // Account balance state
+  const [accountBalance, setAccountBalance] = useState({
     balance: 0,
     equity: 0,
     margin: 0,
@@ -68,7 +183,17 @@ function TradeManagement({ selectedAccount: propSelectedAccount, onTradeSelect, 
   });
   
   
-  // Modal state for position modifications
+  // Virtual scrolling optimization for large datasets
+  const ITEMS_PER_PAGE = 50;
+  const [currentPage, setCurrentPage] = useState(1);
+  
+  const paginatedTrades = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    const end = start + ITEMS_PER_PAGE;
+    return sortedTrades.slice(start, end);
+  }, [sortedTrades, currentPage]);
+
+  const totalPages = Math.ceil(sortedTrades.length / ITEMS_PER_PAGE);
   const [isModifyModalOpen, setIsModifyModalOpen] = useState(false);
   const [modifyingTrade, setModifyingTrade] = useState(null);
   const [modifyValues, setModifyValues] = useState({
@@ -262,8 +387,8 @@ function TradeManagement({ selectedAccount: propSelectedAccount, onTradeSelect, 
     }
   }, []);
 
-  // Fetch trades and positions
-  const fetchTrades = useCallback(async () => {
+  // Fetch trades and positions with caching
+  const fetchTrades = useCallback(async (forceRefresh = false) => {
     // If no account is selected yet
     if (!selectedAccount?.id) {
       console.log('No selected account, checking if we need to fetch accounts');
@@ -291,6 +416,23 @@ function TradeManagement({ selectedAccount: propSelectedAccount, onTradeSelect, 
       setError('No trading account selected. Please select an account from the dropdown.');
       return;
     }
+
+    // Check cache first (cache valid for 10 seconds for fast UI, but allow manual refresh)
+    const now = Date.now();
+    const cacheMaxAge = 10000; // 10 seconds
+    if (!forceRefresh && 
+        dataCache.lastFetch && 
+        dataCache.accountId === selectedAccount.id && 
+        (now - dataCache.lastFetch) < cacheMaxAge &&
+        dataCache.data) {
+      console.log('Using cached data for fast display');
+      setTrades(dataCache.data.trades || []);
+      if (dataCache.data.stats) {
+        setStats(prev => ({ ...prev, ...dataCache.data.stats }));
+      }
+      toast.success('Loaded from cache', { id: 'fetch-trades', duration: 1000 });
+      return;
+    }
     
     console.log('=== FETCHING TRADES FOR ACCOUNT ===');
     console.log('Using Account:', selectedAccount);
@@ -312,21 +454,10 @@ function TradeManagement({ selectedAccount: propSelectedAccount, onTradeSelect, 
         console.log('Using EA API functions from ea.js');
         
         // Make API calls in parallel using the imported functions
-        const [balanceResult, positionsResult, ordersResult] = await Promise.all([
-          getEAAccountBalance(selectedAccount.id).catch(error => ({
-            success: false,
-            error: error.message || 'Failed to fetch balance'
-          })),
-          getEAPositions(selectedAccount.id).catch(error => ({
-            success: false,
-            data: [],
-            error: error.message || 'Failed to fetch positions'
-          })),
-          getEAOrders(selectedAccount.id).catch(error => ({
-            success: false,
-            data: [],
-            error: error.message || 'Failed to fetch orders'
-          }))
+        const [balanceResult, positionsResult, ordersResult] = await Promise.allSettled([
+          getEAAccountBalance(selectedAccount.id),
+          getEAPositions(selectedAccount.id),
+          getEAOrders(selectedAccount.id)
         ]);
         
         console.log('EA API Results:', {
@@ -335,14 +466,20 @@ function TradeManagement({ selectedAccount: propSelectedAccount, onTradeSelect, 
           orders: ordersResult
         });
 
-        // Process balance data
-        const balanceData = balanceResult.success ? balanceResult.data : {};
+        // Process balance data with error handling
+        const balanceData = balanceResult.status === 'fulfilled' && balanceResult.value?.success 
+          ? balanceResult.value.data 
+          : {};
         
-        // Process positions data
-        const positionsArray = positionsResult.success ? (positionsResult.data || []) : [];
+        // Process positions data with error handling
+        const positionsArray = positionsResult.status === 'fulfilled' && positionsResult.value?.success 
+          ? (positionsResult.value.data || []) 
+          : [];
         
-        // Process orders data
-        const ordersArray = ordersResult.success ? (ordersResult.data || []) : [];
+        // Process orders data with error handling
+        const ordersArray = ordersResult.status === 'fulfilled' && ordersResult.value?.success 
+          ? (ordersResult.value.data || []) 
+          : [];
 
         console.log('Processed Data:', {
           balanceData,
@@ -436,6 +573,23 @@ function TradeManagement({ selectedAccount: propSelectedAccount, onTradeSelect, 
         setTrades(allTrades);
         calculateStats(allTrades, balanceData);
         
+        // Cache the results
+        setDataCache({
+          lastFetch: Date.now(),
+          accountId: selectedAccount.id,
+          data: {
+            trades: allTrades,
+            stats: {
+              balance: parseFloat(balanceData.balance || 0),
+              equity: parseFloat(balanceData.equity || 0),
+              margin: parseFloat(balanceData.margin || 0),
+              freeMargin: parseFloat(balanceData.free_margin || 0),
+              currency: balanceData.currency || 'USD',
+              leverage: parseInt(balanceData.leverage || 1, 10)
+            }
+          }
+        });
+        
         // Show success message
         if (allTrades.length > 0) {
           console.log(`✅ Loaded ${positions.length} positions and ${orders.length} orders from EA`);
@@ -454,11 +608,21 @@ function TradeManagement({ selectedAccount: propSelectedAccount, onTradeSelect, 
         const positionsUrl = `${API_CONFIG.baseUrl}${API_CONFIG.paths.brokerPositions(selectedAccount.id)}`;
         const ordersUrl = `${API_CONFIG.baseUrl}${API_CONFIG.paths.brokerOrders(selectedAccount.id)}`;
         
-        // Make API calls
-        const [balanceResult, positionsResult, ordersResult] = await Promise.all([
-          apiCall(balanceUrl),
-          apiCall(positionsUrl),
-          apiCall(ordersUrl)
+        // Make API calls in parallel with timeout
+        const apiTimeout = 5000; // 5 seconds timeout
+        const [balanceResult, positionsResult, ordersResult] = await Promise.allSettled([
+          Promise.race([
+            apiCall(balanceUrl),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Balance API timeout')), apiTimeout))
+          ]),
+          Promise.race([
+            apiCall(positionsUrl),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Positions API timeout')), apiTimeout))
+          ]),
+          Promise.race([
+            apiCall(ordersUrl),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Orders API timeout')), apiTimeout))
+          ])
         ]);
         
         console.log('Broker API Results:', {
@@ -467,26 +631,32 @@ function TradeManagement({ selectedAccount: propSelectedAccount, onTradeSelect, 
           orders: ordersResult
         });
         
-        // Process broker API data
-        const balanceData = balanceResult.success ? balanceResult.data : {};
+        // Process broker API data with error handling
+        const balanceData = balanceResult.status === 'fulfilled' && balanceResult.value?.success 
+          ? balanceResult.value.data 
+          : {};
         
-        // Process positions data
-        const positionsData = positionsResult.data || {};
+        // Process positions data with error handling
+        const positionsData = positionsResult.status === 'fulfilled' && positionsResult.value?.success 
+          ? positionsResult.value.data 
+          : {};
         const positionsArray = Array.isArray(positionsData)
           ? positionsData
-          : Array.isArray(positionsData.positions)
+          : Array.isArray(positionsData?.positions)
             ? positionsData.positions
-            : positionsData.data && Array.isArray(positionsData.data) 
+            : positionsData?.data && Array.isArray(positionsData.data) 
             ? positionsData.data
             : [];
             
-        // Process orders data
-        const ordersData = ordersResult.data || {};
+        // Process orders data with error handling
+        const ordersData = ordersResult.status === 'fulfilled' && ordersResult.value?.success 
+          ? ordersResult.value.data 
+          : {};
         const ordersArray = Array.isArray(ordersData)
           ? ordersData
-          : Array.isArray(ordersData.orders)
+          : Array.isArray(ordersData?.orders)
             ? ordersData.orders
-            : ordersData.data && Array.isArray(ordersData.data)
+            : ordersData?.data && Array.isArray(ordersData.data)
             ? ordersData.data
             : [];
 
@@ -547,6 +717,20 @@ function TradeManagement({ selectedAccount: propSelectedAccount, onTradeSelect, 
         setTrades(allTrades);
         calculateStats(allTrades, balanceData);
         
+        // Cache the broker results
+        setDataCache({
+          lastFetch: Date.now(),
+          accountId: selectedAccount.id,
+          data: {
+            trades: allTrades,
+            stats: {
+              balance: parseFloat(balanceData.balance || 0),
+              equity: parseFloat(balanceData.equity || 0),
+              currency: balanceData.currency || 'USD'
+            }
+          }
+        });
+        
         // Show success message
         if (allTrades.length > 0) {
           toast.success(`Loaded ${allTrades.length} trades from broker account`, { id: 'fetch-trades' });
@@ -580,11 +764,17 @@ function TradeManagement({ selectedAccount: propSelectedAccount, onTradeSelect, 
     if (isEA) {
       console.log('Setting up EA WebSocket for account:', selectedAccount.id);
       
-      // Set up event listeners for real-time updates
+      // Set up event listeners for real-time updates with throttling
+      let updateTimeout = null;
+      
       const handleTradeUpdate = (data) => {
         console.log('EA trade update received:', data);
         if (data.account_id === selectedAccount.id) {
-          fetchTrades();
+          // Throttle updates to prevent excessive API calls
+          if (updateTimeout) clearTimeout(updateTimeout);
+          updateTimeout = setTimeout(() => {
+            fetchTrades(false); // Use cache-friendly refresh for real-time updates
+          }, 1000); // Wait 1 second before updating
         }
       };
 
@@ -1488,6 +1678,15 @@ function TradeManagement({ selectedAccount: propSelectedAccount, onTradeSelect, 
         </div>
         <div className="flex items-center gap-3">
           <button 
+            onClick={() => fetchTrades(false)} // Use cache when available
+            disabled={loading}
+            className="flex items-center gap-2 px-3 py-2 bg-[#2A2A2A] hover:bg-[#333] text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Quick refresh (uses cache)"
+          >
+            <Zap className="w-4 h-4" />
+            Quick
+          </button>
+          <button 
             onClick={exportToCsv}
             className="flex items-center gap-2 px-4 py-2 bg-[#2A2A2A] hover:bg-[#333] text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={filteredAndSortedTrades.length === 0}
@@ -1495,9 +1694,10 @@ function TradeManagement({ selectedAccount: propSelectedAccount, onTradeSelect, 
             <Download className="w-4 h-4" /> Export CSV
           </button>
           <button 
-            onClick={fetchTrades}
+            onClick={() => fetchTrades(true)} // Force refresh
             disabled={loading}
             className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#2F00FF] to-[#1C0099] hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+            title="Force refresh data from server"
           >
             <RefreshCw className={cn("w-4 h-4", loading && "animate-spin")} />
             Refresh

@@ -471,7 +471,7 @@ const PairTradingPanel = ({ data, setData, onSubmit, submitting, selectedAccount
       symbol2: data.symbol2,
       volume1: parseFloat(data.volume1) || 0.1,
       volume2: parseFloat(data.volume2) || 0.1,
-      action: selectedAction || data.action || 'buy_spread',
+      action: selectedAction || data.action || 'BUY_SPREAD',
       order_type: 'PENDING',
       entry_spread: parseFloat(data.entry_spread),
       spread_direction: data.spread_direction || 'NARROW'
@@ -492,7 +492,7 @@ const PairTradingPanel = ({ data, setData, onSubmit, submitting, selectedAccount
       symbol2: data.symbol2,
       volume1: parseFloat(data.volume1) || 0.1,
       volume2: parseFloat(data.volume2) || 0.1,
-      action: selectedAction || data.action || 'buy_spread',
+      action: selectedAction || data.action || 'BUY_SPREAD',
       order_type: 'MARKET'
     };
     
@@ -509,9 +509,9 @@ const PairTradingPanel = ({ data, setData, onSubmit, submitting, selectedAccount
     const payload = {
       symbol1: data.symbol1,
       symbol2: data.symbol2,
-      volume1: parseFloat(data.volume1) || 0.1,
-      volume2: parseFloat(data.volume2) || 0.1,
-      action: selectedAction || data.action || 'buy_spread'
+      volume: parseFloat(data.volume) || 0.1,
+      action: selectedAction || data.action || 'BUY_SPREAD',
+      correlation_type: 'STATISTICAL'
     };
     
     // Add optional fields
